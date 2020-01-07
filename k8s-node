@@ -8,7 +8,7 @@ curl -so /tmp/px.yml $url
 [ "$version" ] && sed -ri s/oci-monitor:[0-9\.]+/oci-monitor:$version/ /tmp/px.yml
 cat /tmp/px.yml | awk '/image: /{print $2} /oci-monitor/{sub(/oci-monitor/,"px-enterprise",$2);print$2}' | sort -u | xargs -n1 -P0 docker pull &
 while : ; do
-  command=$(ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no $hostname_master kubeadm token create --print-join-command)
+  command=$(ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no master-$c kubeadm token create --print-join-command)
   [ $? -eq 0 ] && break
   sleep 5
 done

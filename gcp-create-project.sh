@@ -1,7 +1,6 @@
 # Set the GCP region and project name
 GCP_REGION=europe-west1
 GCP_PROJECT=pxtest-1231234
-GCP_owner_tag=CHANGEME
 
 # Do not change below this line
 gcloud projects create $GCP_PROJECT
@@ -21,6 +20,5 @@ gcloud compute project-info add-metadata --metadata "ssh-keys=$USER:$(cat $HOME/
 cat <<EOF >gcp-env.sh
 GCP_PROJECT=$GCP_PROJECT
 GCP_REGION=$GCP_REGION
-GCP_owner_tag=$GCP_owner_tag
-export GCP_PROJECT GCP_REGION GCP_owner_tag
+export GCP_PROJECT GCP_REGION
 EOF
