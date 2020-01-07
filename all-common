@@ -1,0 +1,48 @@
+if [ -f /etc/selinux/config ]; then
+  setenforce 0
+  sed -i s/SELINUX=enforcing/SELINUX=disabled/g /etc/selinux/config
+fi
+swapoff -a
+sed -i /swap/d /etc/fstab
+
+echo 127.0.0.1 localhost >/etc/hosts
+for i in $(seq 1 $clusters); do
+  echo 192.168.$[100+$i].90 master-$i >>/etc/hosts
+  for j in $(seq 1 $nodes); do
+    echo 192.168.$[100+$i].$[100+$j] node-$i-$j >>/etc/hosts
+  done
+done
+
+mkdir -p /root/.ssh
+mv /tmp/id_rsa /root/.ssh
+chown root.root /root/.ssh/id_rsa
+chmod 600 /root/.ssh/id_rsa
+ssh-keygen -y -f /root/.ssh/id_rsa >/root/.ssh/authorized_keys
+
+cat <<EOF >/etc/ssh/sshd_config
+HostKey /etc/ssh/ssh_host_rsa_key
+HostKey /etc/ssh/ssh_host_ecdsa_key
+HostKey /etc/ssh/ssh_host_ed25519_key
+SyslogFacility AUTHPRIV
+AuthorizedKeysFile .ssh/authorized_keys
+PasswordAuthentication yes
+PermitRootLogin yes
+ChallengeResponseAuthentication no
+GSSAPIAuthentication yes
+GSSAPICleanupCredentials no
+UsePAM yes
+X11Forwarding yes
+AcceptEnv LANG LC_CTYPE LC_NUMERIC LC_TIME LC_COLLATE LC_MONETARY LC_MESSAGES
+AcceptEnv LC_PAPER LC_NAME LC_ADDRESS LC_TELEPHONE LC_MEASUREMENT
+AcceptEnv LC_IDENTIFICATION LC_ALL LANGUAGE
+AcceptEnv XMODIFIERS
+Subsystem sftp  /usr/libexec/openssh/sftp-server
+EOF
+
+echo "StrictHostKeyChecking no" >/root/.ssh/config
+
+hostnamectl set-hostname $(getent hosts $(hostname -I) | awk '{print$2}')
+systemctl stop firewalld 2>/dev/null
+systemctl disable firewall 2>/dev/null
+systemctl restart sshd
+passwd --stdin root <<<portworx
