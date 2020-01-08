@@ -1,6 +1,4 @@
-AWS_sshkey_path = "#{ENV['HOME']}/.ssh/id_rsa"
-GCP_sshkey_path = "#{ENV['HOME']}/.ssh/id_rsa"
-GCP_zone = "#{ENV['GCP_REGION']}-b"
+env = ENV.select { |key, value| key.start_with?("DEP", "GCP", "AWS") }
 
 if !File.exist?("id_rsa")
   system("ssh-keygen -t rsa -b 2048 -f id_rsa -N ''");
@@ -40,7 +38,6 @@ Vagrant.configure("2") do |config|
     end
   end
 
-  env = { :cluster_name => ENV['PX_CLUSTERNAME'], :version => ENV['PX_VERSION'], :nodes => ENV['PX_NODES'], :clusters => ENV['PX_CLUSTERS'], :k8s_version => ENV['PX_K8S_VERSION'] }
   config.vm.provision "shell", path: "all-common", env: env
   config.vm.provision "shell", path: "#{ENV['PX_PLATFORM']}-common"
 
