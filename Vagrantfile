@@ -41,20 +41,14 @@ Vagrant.configure("2") do |config|
     end
   end
 
-  env_ = { :cluster_name => ENV['PX_CLUSTERNAME'], :version => ENV['PX_VERSION'], :journal => ENV['PX_JOURNAL'], :nodes => ENV['PX_NODES'], :clusters => ENV['PX_CLUSTERS'], :k8s_version => ENV['PX_K8S_VERSION'] }
+  env = { :cluster_name => ENV['PX_CLUSTERNAME'], :version => ENV['PX_VERSION'], :nodes => ENV['PX_NODES'], :clusters => ENV['PX_CLUSTERS'], :k8s_version => ENV['PX_K8S_VERSION'] }
 
-  config.vm.provision "shell", path: "all-common", env: env_
-
-  if ENV['PX_PLATFORM'] == "k8s"
-    config.vm.provision "shell", path: "k8s-common"
-  elsif ENV['PX_PLATFORM'] == "openshift"
-    config.vm.provision "shell", path: "openshift-common"
-  end
+  config.vm.provision "shell", path: "all-common", env: env
+  config.vm.provision "shell", path: "#{ENV['PX_PLATFORM']}-common"
 
   (1..ENV['PX_CLUSTERS'].to_i).each do |c|
     subnet = "192.168.#{100+c}"
     config.vm.hostname = "master-#{c}"
-    env = env_.merge({ :c => c })
     config.vm.define "master-#{c}" do |master|
       if ENV['PX_CLOUD'] == "aws"
         master.vm.provider :aws do |aws|
@@ -68,7 +62,7 @@ Vagrant.configure("2") do |config|
           gcp.network_ip = "#{subnet}.90"
         end
       end
-      master.vm.provision "shell", path: "#{ENV['PX_PLATFORM']}-master", env: env
+      master.vm.provision "shell", path: "#{ENV['PX_PLATFORM']}-master", env: (env.merge({ :c => c }))
     end
 
     (1..ENV['PX_NODES'].to_i).each do |n|
@@ -79,21 +73,15 @@ Vagrant.configure("2") do |config|
             aws.private_ip_address = "#{subnet}.#{100+n}"
             aws.tags = { "Name" => "node-#{c}-#{n}" }
             aws.block_device_mapping = [{ :DeviceName => "/dev/sda1", "Ebs.DeleteOnTermination" => true, "Ebs.VolumeSize" => 15 }, { :DeviceName => "/dev/sdb", "Ebs.DeleteOnTermination" => true, "Ebs.VolumeSize" => ENV['PX_DISKSIZE'] }]
-            if ENV['PX_JOURNAL']
-              aws.block_device_mapping.push({ :DeviceName => "/dev/sdc", "Ebs.DeleteOnTermination" => true, "Ebs.VolumeSize" => 3 })
-            end
           end
         elsif ENV['PX_CLOUD'] == "gcp"
           node.vm.provider :google do |gcp|
             gcp.network_ip = "#{subnet}.#{100+n}"
             gcp.name = "node-#{c}-#{n}"
             gcp.additional_disks = [{ :disk_size => ENV['PX_DISKSIZE'], :disk_name => "disk-#{c}-#{n}" }]
-            if ENV['PX_JOURNAL']
-              gcp.additional_disks.push({ :disk_size => 3, :disk_name => "journal-#{c}-#{n}" })
-            end
           end
         end
-        node.vm.provision "shell", path: "#{ENV['PX_PLATFORM']}-node", env: env
+        node.vm.provision "shell", path: "#{ENV['PX_PLATFORM']}-node", env: (env.merge({ :c => c }))
       end
     end
   end

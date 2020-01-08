@@ -3,7 +3,6 @@ PX_NODES=3
 PX_DISKSIZE=20
 PX_CLUSTERNAME=px-test-cluster
 PX_VERSION=2.3.2
-PX_JOURNAL=false
 PX_CLOUD=aws				# aws or gcp
 PX_PLATFORM=k8s				# k8s or openshift
 PX_K8S_VERSION=1.16.4
