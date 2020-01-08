@@ -10,7 +10,6 @@ end
 Vagrant.configure("2") do |config|
   config.vm.synced_folder ".", "/vagrant", disabled: true
   config.vm.provision "file", source: "id_rsa", destination: "/tmp/id_rsa"
-
   if ENV['PX_CLOUD'] == "aws"
     config.vm.box = "dummy"
     config.vm.provider :aws do |aws, override|
@@ -42,7 +41,6 @@ Vagrant.configure("2") do |config|
   end
 
   env = { :cluster_name => ENV['PX_CLUSTERNAME'], :version => ENV['PX_VERSION'], :nodes => ENV['PX_NODES'], :clusters => ENV['PX_CLUSTERS'], :k8s_version => ENV['PX_K8S_VERSION'] }
-
   config.vm.provision "shell", path: "all-common", env: env
   config.vm.provision "shell", path: "#{ENV['PX_PLATFORM']}-common"
 
