@@ -1,6 +1,7 @@
 # Set the AWS region
 AWS_region=eu-west-1
 AWS_keypair=ah
+AWS_sshkey_path=$HOME/.ssh/id_rsa
 
 # Do not change below this line
 AWS_vpc=$(aws --region=$AWS_region --output json ec2 create-vpc --cidr-block 192.168.0.0/16 | jq -r .Vpc.VpcId)
@@ -27,5 +28,6 @@ AWS_routetable=$AWS_routetable
 AWS_sg=$AWS_sg
 AWS_ami=$AWS_ami
 AWS_region=$AWS_region
+AWS_sshkey_path=$AWS_sshkey_path
 export AWS_vpc AWS_subnet AWS_gw AWS_routetable AWS_sg AWS_ami AWS_region
 EOF

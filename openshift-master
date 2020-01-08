@@ -47,7 +47,7 @@ master-$c
 [nodes]
 master-$c openshift_node_group_name='node-config-master-infra' openshift_schedulable=true
 EOF
-for n in $(seq 1 $nodes); do
+for n in $(seq 1 $DEP_NODES); do
   echo "node-$c-$n openshift_node_group_name='node-config-compute'" >>/root/inventory
 done
 git clone https://github.com/openshift/openshift-ansible
@@ -56,5 +56,4 @@ git checkout release-3.11
 ansible-playbook playbooks/prerequisites.yml -i /root/inventory
 ansible-playbook playbooks/deploy_cluster.yml -i /root/inventory
 k8s_version=$(kubectl version --short | awk -Fv '/Server Version: / {print $3}')
-url="https://install.portworx.com/$(cut -f 1,2 -d . <<<$version)?kbver=$k8s_version&b=true&c=$cluster_name-$c&stork=true&st=k8s&lh=true"
 ) >/var/log/vagrant-openshift-bootstrap 2>&1

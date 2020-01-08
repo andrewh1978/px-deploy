@@ -8,7 +8,7 @@ end
 Vagrant.configure("2") do |config|
   config.vm.synced_folder ".", "/vagrant", disabled: true
   config.vm.provision "file", source: "id_rsa", destination: "/tmp/id_rsa"
-  if ENV['PX_CLOUD'] == "aws"
+  if ENV['DEP_CLOUD'] == "aws"
     config.vm.box = "dummy"
     config.vm.provider :aws do |aws, override|
       aws.security_groups = ENV['AWS_sg']
@@ -19,9 +19,9 @@ Vagrant.configure("2") do |config|
       aws.subnet_id = ENV['AWS_subnet']
       aws.associate_public_ip = true
       override.ssh.username = "centos"
-      override.ssh.private_key_path = AWS_sshkey_path
+      override.ssh.private_key_path = env['AWS_sshkey_path']
     end
-  elsif ENV['PX_CLOUD'] == "gcp"
+  elsif ENV['DEP_CLOUD'] == "gcp"
     config.vm.box = "google/gce"
     config.vm.provider :google do |gcp, override|
       gcp.google_project_id = ENV['GCP_PROJECT']
@@ -34,49 +34,49 @@ Vagrant.configure("2") do |config|
       gcp.network = "px-net"
       gcp.subnetwork = "px-subnet"
       override.ssh.username = ENV['USER']
-      override.ssh.private_key_path = GCP_sshkey_path
+      override.ssh.private_key_path = env['GCP_sshkey_path']
     end
   end
 
   config.vm.provision "shell", path: "all-common", env: env
-  config.vm.provision "shell", path: "#{ENV['PX_PLATFORM']}-common"
+  config.vm.provision "shell", path: "#{ENV['DEP_PLATFORM']}-common"
 
-  (1..ENV['PX_CLUSTERS'].to_i).each do |c|
+  (1..ENV['DEP_CLUSTERS'].to_i).each do |c|
     subnet = "192.168.#{100+c}"
     config.vm.hostname = "master-#{c}"
     config.vm.define "master-#{c}" do |master|
-      if ENV['PX_CLOUD'] == "aws"
+      if ENV['DEP_CLOUD'] == "aws"
         master.vm.provider :aws do |aws|
           aws.private_ip_address = "#{subnet}.90"
           aws.tags = { "Name" => "master-#{c}" }
           aws.block_device_mapping = [{ :DeviceName => "/dev/sda1", "Ebs.DeleteOnTermination" => true, "Ebs.VolumeSize" => 15 }]
         end
-      elsif ENV['PX_CLOUD'] == "gcp"
+      elsif ENV['DEP_CLOUD'] == "gcp"
         master.vm.provider :google do |gcp|
           gcp.name = "master-#{c}"
           gcp.network_ip = "#{subnet}.90"
         end
       end
-      master.vm.provision "shell", path: "#{ENV['PX_PLATFORM']}-master", env: (env.merge({ :c => c }))
+      master.vm.provision "shell", path: "#{ENV['DEP_PLATFORM']}-master", env: (env.merge({ :c => c }))
     end
 
-    (1..ENV['PX_NODES'].to_i).each do |n|
+    (1..ENV['DEP_NODES'].to_i).each do |n|
       config.vm.define "node-#{c}-#{n}" do |node|
         node.vm.hostname = "node-#{c}-#{n}"
-        if ENV['PX_CLOUD'] == "aws"
+        if ENV['DEP_CLOUD'] == "aws"
           node.vm.provider :aws do |aws|
             aws.private_ip_address = "#{subnet}.#{100+n}"
             aws.tags = { "Name" => "node-#{c}-#{n}" }
-            aws.block_device_mapping = [{ :DeviceName => "/dev/sda1", "Ebs.DeleteOnTermination" => true, "Ebs.VolumeSize" => 15 }, { :DeviceName => "/dev/sdb", "Ebs.DeleteOnTermination" => true, "Ebs.VolumeSize" => ENV['PX_DISKSIZE'] }]
+            aws.block_device_mapping = [{ :DeviceName => "/dev/sda1", "Ebs.DeleteOnTermination" => true, "Ebs.VolumeSize" => 15 }, { :DeviceName => "/dev/sdb", "Ebs.DeleteOnTermination" => true, "Ebs.VolumeSize" => ENV['DEP_DISKSIZE'] }]
           end
-        elsif ENV['PX_CLOUD'] == "gcp"
+        elsif ENV['DEP_CLOUD'] == "gcp"
           node.vm.provider :google do |gcp|
             gcp.network_ip = "#{subnet}.#{100+n}"
             gcp.name = "node-#{c}-#{n}"
-            gcp.additional_disks = [{ :disk_size => ENV['PX_DISKSIZE'], :disk_name => "disk-#{c}-#{n}" }]
+            gcp.additional_disks = [{ :disk_size => ENV['DEP_DISKSIZE'], :disk_name => "disk-#{c}-#{n}" }]
           end
         end
-        node.vm.provision "shell", path: "#{ENV['PX_PLATFORM']}-node", env: (env.merge({ :c => c }))
+        node.vm.provision "shell", path: "#{ENV['DEP_PLATFORM']}-node", env: (env.merge({ :c => c }))
       end
     end
   end

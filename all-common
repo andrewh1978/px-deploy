@@ -6,9 +6,9 @@ swapoff -a
 sed -i /swap/d /etc/fstab
 
 echo 127.0.0.1 localhost >/etc/hosts
-for i in $(seq 1 $clusters); do
+for i in $(seq 1 $DEP_CLUSTERS); do
   echo 192.168.$[100+$i].90 master-$i >>/etc/hosts
-  for j in $(seq 1 $nodes); do
+  for j in $(seq 1 $DEP_NODES); do
     echo 192.168.$[100+$i].$[100+$j] node-$i-$j >>/etc/hosts
   done
 done
