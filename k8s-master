@@ -1,4 +1,5 @@
-( yum install -y kubelet-$k8s_version-0 docker
+(
+yum install -y kubelet-$k8s_version-0 docker
 yum install -y kubeadm-$k8s_version-0 kubectl-$k8s_version-0
 systemctl enable docker kubelet
 systemctl restart docker kubelet
@@ -7,34 +8,4 @@ kubeadm init --apiserver-advertise-address=$(hostname -i) --pod-network-cidr=10.
 mkdir /root/.kube
 cp /etc/kubernetes/admin.conf /root/.kube/config
 kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
-k8s_version=$(kubectl version --short | awk -Fv '/Server Version: / {print $3}')
-url="https://install.portworx.com/$(cut -f 1,2 -d . <<<$version)?kbver=$k8s_version&b=true&c=$cluster_name-$c&stork=true&st=k8s&lh=true"
-curl -so /tmp/px.yml $url
-[ "$version" ] && sed -ri s/oci-monitor:[0-9\.]+/oci-monitor:$version/ /tmp/px.yml
-kubectl apply -f /tmp/px.yml
-while : ; do
-  STORK_POD=$(kubectl get pods -n kube-system -l name=stork -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-  if [ "$STORK_POD" ]; then
-    kubectl cp -n kube-system $STORK_POD:/storkctl/linux/storkctl /usr/bin/storkctl 2>/dev/null
-    [ $? -eq 0 ] && break
-  fi
-  sleep 5
-  echo waiting for stork
-done
-chmod +x /usr/bin/storkctl
-if [ $c != 1 ]; then
-  while : ; do
-    token=$(ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no node-$c-1 pxctl cluster token show 2>/dev/null | cut -f 3 -d " ")
-    echo $token | grep -Eq '\w{128}'
-    [ $? -eq 0 ] && break
-    sleep 5
-    echo waiting for portworx
-  done
-  storkctl generate clusterpair -n default remotecluster-$c | sed "/insert_storage_options_here/c\    ip: node-$c-1\n    token: $token" >/root/cp.yaml
-  while : ; do
-    cat /root/cp.yaml | ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no master-1 kubectl apply -f -
-    [ $? -eq 0 ] && break
-    sleep 5
-  done
-fi
-echo End) >&/var/log/vagrant.bootstrap &
+) >/var/log/vagrant-k8s-bootstrap 2>&1
