@@ -58,6 +58,7 @@ Vagrant.configure("2") do |config|
         end
       end
       master.vm.provision "shell", path: "#{ENV['DEP_PLATFORM']}-master", env: (env.merge({ :c => c }))
+      master.vm.provision "shell", path: "lib/#{ENV['DEP_INSTALL']}", env: (env.merge({ :c => c })) if defined?ENV['DEP_INSTALL']
     end
 
     (1..ENV['DEP_NODES'].to_i).each do |n|

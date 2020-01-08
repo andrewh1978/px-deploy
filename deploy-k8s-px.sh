@@ -4,6 +4,9 @@ DEP_DISKSIZE=20
 DEP_CLOUD=aws			# aws or gcp
 DEP_PLATFORM=k8s		# k8s or openshift
 DEP_K8S_VERSION=1.16.4
+DEP_PX_VERSION=2.3.2
+DEP_PX_CLUSTER_PREFIX=px-deploy
+DEP_INSTALL="install-px"
 
 AWS_TYPE=t3.large
 GCP_KEYFILE=./gcp-key.json
