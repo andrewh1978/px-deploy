@@ -11,4 +11,4 @@ while : ; do
 done
 wait
 eval $command
-) >/var/log/vagrant-k8s-bootstrap 2>&1
+) >&/var/log/vagrant-k8s

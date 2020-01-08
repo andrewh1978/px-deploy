@@ -56,4 +56,4 @@ git checkout release-3.11
 ansible-playbook playbooks/prerequisites.yml -i /root/inventory
 ansible-playbook playbooks/deploy_cluster.yml -i /root/inventory
 k8s_version=$(kubectl version --short | awk -Fv '/Server Version: / {print $3}')
-) >/var/log/vagrant-openshift-bootstrap 2>&1
+) >&/var/log/vagrant-openshift

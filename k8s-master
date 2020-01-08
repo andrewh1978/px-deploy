@@ -8,4 +8,4 @@ kubeadm init --apiserver-advertise-address=$(hostname -i) --pod-network-cidr=10.
 mkdir /root/.kube
 cp /etc/kubernetes/admin.conf /root/.kube/config
 kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
-) >/var/log/vagrant-k8s-bootstrap 2>&1
+) >&/var/log/vagrant-k8s
