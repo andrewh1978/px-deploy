@@ -1,1 +1,1 @@
-ssh root@$(aws ec2 describe-instances --region eu-west-1 --filters "Name=tag:Name,Values=master-1" "Name=instance-state-name,Values=running" --query Reservations[*].Instances[*].PublicIpAddress --output text)
+ssh -oStrictHostKeyChecking=no root@$(aws ec2 describe-instances --region eu-west-1 --filters "Name=tag:Name,Values=master-1" "Name=instance-state-name,Values=running" --query Reservations[*].Instances[*].PublicIpAddress --output text)
