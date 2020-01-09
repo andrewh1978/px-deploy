@@ -5,7 +5,7 @@ DEP_PLATFORM=k8s		# k8s or openshift
 DEP_K8S_VERSION=1.16.4
 DEP_PX_VERSION=2.3.2
 DEP_PX_CLUSTER_PREFIX=px-deploy
-DEP_INSTALL="install-px petclinic"
+DEP_INSTALL="install-px px-wait petclinic"
 
 AWS_TYPE=t3.large
 AWS_EBS="gp2:20 standard:30"
