@@ -1,0 +1,5 @@
+while : ; do
+  n=$(ssh node-$c-1 pxctl status 2>/dev/null | grep "Yes.*Online.*Up" | wc -l)
+  [ $n -eq $DEP_NODES ] && break
+  sleep 1
+done
