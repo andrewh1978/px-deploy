@@ -1,6 +1,5 @@
 DEP_CLUSTERS=1
 DEP_NODES=3
-DEP_DISKSIZE=20
 DEP_CLOUD=aws			# aws or gcp
 DEP_PLATFORM=k8s		# k8s or openshift
 DEP_K8S_VERSION=1.16.4
