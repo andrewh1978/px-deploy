@@ -29,7 +29,6 @@ Vagrant.configure("2") do |config|
       gcp.google_json_key_location = ENV['GCP_KEYFILE']
       gcp.image_family = "centos-7"
       gcp.machine_type = ENV['GCP_TYPE']
-      gcp.disk_type = ENV['GCP_DISKTYPE']
       gcp.disk_size = 15
       gcp.network = "px-net"
       gcp.subnetwork = "px-subnet"
@@ -72,13 +71,24 @@ Vagrant.configure("2") do |config|
           node.vm.provider :aws do |aws|
             aws.private_ip_address = "#{subnet}.#{100+n}"
             aws.tags = { "Name" => "node-#{c}-#{n}" }
-            aws.block_device_mapping = [{ :DeviceName => "/dev/sda1", "Ebs.DeleteOnTermination" => true, "Ebs.VolumeSize" => 15 }, { :DeviceName => "/dev/sdb", "Ebs.DeleteOnTermination" => true, "Ebs.VolumeSize" => ENV['DEP_DISKSIZE'] }]
+            aws.block_device_mapping = [{ :DeviceName => "/dev/sda1", "Ebs.DeleteOnTermination" => true, "Ebs.VolumeSize" => 15 }]
+            d = 98
+            ENV['AWS_EBS'].split(' ').each do |i|
+              (type, size) = i.split(':')
+              aws.block_device_mapping.push({ :DeviceName => "/dev/sd" + d.chr, "Ebs.DeleteOnTermination" => true, "Ebs.VolumeSize" => size, "Ebs.VolumeType" => type })
+              d += 1
+            end
           end
         elsif ENV['DEP_CLOUD'] == "gcp"
           node.vm.provider :google do |gcp|
             gcp.network_ip = "#{subnet}.#{100+n}"
             gcp.name = "node-#{c}-#{n}"
-            gcp.additional_disks = [{ :disk_size => ENV['DEP_DISKSIZE'], :disk_name => "disk-#{c}-#{n}" }]
+            d = 1
+            ENV['GCP_DISKS'].split(' ').each do |i|
+              (type, size) = i.split(':')
+              gcp.additional_disks.push({ :disk_name => "disk-#{c}-#{n}-#{d}", :disk_type => type, :disk_size => size })
+              d += 1
+            end
           end
         end
         node.vm.provision "shell", path: "#{ENV['DEP_PLATFORM']}-node", env: (env.merge({ :c => c }))

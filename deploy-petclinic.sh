@@ -9,15 +9,16 @@ DEP_PX_CLUSTER_PREFIX=px-deploy
 DEP_INSTALL="install-px petclinic"
 
 AWS_TYPE=t3.large
+AWS_EBS="gp2:20 standard:30"
 GCP_KEYFILE=./gcp-key.json
 GCP_TYPE=n1-standard-2
-GCP_DISKTYPE=pd-standard
+GCP_DISKS="pd-standard:20 pd-ssd:30"
 
 export $(set | grep -E '^(DEP|AWS|GCP)' | cut -f 1 -d = )
 
-if [ $1 == up ]; then
+if [ "$1" == up ]; then
   vagrant up
-elif [ $1 == down ]; then
+elif [ "$1" == down ]; then
   vagrant destroy -fp
 else
   echo "Usage: $0 up | down"
