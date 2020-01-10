@@ -72,11 +72,10 @@ Vagrant.configure("2") do |config|
             aws.private_ip_address = "#{subnet}.#{100+n}"
             aws.tags = { "Name" => "node-#{c}-#{n}" }
             aws.block_device_mapping = [{ :DeviceName => "/dev/sda1", "Ebs.DeleteOnTermination" => true, "Ebs.VolumeSize" => 15 }]
-            d = 98
+            d = 97
             ENV['AWS_EBS'].split(' ').each do |i|
               (type, size) = i.split(':')
-              aws.block_device_mapping.push({ :DeviceName => "/dev/sd" + d.chr, "Ebs.DeleteOnTermination" => true, "Ebs.VolumeSize" => size, "Ebs.VolumeType" => type })
-              d += 1
+              aws.block_device_mapping.push({ :DeviceName => "/dev/sd#{(d+=1).chr}", "Ebs.DeleteOnTermination" => true, "Ebs.VolumeSize" => size, "Ebs.VolumeType" => type })
             end
           end
         elsif ENV['DEP_CLOUD'] == "gcp"
