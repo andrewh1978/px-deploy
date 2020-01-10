@@ -19,7 +19,7 @@ Vagrant.configure("2") do |config|
       aws.subnet_id = ENV['AWS_subnet']
       aws.associate_public_ip = true
       override.ssh.username = "centos"
-      override.ssh.private_key_path = env['AWS_sshkey_path']
+      override.ssh.private_key_path = ENV['AWS_sshkey_path']
     end
   elsif ENV['DEP_CLOUD'] == "gcp"
     config.vm.box = "google/gce"
@@ -33,7 +33,7 @@ Vagrant.configure("2") do |config|
       gcp.network = "px-net"
       gcp.subnetwork = "px-subnet"
       override.ssh.username = ENV['USER']
-      override.ssh.private_key_path = env['GCP_sshkey_path']
+      override.ssh.private_key_path = ENV['GCP_sshkey_path']
     end
   end
 
