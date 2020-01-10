@@ -18,6 +18,7 @@ Vagrant.configure("2") do |config|
       aws.ami = ENV['AWS_ami']
       aws.subnet_id = ENV['AWS_subnet']
       aws.associate_public_ip = true
+      aws.block_device_mapping = [{ :DeviceName => "/dev/sda1", "Ebs.DeleteOnTermination" => true, "Ebs.VolumeSize" => 15 }]
       override.ssh.username = "centos"
       override.ssh.private_key_path = ENV['AWS_sshkey_path']
     end
@@ -48,7 +49,6 @@ Vagrant.configure("2") do |config|
         master.vm.provider :aws do |aws|
           aws.private_ip_address = "#{subnet}.90"
           aws.tags = { "Name" => "master-#{c}" }
-          aws.block_device_mapping = [{ :DeviceName => "/dev/sda1", "Ebs.DeleteOnTermination" => true, "Ebs.VolumeSize" => 15 }]
         end
       elsif ENV['DEP_CLOUD'] == "gcp"
         master.vm.provider :google do |gcp|
@@ -57,11 +57,7 @@ Vagrant.configure("2") do |config|
         end
       end
       master.vm.provision "shell", path: "#{ENV['DEP_PLATFORM']}-master", env: (env.merge({ :c => c }))
-      if ENV['DEP_INSTALL']
-        ENV['DEP_INSTALL'].split(' ').each do |i|
-          master.vm.provision "shell", path: "lib/#{i}", env: (env.merge({ :c => c }))
-        end
-      end
+      ENV['DEP_INSTALL'].split(' ').each do |i| master.vm.provision "shell", path: "lib/#{i}", env: (env.merge({ :c => c })) end if ENV['DEP_INSTALL']
     end
 
     (1..ENV['DEP_NODES'].to_i).each do |n|
@@ -71,22 +67,20 @@ Vagrant.configure("2") do |config|
           node.vm.provider :aws do |aws|
             aws.private_ip_address = "#{subnet}.#{100+n}"
             aws.tags = { "Name" => "node-#{c}-#{n}" }
-            aws.block_device_mapping = [{ :DeviceName => "/dev/sda1", "Ebs.DeleteOnTermination" => true, "Ebs.VolumeSize" => 15 }]
             d = 97
             ENV['AWS_EBS'].split(' ').each do |i|
               (type, size) = i.split(':')
-              aws.block_device_mapping.push({ :DeviceName => "/dev/sd#{(d+=1).chr}", "Ebs.DeleteOnTermination" => true, "Ebs.VolumeSize" => size, "Ebs.VolumeType" => type })
+              aws.block_device_mapping.push({:DeviceName => "/dev/sd#{(d+=1).chr}", "Ebs.DeleteOnTermination" => true, "Ebs.VolumeSize" => size, "Ebs.VolumeType" => type })
             end
           end
         elsif ENV['DEP_CLOUD'] == "gcp"
           node.vm.provider :google do |gcp|
             gcp.network_ip = "#{subnet}.#{100+n}"
             gcp.name = "node-#{c}-#{n}"
-            d = 1
+            d = 0
             ENV['GCP_DISKS'].split(' ').each do |i|
               (type, size) = i.split(':')
-              gcp.additional_disks.push({ :disk_name => "disk-#{c}-#{n}-#{d}", :disk_type => type, :disk_size => size })
-              d += 1
+              gcp.additional_disks.push({ :disk_name => "disk-#{c}-#{n}-#{d+=1}", :disk_type => type, :disk_size => size })
             end
           end
         end
