@@ -13,7 +13,7 @@ GCP_KEYFILE=./gcp-key.json
 GCP_TYPE=n1-standard-2
 GCP_DISKS="pd-standard:20 pd-ssd:30"
 
-options=$(getopt -o dn --long platform:,cloud:,clusters:,nodes:,k8s_version:,px_version:,aws_type:,aws_ebs:,gcp_keyfile:,gcp_type:,gcp_disks:,template:,destroy -- "$@")
+options=$(getopt -o dnh --long platform:,cloud:,clusters:,nodes:,k8s_version:,px_version:,aws_type:,aws_ebs:,gcp_keyfile:,gcp_type:,gcp_disks:,template:,destroy -- "$@")
 [ $? -eq 0 ] || { 
   echo "Incorrect options provided"
   exit 1
@@ -21,6 +21,10 @@ options=$(getopt -o dn --long platform:,cloud:,clusters:,nodes:,k8s_version:,px_
 eval set -- "$options"
 while true; do
   case "$1" in
+  -h)
+    DEP_HELP=1
+    break
+    ;;
   -d)
     DEP_DEBUG=1
     ;;
@@ -97,7 +101,7 @@ while true; do
   --gcp_keyfile)
     shift;
     GCP_KEYFILE=$1
-    [ ! -e "$GCP_KEYFILE" ] && {
+    [ ! -f "$GCP_KEYFILE" ] && {
       echo "Bad GCP keyfile"
       exit 1
     }
@@ -121,7 +125,7 @@ while true; do
   --template)
     shift;
     DEP_TEMPLATE=$1
-    [[ ! -e "templates/$DEP_TEMPLATE" ]] && {
+    [[ ! -f "templates/$DEP_TEMPLATE" ]] && {
       echo "Bad template"
       exit 1
     }
@@ -134,13 +138,47 @@ while true; do
   shift
 done
 
-[[ "$DEP_DEBUG" ]] && set | grep -E '^(DEP|AWS|GCP)'
+[[ "$DEP_HELP" ]] && {
+  cat <<EOF
+usage: $0 [ options ]
+  -h				print this usage and exit
+  -d				debug - dump environmemnt
+  -n				dryrun - do not deploy or destroy
+  --destroy			destroy VMs
+  --platform=k8s|openshift	deploy Kubernetes or Openshift 3.11 (default $DEP_PLATFORM)
+  --cloud=aws|gcp		deploy on AWS or Google Cloud (default $DEP_CLOUD)
+  --clusters=num		number of clusters to deploy (default $DEP_CLUSTERS)
+  --nodes=num			number of worker nodes in each cluster (default $DEP_NODES)
+  --k8s_version=x.y.z		Kubernetes version to install (default $DEP_K8S_VERSION)
+  --px_version=x.y.z		Portworx version to install (default $DEP_PX_VERSION)
+  --aws_type=text		AWS instance type (default $AWS_TYPE)
+  --aws_ebs="type:size ..."	AWS EBS volumes to be attached to each worker node (default "$AWS_EBS")
+  --gcp_keyfile=file		path to JSON for GCP key (default $GCP_KEYFILE)
+  --gcp_type=text		GCP instance type (default $GCP_TYPE)
+  --gcp_disks="type: size..."	GCP disk volimes to be attached to each worker node (default "$GCP_DISKS")
+  --template=name		name of template to deploy
+Examples:
+  Deploy a single K8s cluster on AWS:
+    $0
+
+  Deploy a single clusterpair on Openshift and GCP:
+    $0 --template=clusterpair --cloud=gcp --platform=openshift
+
+  Deploy 3 Portworx clusters of 5 nodes on AWS:
+    $0 --template=px --clusters=3 --nodes=5
+EOF
+  exit
+}
+
+[[ $DEP_TEMPLATE ]] && . templates/$DEP_TEMPLATE
+
+[[ "$DEP_DEBUG" ]] && set | grep -E '^(DEP|AWS|GCP)' | sort
 [[ "$DEP_DRYRUN" ]] && exit
 
 export $(set | grep -E '^(DEP|AWS|GCP)' | cut -f 1 -d = )
 
 if [ "$DEP_DESTROY" ]; then
   vagrant destroy -fp
-elif [ "$1" == down ]; then
+else
   vagrant up
 fi
