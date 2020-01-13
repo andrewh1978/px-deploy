@@ -1,0 +1,4 @@
+DEP_CLUSTERS=2
+DEP_PX_VERSION=2.3.2
+DEP_PX_CLUSTER_PREFIX=px-deploy
+DEP_INSTALL="install-px clusterpair"
