@@ -83,7 +83,7 @@ The defaults are defined in the script.
 
 There are two ways to override these variables. The first is to specify a template with the `--template=...` parameter. For example:
 ```
-Andrews-Work-MBP:px-deploy andrewh$ cat templates/clusterpair
+$ cat templates/clusterpair
 DEP_CLUSTERS=2
 DEP_PX_VERSION=2.3.2
 DEP_PX_CLUSTER_PREFIX=px-deploy
@@ -101,7 +101,7 @@ This example is a mixture of both methods. The template is applied, then the com
 
 `DEP_INSTALL` is a list of scripts to be executed on each master node. For example:
 ```
-Andrews-Work-MBP:px-deploy andrewh$ cat scripts/clusterpair
+$ cat scripts/clusterpair
 (
 if [ $cluster != 1 ]; then
   while : ; do
@@ -124,6 +124,25 @@ fi
 All of the variables above are passed to the script. In addition to these, there are some more variables available:
  * `$cluster` - cluster number
  * `$script` - filename of the script
+
+# NOTES
+
+ * The `status.sh` script will output a list of master nodes and IP addresses:
+```
+$ sh status.sh
+master-1 34.245.47.251 ec2-34-245-47-251.eu-west-1.compute.amazonaws.com
+master-2 34.252.74.216 ec2-34-252-74-216.eu-west-1.compute.amazonaws.com
+master-3 34.245.11.144 ec2-34-245-11-144.eu-west-1.compute.amazonaws.com
+...
+```
+
+ * The `connect.sh` script will look up the first master node and SSH to it using the generated RSA ke:
+```
+$ sh connect.sh
+Warning: Permanently added '54.194.101.251' (ECDSA) to the list of known hosts.
+Last login: Tue Jan 14 14:35:49 2020 from cpc1-lea23-2-0-cust245.6-3.cable.virginm.net
+[root@master-1 ~]#
+```
 
 # BUGS
  * When destroying the clusters as above, it uses the default number of clusters and nodes, so will only destroy master-1, node-1-1, node-1-2 and node-1-3, unless --clusters and --nodes are specified.
