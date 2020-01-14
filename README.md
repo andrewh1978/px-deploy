@@ -103,15 +103,15 @@ This example is a mixture of both methods. The template is applied, then the com
 ```
 Andrews-Work-MBP:px-deploy andrewh$ cat scripts/clusterpair
 (
-if [ $c != 1 ]; then
+if [ $cluster != 1 ]; then
   while : ; do
-    token=$(ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no node-$c-1 pxctl cluster token show 2>/dev/null | cut -f 3 -d " ")
+    token=$(ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no node-$cluster-1 pxctl cluster token show 2>/dev/null | cut -f 3 -d " ")
     echo $token | grep -Eq '\w{128}'
     [ $? -eq 0 ] && break
     sleep 5
     echo waiting for portworx
   done
-  storkctl generate clusterpair -n default remotecluster-$c | sed "/insert_storage_options_here/c\    ip: node-$c-1\n    token: $token" >/var/tmp/cp.yaml
+  storkctl generate clusterpair -n default remotecluster-$cluster | sed "/insert_storage_options_here/c\    ip: node-$cluster-1\n    token: $token" >/var/tmp/cp.yaml
   while : ; do
     cat /var/tmp/cp.yaml | ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no master-1 kubectl apply -f -
     [ $? -eq 0 ] && break
@@ -122,7 +122,7 @@ fi
 ```
 
 All of the variables above are passed to the script. In addition to these, there are some more variables available:
- * `$c` - cluster number
+ * `$cluster` - cluster number
  * `$script` - filename of the script
 
 # BUGS

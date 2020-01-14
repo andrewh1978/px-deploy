@@ -34,21 +34,21 @@ openshift_master_identity_providers=[{'name': 'htpasswd_auth', 'login': 'true', 
 openshift_master_htpasswd_users={'admin' : '$htpasswd'}
 openshift_master_default_subdomain=apps.$ip
 openshift_master_cluster_public_hostname=$ip
-openshift_master_cluster_hostname=master-$c
+openshift_master_cluster_hostname=master-$cluster
 openshift_web_console_install=false
 openshift_disable_check=disk_availability,docker_storage,memory_availability
 openshift_hosted_router_selector='node-role.kubernetes.io/infra=true'
 openshift_enable_service_catalog=false
 openshift_web_console_install=false
 [masters]
-master-$c
+master-$cluster
 [etcd]
-master-$c
+master-$cluster
 [nodes]
-master-$c openshift_node_group_name='node-config-master-infra' openshift_schedulable=true
+master-$cluster openshift_node_group_name='node-config-master-infra' openshift_schedulable=true
 EOF
 for n in $(seq 1 $DEP_NODES); do
-  echo "node-$c-$n openshift_node_group_name='node-config-compute'" >>/root/inventory
+  echo "node-$cluster-$n openshift_node_group_name='node-config-compute'" >>/root/inventory
 done
 git clone https://github.com/openshift/openshift-ansible
 cd openshift-ansible
