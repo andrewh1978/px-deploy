@@ -1,2 +1,3 @@
+exec &>/var/log/vagrant.$script
 kubectl apply -f https://raw.githubusercontent.com/grdnrio/pwx-deploy/master/apps/petclinic/petclinic-db.yaml
 kubectl apply -f https://raw.githubusercontent.com/grdnrio/pwx-deploy/master/apps/petclinic/petclinic-deployment.yaml

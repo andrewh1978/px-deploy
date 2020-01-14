@@ -1,4 +1,4 @@
-(
+exec &>/var/log/vagrant.$script
 if [ $c != 1 ]; then
   while : ; do
     token=$(ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no node-$c-1 pxctl cluster token show 2>/dev/null | cut -f 3 -d " ")
@@ -14,4 +14,3 @@ if [ $c != 1 ]; then
     sleep 5
   done
 fi
-) >&/var/log/vagrant-clusterpair
