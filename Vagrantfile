@@ -41,8 +41,8 @@ Vagrant.configure("2") do |config|
 
   (1..ENV['DEP_CLUSTERS'].to_i).each do |c|
     subnet = "192.168.#{100+c}"
-    config.vm.hostname = "master-#{c}"
     config.vm.define "master-#{c}" do |master|
+      master.vm.hostname = "master-#{c}"
       if ENV['DEP_CLOUD'] == "aws"
         master.vm.provider :aws do |aws|
           aws.private_ip_address = "#{subnet}.90"
