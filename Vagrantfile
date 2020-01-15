@@ -1,9 +1,7 @@
 env = ENV.select { |key, value| key.start_with?("DEP", "GCP", "AWS") }
 
-if !File.exist?("id_rsa")
-  system("ssh-keygen -t rsa -b 2048 -f id_rsa -N ''");
-  File.delete("id_rsa.pub") if File.exist?("id_rsa.pub")
-end
+system("ssh-keygen -t rsa -b 2048 -f id_rsa -N ''") if !File.exist?("id_rsa")
+File.delete("id_rsa.pub") if File.exist?("id_rsa.pub")
 
 Vagrant.configure("2") do |config|
   config.vm.synced_folder ".", "/vagrant", disabled: true
