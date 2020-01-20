@@ -1,0 +1,3 @@
+yum install -y docker NetworkManager
+systemctl enable docker NetworkManager
+systemctl start docker NetworkManager

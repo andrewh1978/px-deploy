@@ -73,7 +73,7 @@ The `deploy.sh` script sets a number of environment variables:
  * `DEP_CLUSTERS` - the number of clusters to deploy
  * `DEP_K8S_VERSION` - the version of Kubernetes to deploy
  * `DEP_NODES` - the number of worker nodes on each cluster
- * `DEP_PLATFORM` - can be set to either k8s or openshift
+ * `DEP_PLATFORM` - can be set to either k8s or ocp3
  * `DEP_PX_VERSION` - the version of Portworx to install
  * `GCP_DISKS` - similar to AWS_EBS, for example: `"pd-standard:20 pd-ssd:30"`
  * `GCP_KEYFILE` - path to the GCP JSON keyfile

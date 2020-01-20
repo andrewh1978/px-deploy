@@ -58,7 +58,7 @@ while true; do
   --platform)
     shift;
     DEP_PLATFORM=$1
-    [[ ! $DEP_PLATFORM =~ ^k8s|openshift$ ]] && {
+    [[ ! $DEP_PLATFORM =~ ^k8s|ocp3$ ]] && {
       echo "Bad platform"
       exit 1
     }
@@ -158,7 +158,7 @@ usage: $0 [ options ]
   -d				debug - dump environmemnt
   -n				dryrun - do not deploy or destroy
   --destroy			destroy VMs
-  --platform=k8s|openshift	deploy Kubernetes or Openshift 3.11 (default $DEP_PLATFORM)
+  --platform=k8s|ocp3		deploy Kubernetes or Openshift 3.11 (default $DEP_PLATFORM)
   --cloud=aws|gcp		deploy on AWS or Google Cloud (default $DEP_CLOUD)
   --clusters=num		number of clusters to deploy (default $DEP_CLUSTERS)
   --nodes=num			number of worker nodes in each cluster (default $DEP_NODES)
@@ -175,7 +175,7 @@ Examples:
     $0
 
   Deploy a single clusterpair on Openshift and GCP:
-    $0 --template=clusterpair --cloud=gcp --platform=openshift
+    $0 --template=clusterpair --cloud=gcp --platform=ocp3
 
   Deploy 3 Portworx clusters of 5 nodes on AWS:
     $0 --template=px --clusters=3 --nodes=5
