@@ -30,8 +30,8 @@ vagrant box add dummy https://github.com/mitchellh/vagrant-aws/raw/master/dummy.
 4. Clone this repo and cd to it.
 
 5. Configure cloud-specific environment and project/VPC:
- * AWS: Edit aws-create-vpc.sh and change AWS_region as required (you need to ensure this matches the region set in `$HOME/.aws/config` until https://github.com/mitchellh/vagrant-aws/pull/564 is merged). AWS_owner_tag will add an owner tag to all of the AWS objects.
- * GCP: Edit gcp-create-project.sh and change GCP_PROJECT and GCP_REGION as required. GCP_owner_tag will add an owner tag to all of the GCP objects.
+ * AWS: Edit aws-create-vpc.sh and change AWS_region as required (you need to ensure this matches the region set in `$HOME/.aws/config` until https://github.com/mitchellh/vagrant-aws/pull/564 is merged).
+ * GCP: Edit gcp-create-project.sh and change GCP_PROJECT and GCP_REGION as required.
 
 6. Create cloud-specific VPC/project:
  * AWS: `sh aws-create-vpc.sh`
