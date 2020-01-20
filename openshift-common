@@ -1,9 +1,0 @@
-modprobe br_netfilter
-sysctl -w net.bridge.bridge-nf-call-iptables=1 >/etc/sysctl.conf
-cat <<EOF >/etc/yum.repos.d/okd.repo
-[okd]
-name=okd
-baseurl: https://rpms.svc.ci.openshift.org/openshift-origin-v3.11/
-enabled=1
-gpgcheck: no
-EOF
