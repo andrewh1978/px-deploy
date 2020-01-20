@@ -12,8 +12,9 @@ AWS_EBS="gp2:20"
 GCP_KEYFILE=./gcp-key.json
 GCP_TYPE=n1-standard-2
 GCP_DISKS="pd-standard:20 pd-ssd:30"
+GCP_ZONE=b
 
-options=$(getopt -o dnh --long platform:,cloud:,clusters:,nodes:,k8s_version:,px_version:,aws_type:,aws_ebs:,gcp_keyfile:,gcp_type:,gcp_disks:,template:,destroy -- "$@")
+options=$(getopt -o dnh --long platform:,cloud:,clusters:,nodes:,k8s_version:,px_version:,aws_type:,aws_ebs:,gcp_keyfile:,gcp_type:,gcp_disks,gcp_zone:,template:,destroy -- "$@")
 [ $? -eq 0 ] || { 
   echo "Incorrect options provided"
   exit 1
@@ -140,6 +141,14 @@ while true; do
     GCP_DISKS=$1
     [[ ! $GCP_DISKS =~ ^[0-9a-z\ :\-]+$ ]] && {
       echo "Bad GCP disks"
+      exit 1
+    }
+    ;;
+  --gcp_zone)
+    shift;
+    GCP_ZONE=$1
+    [[ ! $GCP_ZONE =~ ^a|b|c$ ]] && {
+      echo "Bad GCP zone"
       exit 1
     }
     ;;

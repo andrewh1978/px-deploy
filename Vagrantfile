@@ -24,7 +24,7 @@ Vagrant.configure("2") do |config|
     config.vm.box = "google/gce"
     config.vm.provider :google do |gcp, override|
       gcp.google_project_id = ENV['GCP_PROJECT']
-      gcp.zone = GCP_zone
+      gcp.zone = "#{ENV['GCP_REGION']}-#{ENV['GCP_ZONE']}"
       gcp.google_json_key_location = ENV['GCP_KEYFILE']
       gcp.image_family = "centos-7"
       gcp.machine_type = ENV['GCP_TYPE']
