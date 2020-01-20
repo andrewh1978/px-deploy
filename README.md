@@ -146,3 +146,7 @@ Last login: Tue Jan 14 14:35:49 2020 from cpc1-lea23-2-0-cust245.6-3.cable.virgi
 
 # BUGS
  * When destroying the clusters as above, it uses the default number of clusters and nodes, so will only destroy master-1, node-1-1, node-1-2 and node-1-3, unless --clusters and --nodes are specified.
+
+# TODO
+ * Maintain state - ability to list currently deployed deployments and login to each via CLI
+ * Initialise environment from deploy script rather than hacky aws/gcp scripts
