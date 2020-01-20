@@ -18,6 +18,7 @@ options=$(getopt -o dnh --long platform:,cloud:,clusters:,nodes:,k8s_version:,px
   echo "Incorrect options provided"
   exit 1
 }
+
 eval set -- "$options"
 while true; do
   case "$1" in
@@ -25,6 +26,26 @@ while true; do
     DEP_HELP=1
     break
     ;;
+  --template)
+    shift;
+    DEP_TEMPLATE=$1
+    [[ ! -f "templates/$DEP_TEMPLATE" ]] && {
+      echo "Bad template"
+      exit 1
+    }
+    ;;
+  --)
+    shift
+    break
+    ;;
+  esac
+  shift
+done
+[[ $DEP_TEMPLATE ]] && . templates/$DEP_TEMPLATE
+
+eval set -- "$options"
+while true; do
+  case "$1" in
   -d)
     DEP_DEBUG=1
     ;;
@@ -122,14 +143,6 @@ while true; do
       exit 1
     }
     ;;
-  --template)
-    shift;
-    DEP_TEMPLATE=$1
-    [[ ! -f "templates/$DEP_TEMPLATE" ]] && {
-      echo "Bad template"
-      exit 1
-    }
-    ;;
   --)
     shift
     break
@@ -169,8 +182,6 @@ Examples:
 EOF
   exit
 }
-
-[[ $DEP_TEMPLATE ]] && . templates/$DEP_TEMPLATE
 
 [[ "$DEP_DEBUG" ]] && set | grep -E '^(DEP|AWS|GCP)' | sort
 [[ "$DEP_DRYRUN" ]] && exit
