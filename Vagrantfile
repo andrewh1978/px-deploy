@@ -55,7 +55,7 @@ Vagrant.configure("2") do |config|
         end
       end
       master.vm.provision "shell", path: "#{ENV['DEP_PLATFORM']}-master", env: (env.merge({ :cluster => c }))
-      ENV['DEP_INSTALL'].split(' ').each do |i| master.vm.provision "shell", path: "scripts/#{i}", env: (env.merge({ :cluster => c, :script => i })) end if ENV['DEP_INSTALL']
+      ENV['DEP_SCRIPTS'].split(' ').each do |i| master.vm.provision "shell", path: "scripts/#{i}", env: (env.merge({ :cluster => c, :script => i })) end if ENV['DEP_SCRIPTS']
     end
 
     (1..ENV['DEP_NODES'].to_i).each do |n|

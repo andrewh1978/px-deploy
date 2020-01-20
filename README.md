@@ -87,10 +87,10 @@ $ cat templates/clusterpair
 DEP_CLUSTERS=2
 DEP_PX_VERSION=2.3.2
 DEP_PX_CLUSTER_PREFIX=px-deploy
-DEP_INSTALL="install-px clusterpair"
+DEP_SCRIPTS="install-px clusterpair"
 ```
 
-More on DEP_INSTALL below.
+More on DEP_SCRIPTS below.
 
 The second way to override the defaults is to specify on the command line. See `./deploy -h` for a full list. For example:
 ```
@@ -99,7 +99,7 @@ The second way to override the defaults is to specify on the command line. See `
 
 This example is a mixture of both methods. The template is applied, then the command line parameters are applied, so not only is the template overriding the defaults, but also the parameters are overriding the template.
 
-`DEP_INSTALL` is a list of scripts to be executed on each master node. For example:
+`DEP_SCRIPTS` is a list of scripts to be executed on each master node. For example:
 ```
 $ cat scripts/clusterpair
 (
