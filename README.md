@@ -29,54 +29,70 @@ vagrant box add dummy https://github.com/mitchellh/vagrant-aws/raw/master/dummy.
 
 4. Clone this repo and cd to it.
 
-5. Configure cloud-specific environment and project/VPC:
- * AWS: Edit aws-create-vpc.sh and change AWS_region as required (you need to ensure this matches the region set in `$HOME/.aws/config` until https://github.com/mitchellh/vagrant-aws/pull/564 is merged).
- * GCP: Edit gcp-create-project.sh and change GCP_PROJECT and GCP_REGION as required.
-
-6. Create cloud-specific VPC/project:
- * AWS: `sh aws-create-vpc.sh`
- * GCP: `sh gcp-create-project.sh`
-
-Notes for GCP:
- * Billing needs to be enabled:
+5. If running on macOS, install GNU Getopt and Coreutils:
 ```
-gcloud alpha billing projects link $PROJECT --billing-account $(gcloud alpha billing accounts list | tail -1 | cut -f 1 -d " ")
-```
- * Create JSON service account key: On GCP console, select the Project, click APIs and Services, Credentials, Create Credentials, Service account key, Create. Save the file.
-
-7. If running on macOS, install GNU Getopt:
-```
-brew install gnu-getopt
+brew install gnu-getopt coreutils
 echo 'export PATH="/usr/local/opt/gnu-getopt/bin:$PATH"' >> ~/.bash_profile
 ```
 
-8. Source the cloud-specific environment:
- * AWS: `. aws-env.sh`
- * GCP: `. gcp-env.sh`
+6. Create an environment (in AWS by default):
+```
+./deploy.sh --init=myDeployment --aws_keypair=CHANGEME
+```
+This will provision a VPC and some other objects. Be sure to update the name of the keypair.
 
-9. Deploy some clusters:
+7. Provision a deployment in the environment:
 ```
-./deploy.sh --template=px
+./deploy.sh --env=myDeployment --template=clusterpair
 ```
 
-10. Tear down the clusters:
+8. Connect via SSH:
 ```
-./deploy.sh --destroy
+./deploy.sh --env=myDeployment --ssh
+```
+
+9. Tear down the deployment:
+```
+./deploy.sh --env=myDeployment --destroy
+```
+
+10. Tear down the environment:
+```
+./deploy.sh --uninit=myDeployment
 ```
 
 # DESIGN
 
+Before deploying anything, an environment must be created. For example:
+```
+./deploy.sh --aws_keypair=CHANGEME --init=foo
+./deploy.sh --gcp_keyfile=gcp-key.json --cloud=gcp --init=bar
+```
+If using GCP, download the JSON service account key after creating the deployment, and copy to the path specified with the --gcp-keyfile parameter:
+ * On GCP console, select the Project, click APIs and Services, Credentials, Create Credentials, Service account key, Create. Save the file.
+
+The environments can be listed:
+```
+$ ./deploy.sh --envs
+Environment  Cloud  Created
+foo          gcp    2020-01-21 16:25:26
+bar          aws    2020-01-21 15:33:25
+```
+
+This has provisioned an AWS VPC and a GCP project, along with required networking objects and rules.
+
+Now a deployment can be deployed to an environment.
+
 The `deploy.sh` script sets a number of environment variables:
  * `AWS_EBS` - a list of EBS volumes to be attached to each worker node. This is a space-separate list of type:size pairs, for example: `"gp2:30 standard:20"` will provision a gp2 volume of 30 GB and a standard volume of 20GB
  * `AWS_TYPE` - the AWS machine type for each node
- * `DEP_CLOUD` - the cloud on which to deploy (aws or gcp)
+ * `INIT_CLOUD` - the cloud on which to deploy (aws or gcp)
  * `DEP_CLUSTERS` - the number of clusters to deploy
  * `DEP_K8S_VERSION` - the version of Kubernetes to deploy
  * `DEP_NODES` - the number of worker nodes on each cluster
  * `DEP_PLATFORM` - can be set to either k8s or ocp3
  * `DEP_PX_VERSION` - the version of Portworx to install
  * `GCP_DISKS` - similar to AWS_EBS, for example: `"pd-standard:20 pd-ssd:30"`
- * `GCP_KEYFILE` - path to the GCP JSON keyfile
  * `GCP_TYPE` - the GCP machine type for each node
 
 The defaults are defined in the script.
@@ -92,9 +108,9 @@ DEP_SCRIPTS="install-px clusterpair"
 
 More on DEP_SCRIPTS below.
 
-The second way to override the defaults is to specify on the command line. See `./deploy -h` for a full list. For example:
+The second way to override the defaults is to specify on the command line. See `./deploy -h` for a full list. For example, to deploy into the `foo` environment:
 ```
-./deploy --clusters=5 --template=petclinic --nodes=6
+./deploy --env=foo --clusters=5 --template=petclinic --nodes=6
 ```
 
 This example is a mixture of both methods. The template is applied, then the command line parameters are applied, so not only is the template overriding the defaults, but also the parameters are overriding the template.
@@ -125,28 +141,7 @@ All of the variables above are passed to the script. In addition to these, there
  * `$cluster` - cluster number
  * `$script` - filename of the script
 
-# NOTES
-
- * The `status.sh` script will output a list of master nodes and IP addresses:
-```
-$ sh status.sh
-master-1 34.245.47.251 ec2-34-245-47-251.eu-west-1.compute.amazonaws.com
-master-2 34.252.74.216 ec2-34-252-74-216.eu-west-1.compute.amazonaws.com
-master-3 34.245.11.144 ec2-34-245-11-144.eu-west-1.compute.amazonaws.com
-...
-```
-
- * The `connect.sh` script will look up the first master node and SSH to it using the generated RSA ke:
-```
-$ sh connect.sh
-Warning: Permanently added '54.194.101.251' (ECDSA) to the list of known hosts.
-Last login: Tue Jan 14 14:35:49 2020 from cpc1-lea23-2-0-cust245.6-3.cable.virginm.net
-[root@master-1 ~]#
-```
-
 # BUGS
  * When destroying the clusters as above, it uses the default number of clusters and nodes, so will only destroy master-1, node-1-1, node-1-2 and node-1-3, unless --clusters and --nodes are specified.
-
-# TODO
- * Maintain state - ability to list currently deployed deployments and login to each via CLI
- * Initialise environment from deploy script rather than hacky aws/gcp scripts
+ * AWS: When specifying the region, it must match the region set in `$HOME/.aws/config` until https://github.com/mitchellh/vagrant-aws/pull/564 is merged.
+ * Can the GCP JSON key key downloaded automatically?
