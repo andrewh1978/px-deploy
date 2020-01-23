@@ -22,7 +22,7 @@ function envs_show() {
   ( echo Environment,Cloud,Created
   for e in $(find environments -type f); do
     . $e
-    echo $(basename $e | cut -f 2- -d -),$INIT_CLOUD,$(gstat -c %w $e | cut -f 1 -d .)
+    echo $(basename $e | cut -f 2- -d -),$INIT_CLOUD,$(perl -MPOSIX -e 'print strftime("%Y-%m-%d %H:%M:%S",gmtime((stat "'$e'")[10]))')
   done ) | column -t -s,
   exit
 }

@@ -29,9 +29,9 @@ vagrant box add dummy https://github.com/mitchellh/vagrant-aws/raw/master/dummy.
 
 4. Clone this repo and cd to it.
 
-5. If running on macOS, install GNU Getopt and Coreutils:
+5. If running on macOS, install GNU Getopt:
 ```
-brew install gnu-getopt coreutils
+brew install gnu-getopt
 echo 'export PATH="/usr/local/opt/gnu-getopt/bin:$PATH"' >> ~/.bash_profile
 ```
 
