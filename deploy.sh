@@ -274,7 +274,7 @@ done
 
 [[ ! -d environments ]] && mkdir environments
 [[ "$DEP_HELP" ]] && help_show
-[[ "$DEP_DEBUG" ]] && set | grep -E '^(DEP|AWS|GCP)' | sort
+[[ "$DEP_DEBUG" ]] && set | grep -E '^(DEP|AWS|GCP|INIT)' | sort
 [[ "$DEP_DRYRUN" ]] && exit
 [[ "$DEP_ENVS" ]] && envs_show
 
