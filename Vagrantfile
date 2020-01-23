@@ -1,3 +1,4 @@
+require "base64"
 env = ENV.select { |key, value| key.start_with?("DEP", "GCP", "AWS", "INIT", "_AWS", "_GCP") }
 
 system("ssh-keygen -t rsa -b 2048 -f id_rsa -N ''") if !File.exist?("id_rsa")
@@ -23,9 +24,10 @@ Vagrant.configure("2") do |config|
   elsif ENV['INIT_CLOUD'] == "gcp"
     config.vm.box = "google/gce"
     config.vm.provider :google do |gcp, override|
+      File.open("px-deploy_gcp_#{ENV['_GCP_project']}.json", "w") do |line| line.puts(Base64.decode64(ENV['_GCP_key'])) end
       gcp.google_project_id = ENV['_GCP_project']
       gcp.zone = "#{ENV['INIT_GCP_REGION']}-#{ENV['INIT_GCP_ZONE']}"
-      gcp.google_json_key_location = ENV['GCP_KEYFILE']
+      gcp.google_json_key_location = "px-deploy_gcp_#{ENV['_GCP_project']}.json";
       gcp.image_family = "centos-7"
       gcp.machine_type = ENV['GCP_TYPE']
       gcp.disk_size = 15

@@ -66,10 +66,8 @@ This will provision a VPC and some other objects. Be sure to update the name of 
 Before deploying anything, an environment must be created. For example:
 ```
 ./deploy.sh --aws_keypair=CHANGEME --init=foo
-./deploy.sh --gcp_keyfile=gcp-key.json --cloud=gcp --init=bar
+./deploy.sh --cloud=gcp --init=bar
 ```
-If using GCP, download the JSON service account key after creating the deployment, and copy to the path specified with the --gcp-keyfile parameter:
- * On GCP console, select the Project, click APIs and Services, Credentials, Create Credentials, Service account key, Create. Save the file.
 
 The environments can be listed:
 ```
