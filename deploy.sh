@@ -53,8 +53,7 @@ Additional flags for initialisation:
   --region=name			specify AWS or GCP region (default $INIT_AWS_REGION or $INIT_GCP_REGION)
   --cloud=aws|gcp		deploy on AWS or Google Cloud (default $INIT_CLOUD)
   --sshkey=path			path to private SSH key associated with AWS IAM account or GCP project (default $INIT_SSHKEY)
-  --aws_keypair=name		name of AWS keypair (default $AWS_KEYPAIR)
-  --gcp_keyfile=file		path to JSON for GCP key
+  --aws_keypair=name		name of AWS keypair
 
 Examples:
   Initialise on AWS:
@@ -75,7 +74,61 @@ EOF
   exit
 }
 
-options=$(getopt -o dnh --long envs,env:,ssh,init:,uninit:,region:,aws_keypair:,sshkey:,platform:,cloud:,clusters:,nodes:,k8s_version:,px_version:,aws_type:,aws_ebs:,gcp_keyfile:,gcp_type:,gcp_disks,gcp_zone:,template:,destroy -- "$@")
+function env_del_aws {
+  aws ec2 --region=$INIT_AWS_REGION delete-security-group --group-id $_AWS_sg &&
+  aws ec2 --region=$INIT_AWS_REGION delete-subnet --subnet-id $_AWS_subnet &&
+  aws ec2 --region=$INIT_AWS_REGION detach-internet-gateway --internet-gateway-id $_AWS_gw --vpc-id $_AWS_vpc &&
+  aws ec2 --region=$INIT_AWS_REGION delete-internet-gateway --internet-gateway-id $_AWS_gw &&
+  aws ec2 --region=$INIT_AWS_REGION delete-route-table --route-table-id $_AWS_routetable &&
+  aws ec2 --region=$INIT_AWS_REGION delete-vpc --vpc-id $_AWS_vpc &&
+  rm -f environments/$DEP_UNINIT
+}
+
+function env_del_gcp {
+  gcloud projects delete $_GCP_project --quiet && rm -f environments/$DEP_UNINIT
+}
+
+function env_create_aws {
+  _AWS_vpc=$(aws --region=$INIT_AWS_REGION --output text ec2 create-vpc --cidr-block 192.168.0.0/16 --query Vpc.VpcId)
+  _AWS_subnet=$(aws --region=$INIT_AWS_REGION --output text ec2 create-subnet --vpc-id $_AWS_vpc --cidr-block 192.168.0.0/16 --query Subnet.SubnetId)
+  _AWS_gw=$(aws --region=$INIT_AWS_REGION --output text ec2 create-internet-gateway --query InternetGateway.InternetGatewayId)
+  aws --region=$INIT_AWS_REGION ec2 attach-internet-gateway --vpc-id $_AWS_vpc --internet-gateway-id $_AWS_gw
+  _AWS_routetable=$(aws --region=$INIT_AWS_REGION --output text ec2 create-route-table --vpc-id $_AWS_vpc --query RouteTable.RouteTableId)
+  aws --region=$INIT_AWS_REGION ec2 create-route --route-table-id $_AWS_routetable --destination-cidr-block 0.0.0.0/0 --gateway-id $_AWS_gw >/dev/null
+  aws --region=$INIT_AWS_REGION ec2 associate-route-table  --subnet-id $_AWS_subnet --route-table-id $_AWS_routetable >/dev/null
+  _AWS_sg=$(aws --region=$INIT_AWS_REGION --output text ec2 create-security-group --group-name px-cloud --description "Security group for px-cloud" --vpc-id $_AWS_vpc --query GroupId)
+  aws --region=$INIT_AWS_REGION ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 22 --cidr 0.0.0.0/0
+  aws --region=$INIT_AWS_REGION ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 443 --cidr 0.0.0.0/0
+  aws --region=$INIT_AWS_REGION ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 8080 --cidr 0.0.0.0/0
+  aws --region=$INIT_AWS_REGION ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 30000-32767 --cidr 0.0.0.0/0
+  aws --region=$INIT_AWS_REGION ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol all --cidr 192.168.0.0/16
+  aws --region=$INIT_AWS_REGION ec2 create-tags --resources $_AWS_vpc $_AWS_subnet $_AWS_gw $_AWS_routetable $_AWS_sg --tags Key=px-deploy_name,Value=$DEP_INIT
+  _AWS_ami=$(aws --region=$INIT_AWS_REGION --output text ec2 describe-images --owners 679593333241 --filters Name=name,Values='CentOS Linux 7 x86_64 HVM EBS*' Name=architecture,Values=x86_64 Name=root-device-type,Values=ebs --query 'sort_by(Images, &Name)[-1].ImageId')
+    set | grep -E '^(INIT_|_AWS)' | grep -v GCP >environments/$DEP_INIT
+}
+
+function env_create_gcp {
+  _GCP_project=pxd-$(uuidgen | tr -d -- - | cut -b 1-26 | tr 'A-Z' 'a-z')
+  gcloud projects create $_GCP_project --labels px-deploy_name=$DEP_INIT
+  account=$(gcloud alpha billing accounts list | tail -1 | cut -f 1 -d " ")
+  gcloud alpha billing projects link $_GCP_project --billing-account $account
+  gcloud services enable compute.googleapis.com --project $_GCP_project
+  gcloud compute networks create px-net --project $_GCP_project
+  gcloud compute networks subnets create --range 192.168.0.0/16 --network px-net px-subnet --region $INIT_GCP_REGION --project $_GCP_project
+  gcloud compute firewall-rules create allow-tcp --allow=tcp --source-ranges=192.168.0.0/16 --network px-net --project $_GCP_project
+  gcloud compute firewall-rules create allow-udp --allow=udp --source-ranges=192.168.0.0/16 --network px-net --project $_GCP_project
+  gcloud compute firewall-rules create allow-icmp --allow=icmp --source-ranges=192.168.0.0/16 --network px-net --project $_GCP_project
+  gcloud compute firewall-rules create allow-ssh --allow=tcp:22 --network px-net --project $_GCP_project
+  gcloud compute firewall-rules create allow-https --allow=tcp:443 --network px-net --project $_GCP_project
+  gcloud compute firewall-rules create allow-k8s --allow=tcp:6443 --network px-net --project $_GCP_project
+  gcloud compute project-info add-metadata --metadata "ssh-keys=$USER:$(cat $INIT_SSHKEY.pub)" --project $_GCP_project
+  service_account=$(gcloud iam service-accounts list --project $_GCP_project --format 'flattened(email)' | tail -1 | cut -f 2 -d " ")
+  _GCP_key=$(gcloud iam service-accounts keys create - --iam-account $service_account | base64)
+  set | grep -E '^(INIT_|_GCP)' | grep -v AWS >environments/$DEP_INIT
+}
+
+
+options=$(getopt -o dnh --long envs,env:,ssh,init:,uninit:,region:,aws_keypair:,sshkey:,platform:,cloud:,clusters:,nodes:,k8s_version:,px_version:,aws_type:,aws_ebs:,gcp_type:,gcp_disks,gcp_zone:,template:,destroy -- "$@")
 [ $? -eq 0 ] || { 
   echo "Incorrect options provided"
   exit 1
@@ -236,10 +289,6 @@ while true; do
       exit 1
     }
     ;;
-  --gcp_keyfile)
-    shift;
-    GCP_KEYFILE=$1
-    ;;
   --gcp_type)
     shift;
     GCP_TYPE=$1
@@ -280,58 +329,16 @@ done
 
 [[ "$DEP_UNINIT" ]] && {
   . environments/$DEP_UNINIT
-  [[ "$INIT_CLOUD" == aws ]] && {
-    aws ec2 --region=$INIT_AWS_REGION delete-security-group --group-id $_AWS_sg &&
-    aws ec2 --region=$INIT_AWS_REGION delete-subnet --subnet-id $_AWS_subnet &&
-    aws ec2 --region=$INIT_AWS_REGION detach-internet-gateway --internet-gateway-id $_AWS_gw --vpc-id $_AWS_vpc &&
-    aws ec2 --region=$INIT_AWS_REGION delete-internet-gateway --internet-gateway-id $_AWS_gw &&
-    aws ec2 --region=$INIT_AWS_REGION delete-route-table --route-table-id $_AWS_routetable &&
-    aws ec2 --region=$INIT_AWS_REGION delete-vpc --vpc-id $_AWS_vpc &&
-    rm -f environments/$DEP_UNINIT
-  }
-  [[ "$INIT_CLOUD" == gcp ]] && gcloud projects delete $_GCP_project --quiet && rm -f environments/$DEP_UNINIT
+  [[ "$INIT_CLOUD" == aws ]] && env_del_aws
+  [[ "$INIT_CLOUD" == gcp ]] && env_del_gcp
   exit
 }
 
 [[ "$DEP_INIT" ]] && {
   [[ "$DEP_DEBUG" ]] && set | grep ^INIT | sort
-  [[ "$INIT_CLOUD" == aws ]] && {
-    [[ ! "$INIT_AWS_KEYPAIR" ]] && echo Must set AWS keypair && exit
-    _AWS_vpc=$(aws --region=$INIT_AWS_REGION --output text ec2 create-vpc --cidr-block 192.168.0.0/16 --query Vpc.VpcId)
-    _AWS_subnet=$(aws --region=$INIT_AWS_REGION --output text ec2 create-subnet --vpc-id $_AWS_vpc --cidr-block 192.168.0.0/16 --query Subnet.SubnetId)
-    _AWS_gw=$(aws --region=$INIT_AWS_REGION --output text ec2 create-internet-gateway --query InternetGateway.InternetGatewayId)
-    aws --region=$INIT_AWS_REGION ec2 attach-internet-gateway --vpc-id $_AWS_vpc --internet-gateway-id $_AWS_gw
-    _AWS_routetable=$(aws --region=$INIT_AWS_REGION --output text ec2 create-route-table --vpc-id $_AWS_vpc --query RouteTable.RouteTableId)
-    aws --region=$INIT_AWS_REGION ec2 create-route --route-table-id $_AWS_routetable --destination-cidr-block 0.0.0.0/0 --gateway-id $_AWS_gw >/dev/null
-    aws --region=$INIT_AWS_REGION ec2 associate-route-table  --subnet-id $_AWS_subnet --route-table-id $_AWS_routetable >/dev/null
-    _AWS_sg=$(aws --region=$INIT_AWS_REGION --output text ec2 create-security-group --group-name px-cloud --description "Security group for px-cloud" --vpc-id $_AWS_vpc --query GroupId)
-    aws --region=$INIT_AWS_REGION ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 22 --cidr 0.0.0.0/0
-    aws --region=$INIT_AWS_REGION ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 443 --cidr 0.0.0.0/0
-    aws --region=$INIT_AWS_REGION ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 8080 --cidr 0.0.0.0/0
-    aws --region=$INIT_AWS_REGION ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 30000-32767 --cidr 0.0.0.0/0
-    aws --region=$INIT_AWS_REGION ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol all --cidr 192.168.0.0/16
-    aws --region=$INIT_AWS_REGION ec2 create-tags --resources $_AWS_vpc $_AWS_subnet $_AWS_gw $_AWS_routetable $_AWS_sg --tags Key=px-deploy_name,Value=$DEP_INIT
-    _AWS_ami=$(aws --region=$INIT_AWS_REGION --output text ec2 describe-images --owners 679593333241 --filters Name=name,Values='CentOS Linux 7 x86_64 HVM EBS*' Name=architecture,Values=x86_64 Name=root-device-type,Values=ebs --query 'sort_by(Images, &Name)[-1].ImageId')
-    set | grep -E '^(INIT_|_AWS)' | grep -v GCP >environments/$DEP_INIT
-  }
-  [[ "$INIT_CLOUD" == gcp ]] && {
-    [[ ! "$GCP_KEYFILE" ]] && echo Must set GCP keyfile && exit
-    _GCP_project=pxd-$(uuidgen | tr -d -- - | cut -b 1-26 | tr 'A-Z' 'a-z')
-    gcloud projects create $_GCP_project --labels px-deploy_name=$DEP_INIT
-    account=$(gcloud alpha billing accounts list | tail -1 | cut -f 1 -d " ")
-    gcloud alpha billing projects link $_GCP_project --billing-account $account
-    gcloud services enable compute.googleapis.com --project $_GCP_project
-    gcloud compute networks create px-net --project $_GCP_project
-    gcloud compute networks subnets create --range 192.168.0.0/16 --network px-net px-subnet --region $INIT_GCP_REGION --project $_GCP_project
-    gcloud compute firewall-rules create allow-tcp --allow=tcp --source-ranges=192.168.0.0/16 --network px-net --project $_GCP_project
-    gcloud compute firewall-rules create allow-udp --allow=udp --source-ranges=192.168.0.0/16 --network px-net --project $_GCP_project
-    gcloud compute firewall-rules create allow-icmp --allow=icmp --source-ranges=192.168.0.0/16 --network px-net --project $_GCP_project
-    gcloud compute firewall-rules create allow-ssh --allow=tcp:22 --network px-net --project $_GCP_project
-    gcloud compute firewall-rules create allow-https --allow=tcp:443 --network px-net --project $_GCP_project
-    gcloud compute firewall-rules create allow-k8s --allow=tcp:6443 --network px-net --project $_GCP_project
-    gcloud compute project-info add-metadata --metadata "ssh-keys=$USER:$(cat $INIT_SSHKEY.pub)" --project $_GCP_project
-    set | grep -E '^(INIT_|_GCP)' | grep -v AWS >environments/$DEP_INIT
-  }
+  [[ "$INIT_CLOUD" == aws ]] && [[ ! "$INIT_AWS_KEYPAIR" ]] && echo Must set AWS keypair && exit
+  [[ "$INIT_CLOUD" == gcp ]] && [[ ! "$GCP_KEYFILE" ]]
+  env_create_$INIT_CLOUD
   exit
 }
 
