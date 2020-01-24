@@ -115,15 +115,11 @@ function env_create_gcp {
   gcloud services enable compute.googleapis.com --project $_GCP_project
   gcloud compute networks create px-net --project $_GCP_project
   gcloud compute networks subnets create --range 192.168.0.0/16 --network px-net px-subnet --region $INIT_GCP_REGION --project $_GCP_project
-  gcloud compute firewall-rules create allow-tcp --allow=tcp --source-ranges=192.168.0.0/16 --network px-net --project $_GCP_project
-  gcloud compute firewall-rules create allow-udp --allow=udp --source-ranges=192.168.0.0/16 --network px-net --project $_GCP_project
-  gcloud compute firewall-rules create allow-icmp --allow=icmp --source-ranges=192.168.0.0/16 --network px-net --project $_GCP_project
-  gcloud compute firewall-rules create allow-ssh --allow=tcp:22 --network px-net --project $_GCP_project
-  gcloud compute firewall-rules create allow-https --allow=tcp:443 --network px-net --project $_GCP_project
-  gcloud compute firewall-rules create allow-k8s --allow=tcp:6443 --network px-net --project $_GCP_project
+  gcloud compute firewall-rules create allow-internal --allow=tcp,udp,icmp --source-ranges=192.168.0.0/16 --network px-net --project $GCP_PROJECT
+  gcloud compute firewall-rules create allow-external --allow=tcp:22,tcp:443,tcp:6443 --network px-net --project $GCP_PROJECT
   gcloud compute project-info add-metadata --metadata "ssh-keys=$USER:$(cat $INIT_SSHKEY.pub)" --project $_GCP_project
   service_account=$(gcloud iam service-accounts list --project $_GCP_project --format 'flattened(email)' | tail -1 | cut -f 2 -d " ")
-  _GCP_key=$(gcloud iam service-accounts keys create - --iam-account $service_account | base64)
+  _GCP_key=$(gcloud iam service-accounts keys create /dev/stdout --iam-account $service_account | base64)
   set | grep -E '^(INIT_|_GCP)' | grep -v AWS >environments/$DEP_INIT
 }
 
