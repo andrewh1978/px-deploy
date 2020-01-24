@@ -85,6 +85,7 @@ Vagrant.configure("2") do |config|
           end
         end
         node.vm.provision "shell", path: "#{ENV['DEP_PLATFORM']}-node", env: (env.merge({ :cluster => c }))
+        File.delete("px-deploy_gcp_#{ENV['_GCP_project']}.json")
       end
     end
   end
