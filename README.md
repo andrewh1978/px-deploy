@@ -35,65 +35,50 @@ brew install gnu-getopt
 echo 'export PATH="/usr/local/opt/gnu-getopt/bin:$PATH"' >> ~/.bash_profile
 ```
 
-6. Create an environment (in AWS by default):
+6. Create a deployment:
 ```
-./deploy.sh --init=myDeployment --aws_keypair=CHANGEME
+./deploy.sh --env=myDeployment --aws_keypair=CHANGEME --template=clusterpair
 ```
-This will provision a VPC and some other objects. Be sure to update the name of the keypair.
+This will provision a VPC and some other objects, and deploy into it from the template.
 
-7. Provision a deployment in the environment:
-```
-./deploy.sh --env=myDeployment --template=clusterpair
-```
-
-8. Connect via SSH:
+7. Connect via SSH:
 ```
 ./deploy.sh --env=myDeployment --ssh
 ```
 
-9. Tear down the deployment:
+8. Tear down the deployment:
 ```
 ./deploy.sh --env=myDeployment --destroy
 ```
 
-10. Tear down the environment:
-```
-./deploy.sh --uninit=myDeployment
-```
-
-# DESIGN
-
-Before deploying anything, an environment must be created. For example:
-```
-./deploy.sh --aws_keypair=CHANGEME --init=foo
-./deploy.sh --cloud=gcp --init=bar
-```
+# NOTES
 
 The environments can be listed:
 ```
 $ ./deploy.sh --envs
-Environment  Cloud  Created
-foo          gcp    2020-01-21 16:25:26
-bar          aws    2020-01-21 15:33:25
+Environment  Cloud  Template  Created
+foo          gcp    px        2020-01-21 16:25:26
+bar          aws    <none>    2020-01-21 15:33:25
 ```
 
-This has provisioned an AWS VPC and a GCP project, along with required networking objects and rules.
+This has provisioned an AWS VPC and a GCP project, along with required networking objects and rules. It also shows what templates have been deployed.
 
-Now a deployment can be deployed to an environment.
-
-The `deploy.sh` script sets a number of environment variables:
+The `defaults` file sets a number of environment variables:
  * `AWS_EBS` - a list of EBS volumes to be attached to each worker node. This is a space-separate list of type:size pairs, for example: `"gp2:30 standard:20"` will provision a gp2 volume of 30 GB and a standard volume of 20GB
+ * `AWS_KEYPAIR` - AWS keypair used for provisioning
+ * `AWS_REGION` - AWS region
  * `AWS_TYPE` - the AWS machine type for each node
- * `INIT_CLOUD` - the cloud on which to deploy (aws or gcp)
+ * `DEP_CLOUD` - the cloud on which to deploy (aws or gcp)
  * `DEP_CLUSTERS` - the number of clusters to deploy
  * `DEP_K8S_VERSION` - the version of Kubernetes to deploy
  * `DEP_NODES` - the number of worker nodes on each cluster
  * `DEP_PLATFORM` - can be set to either k8s or ocp3
  * `DEP_PX_VERSION` - the version of Portworx to install
+ * `DEP_SSHKEY` - SSH key used for connecting the instances
  * `GCP_DISKS` - similar to AWS_EBS, for example: `"pd-standard:20 pd-ssd:30"`
+ * `GCP_REGION` - GCP region
  * `GCP_TYPE` - the GCP machine type for each node
-
-The defaults are defined in the script.
+ * `GCP_ZONE` - GCP zone
 
 There are two ways to override these variables. The first is to specify a template with the `--template=...` parameter. For example:
 ```
@@ -140,6 +125,4 @@ All of the variables above are passed to the script. In addition to these, there
  * `$script` - filename of the script
 
 # BUGS
- * When destroying the clusters as above, it uses the default number of clusters and nodes, so will only destroy master-1, node-1-1, node-1-2 and node-1-3, unless --clusters and --nodes are specified.
  * AWS: When specifying the region, it must match the region set in `$HOME/.aws/config` until https://github.com/mitchellh/vagrant-aws/pull/564 is merged.
- * Can the GCP JSON key key downloaded automatically?
