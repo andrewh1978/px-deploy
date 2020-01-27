@@ -78,6 +78,8 @@ function env_del_gcp {
 }
 
 function env_create_aws {
+  aws ec2 describe-key-pairs --filters Name=key-name,Values=ah --query KeyPairs[*].KeyName --output text | grep -q $AWS_KEYPAIR
+  [[ $? -ne 0 ]] && echo "Keypair '$AWS_KEYPAIR' does not exist" && exit
   _AWS_vpc=$(aws --region=$AWS_REGION --output text ec2 create-vpc --cidr-block 192.168.0.0/16 --query Vpc.VpcId)
   _AWS_subnet=$(aws --region=$AWS_REGION --output text ec2 create-subnet --vpc-id $_AWS_vpc --cidr-block 192.168.0.0/16 --query Subnet.SubnetId)
   _AWS_gw=$(aws --region=$AWS_REGION --output text ec2 create-internet-gateway --query InternetGateway.InternetGatewayId)
