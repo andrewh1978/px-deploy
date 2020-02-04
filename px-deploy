@@ -70,11 +70,11 @@ function env_del_aws {
   aws ec2 --region=$AWS_REGION delete-internet-gateway --internet-gateway-id $_AWS_gw &&
   aws ec2 --region=$AWS_REGION delete-route-table --route-table-id $_AWS_routetable &&
   aws ec2 --region=$AWS_REGION delete-vpc --vpc-id $_AWS_vpc &&
-  rm -f $PXD/environments/$DEP_ENV
+  rm -f "$PXD/environments/$DEP_ENV"
 }
 
 function env_del_gcp {
-  gcloud projects delete $_GCP_project --quiet && rm -f $PXD/environments/$DEP_ENV $PXD/px-deploy_gcp_$_GCP_project.json
+  gcloud projects delete $_GCP_project --quiet && rm -f "$PXD/environments/$DEP_ENV $PXD/px-deploy_gcp_$_GCP_project.json"
 }
 
 function env_create_aws {
@@ -303,5 +303,4 @@ else
   export $(set | grep -E '^(DEP|AWS|GCP|_AWS|_GCP)' | cut -f 1 -d = )
   cd /px-deploy/vagrant
   vagrant up
-  rm -rf .vagrant
 fi
