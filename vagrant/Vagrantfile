@@ -1,4 +1,3 @@
-require "base64"
 env = ENV.select { |key, value| key.start_with?("DEP", "GCP", "AWS", "_AWS", "_GCP") }
 
 Vagrant.configure("2") do |config|
@@ -19,7 +18,7 @@ Vagrant.configure("2") do |config|
   elsif ENV['DEP_CLOUD'] == "gcp"
     config.vm.box = "google/gce"
     config.vm.provider :google do |gcp|
-      File.open("/px-deploy/.px-deploy/px-deploy_gcp_#{ENV['_GCP_project']}.json", "w") do |line| line.puts(Base64.decode64(ENV['_GCP_key'])) end
+      File.open("/px-deploy/.px-deploy/px-deploy_gcp_#{ENV['_GCP_project']}.json", "w") do |line| line.puts(ENV['_GCP_key']) end
       gcp.google_project_id = ENV['_GCP_project']
       gcp.zone = "#{ENV['GCP_REGION']}-#{ENV['GCP_ZONE']}"
       gcp.google_json_key_location = "/px-deploy/.px-deploy/px-deploy_gcp_#{ENV['_GCP_project']}.json";

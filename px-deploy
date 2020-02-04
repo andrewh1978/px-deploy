@@ -59,7 +59,7 @@ EOF
 }
 
 function env_del_aws {
-  instances=$(aws ec2 describe-instances --region=$AWS_REGION --filters "Name=instance-state-name,Values=running" "Name=network-interface.vpc-id,Values=$_AWS_vpc" --query "Reservations[*].Instances[*].InstanceId" --output text)
+  instances=$(aws ec2 describe-instances --region=$AWS_REGION --filters "Name=network-interface.vpc-id,Values=$_AWS_vpc" --query "Reservations[*].Instances[*].InstanceId" --output text)
   [[ "$instances" ]] && {
     aws ec2 terminate-instances --region $AWS_REGION --instance-ids $instances >/dev/null
     aws ec2 wait instance-terminated --region $AWS_REGION --instance-ids $instances
@@ -69,8 +69,7 @@ function env_del_aws {
   aws ec2 --region=$AWS_REGION detach-internet-gateway --internet-gateway-id $_AWS_gw --vpc-id $_AWS_vpc &&
   aws ec2 --region=$AWS_REGION delete-internet-gateway --internet-gateway-id $_AWS_gw &&
   aws ec2 --region=$AWS_REGION delete-route-table --route-table-id $_AWS_routetable &&
-  aws ec2 --region=$AWS_REGION delete-vpc --vpc-id $_AWS_vpc &&
-  rm -f "$PXD/environments/$DEP_ENV"
+  aws ec2 --region=$AWS_REGION delete-vpc --vpc-id $_AWS_vpc
 }
 
 function env_del_gcp {
@@ -79,8 +78,9 @@ function env_del_gcp {
 
 function env_create_aws {
   aws configure set default.region $AWS_REGION
-  aws --region=$AWS_REGION ec2 describe-key-pairs --key-name px-deploy >&/dev/null
-  [[ $? -ne 0 ]] && aws --region=$AWS_REGION ec2 create-key-pair --key-name px-deploy --query KeyMaterial --output text >$PXD/id_rsa.aws && chmod 600 $PXD/id_rsa.aws
+  [[ ! -f $PXD/id_rsa.aws ]] && ssh-keygen -t rsa -b 2048 -f $PXD/id_rsa.aws -N ''
+  aws --region=$AWS_REGION ec2 delete-key-pair --key-name px-deploy >&/dev/null
+  aws --region=$AWS_REGION ec2 import-key-pair --key-name px-deploy --public-key-material file://$PXD/id_rsa.aws.pub
   _AWS_vpc=$(aws --region=$AWS_REGION --output text ec2 create-vpc --cidr-block 192.168.0.0/16 --query Vpc.VpcId)
   _AWS_subnet=$(aws --region=$AWS_REGION --output text ec2 create-subnet --vpc-id $_AWS_vpc --cidr-block 192.168.0.0/16 --query Subnet.SubnetId)
   _AWS_gw=$(aws --region=$AWS_REGION --output text ec2 create-internet-gateway --query InternetGateway.InternetGatewayId)
@@ -113,7 +113,7 @@ function env_create_gcp {
   gcloud compute firewall-rules create allow-external --allow=tcp:22,tcp:443,tcp:6443 --network px-net --project $_GCP_project &
   gcloud compute project-info add-metadata --metadata "ssh-keys=centos:$(cat $PXD/id_rsa.gcp.pub)" --project $_GCP_project &
   service_account=$(gcloud iam service-accounts list --project $_GCP_project --format 'flattened(email)' | tail -1 | cut -f 2 -d " ")
-  _GCP_key=$(gcloud iam service-accounts keys create /dev/stdout --iam-account $service_account | base64)
+  _GCP_key=$(gcloud iam service-accounts keys create /dev/stdout --iam-account $service_account)
   wait
   set | grep -E '^(DEP|GCP|_GCP)' | grep -v AWS >$PXD/environments/$DEP_ENV
 }
@@ -293,6 +293,7 @@ if [ "$DEP_DESTROY" ]; then
   [[ ! -f "$PXD/environments/$DEP_ENV" ]] && echo Environment $DEP_ENV does not exist && exit
   . $PXD/environments/$DEP_ENV
   env_del_$DEP_CLOUD
+  rm -f "$PXD/environments/$DEP_ENV"
 else
   if [[ "$DEP_ENV" ]]; then
     [[ -e "$PXD/environments/$DEP_ENV" ]] && echo Environment $DEP_ENV already exists && exit
@@ -300,6 +301,7 @@ else
     DEP_ENV=$(uuidgen)
   fi
   env_create_$DEP_CLOUD
+  . $PXD/environments/$DEP_ENV
   export $(set | grep -E '^(DEP|AWS|GCP|_AWS|_GCP)' | cut -f 1 -d = )
   cd /px-deploy/vagrant
   vagrant up
