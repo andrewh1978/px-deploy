@@ -1,0 +1,10 @@
+exec &>/var/log/vagrant.$script
+yum install -y git epel-release vim-enhanced
+yum install -y shellinabox
+rm -f /etc/securetty
+sed -i s/4200/443/ /etc/sysconfig/shellinaboxd
+systemctl enable shellinaboxd
+systemctl restart shellinaboxd sshd
+cd /root
+git config --global color.ui auto
+git clone https://github.com/portworx/pwx-fundamentals-training.git
