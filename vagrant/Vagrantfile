@@ -42,7 +42,7 @@ Vagrant.configure("2") do |config|
       if ENV['DEP_CLOUD'] == "aws"
         master.vm.provider :aws do |aws|
           aws.private_ip_address = "#{subnet}.90"
-          aws.tags = { "Name" => "master-#{c}" }
+          aws.tags = { "Name" => "master-#{c}", "px-deploy_name" => ENV['DEP_ENV'] }
         end
       elsif ENV['DEP_CLOUD'] == "gcp"
         master.vm.provider :google do |gcp|
