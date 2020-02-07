@@ -74,7 +74,6 @@ There are two ways to override these variables. The first is to specify a templa
 ```
 $ cat templates/clusterpair
 DEP_CLUSTERS=2
-DEP_PX_VERSION=2.3.2
 DEP_PX_CLUSTER_PREFIX=px-deploy
 DEP_SCRIPTS="install-px clusterpair"
 ```
