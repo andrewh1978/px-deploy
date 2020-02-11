@@ -1,14 +1,12 @@
-(
+exec &>/var/log/vagrant.k8s-node
 yum install -y kubelet-$DEP_K8S_VERSION-0 docker
 yum install -y kubeadm-$DEP_K8S_VERSION-0 kubectl-$DEP_K8S_VERSION-0
 systemctl enable docker kubelet
 systemctl restart docker kubelet
-kubeadm config images list --kubernetes-version $DEP_K8S_VERSION | xargs -n1 -P0 docker pull &
+kubeadm config images list --kubernetes-version $DEP_K8S_VERSION | xargs -n1 -P0 docker pull
 while : ; do
   command=$(ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no master-$cluster kubeadm token create --print-join-command)
   [ $? -eq 0 ] && break
   sleep 5
 done
-wait
 eval $command
-) >&/var/log/vagrant-k8s

@@ -1,4 +1,4 @@
-(
+exec &>/var/log/vagrant.k8s-master
 yum install -y kubelet-$DEP_K8S_VERSION-0 docker
 yum install -y kubeadm-$DEP_K8S_VERSION-0 kubectl-$DEP_K8S_VERSION-0
 systemctl enable docker kubelet
@@ -8,4 +8,3 @@ kubeadm init --apiserver-advertise-address=$(hostname -i) --pod-network-cidr=10.
 mkdir /root/.kube
 cp /etc/kubernetes/admin.conf /root/.kube/config
 kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
-) >&/var/log/vagrant-k8s
