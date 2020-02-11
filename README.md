@@ -29,33 +29,35 @@ This will:
  * create and populate `$HOME/.px-deploy`
  * add an alias to `.bash_profile`, which will require sourcing
 
+If you are not using bash, you can edit the appropriate file manually.
+
 5. Deploy something
 ```
-px-deploy --env=myDeployment --template=clusterpair
+px-deploy deploy --name=myDeployment --template=clusterpair
 ```
 This will provision a VPC and some other objects, and deploy into it from the template.
 
 6. Connect via SSH:
 ```
-px-deploy --env=myDeployment --ssh
+px-deploy connect --name myDeployment
 ```
 
-7. Tear down the environment:
+7. Tear down the deployment:
 ```
-px-deploy --env=myDeployment --destroy
+px-deploy destroy --name myDeployment
 ```
 
 # NOTES
 
-The environments can be listed:
+The deployments can be listed:
 ```
-$ px-deploy --envs
-Environment  Cloud  Region         Template  Clusters  Nodes  Created
-foo          aws    eu-west-2      px        1         3      2020-02-04 09:52:10
-bar          gcp    europe-north1  <none>    1         3      2020-02-04 09:50:11
+$ px-deploy list
+Environment Cloud Region        Platform Template Clusters Nodes Created
+foo         aws   eu-west-1     k8s      px       1        3     2020-02-11T16:14:06Z
+bar         gcp   europe-north1 gcp      <none>   1        3     2020-02-04T09:50:11Z
 ```
 
-The `defaults` file sets a number of environment variables:
+The `defaults` file sets a number of deployment variables:
  * `AWS_EBS` - a list of EBS volumes to be attached to each worker node. This is a space-separate list of type:size pairs, for example: `"gp2:30 standard:20"` will provision a gp2 volume of 30 GB and a standard volume of 20GB
  * `AWS_REGION` - AWS region
  * `AWS_TYPE` - the AWS machine type for each node
@@ -80,9 +82,9 @@ DEP_SCRIPTS="install-px clusterpair"
 
 More on `DEP_SCRIPTS` below.
 
-The second way to override the defaults is to specify on the command line. See `px-deploy -h` for a full list. For example, to deploy into the `foo` environment:
+The second way to override the defaults is to specify on the command line. See `px-deploy deploy -h` for a full list. For example, to deploy petclinic into the `foo` deployment:
 ```
-px-deploy --env=foo --clusters=5 --template=petclinic --nodes=6
+px-deploy deploy --name=foo --clusters=5 --template=petclinic --nodes=6
 ```
 
 This example is a mixture of both methods. The template is applied, then the command line parameters are applied, so not only is the template overriding the defaults, but also the parameters are overriding the template.
