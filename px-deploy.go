@@ -16,22 +16,7 @@ import (
 )
 
 func main() {
-  var deployName string
-  var deployPlatform string
-  var deployClusters string
-  var deployNodes string
-  var deployK8sVer string
-  var deployPxVer string
-  var deployAwsType string
-  var deployAwsEbs string
-  var deployGcpType string
-  var deployGcpDisks string
-  var deployGcpZone string
-  var deployTemplate string
-  var deployRegion string
-  var deployCloud string
-  var connectName string
-  var destroyName string
+  var deployName, deployPlatform, deployClusters, deployNodes, deployK8sVer, deployPxVer, deployAwsType, deployAwsEbs, deployGcpType, deployGcpDisks, deployGcpZone, deployTemplate, deployRegion, deployCloud, connectName, destroyName string
 
   os.Chdir("/px-deploy/.px-deploy")
   godotenv.Load("defaults")
@@ -140,12 +125,12 @@ func main() {
         output, _ = exec.Command("bash", "-c", `
           gcloud projects delete $_GCP_project --quiet
         `).CombinedOutput()
-        os.Remove("px-deploy_gcp_" + os.Getenv("_GCP_project") + ".json")
+        os.Remove("keys/px-deploy_gcp_" + os.Getenv("_GCP_project") + ".json")
       }
       fmt.Print(string(output))
       os.Remove("deployments/" + destroyName)
-      os.Remove("id_rsa." + os.Getenv("DEP_CLOUD") + "." + destroyName)
-      os.Remove("id_rsa." + os.Getenv("DEP_CLOUD") + "." + destroyName + ".pub")
+      os.Remove("keys/id_rsa." + os.Getenv("DEP_CLOUD") + "." + destroyName)
+      os.Remove("keys/id_rsa." + os.Getenv("DEP_CLOUD") + "." + destroyName + ".pub")
     },
   }
   
@@ -164,7 +149,7 @@ func main() {
         output, _ = exec.Command("bash", "-c", `gcloud compute instances list --project $_GCP_project --filter="name=('master-1')" --format 'flattened(networkInterfaces[0].accessConfigs[0].natIP)' | tail -1 | cut -f 2 -d " "`).Output()
       }
       ip = strings.TrimSuffix(string(output), "\n")
-      syscall.Exec("/usr/bin/ssh", []string{"ssh", "-oStrictHostKeyChecking=no","-i","id_rsa." + os.Getenv("DEP_CLOUD") + "." + os.Getenv("DEP_NAME"),"root@" + ip}, os.Environ())
+      syscall.Exec("/usr/bin/ssh", []string{"ssh", "-oStrictHostKeyChecking=no","-i","keys/id_rsa." + os.Getenv("DEP_CLOUD") + "." + os.Getenv("DEP_NAME"),"root@" + ip}, os.Environ())
     },
   }
   
@@ -222,10 +207,10 @@ func main() {
 func create_deployment_aws() {
   output, _ := exec.Command("bash", "-c", `
     aws configure set default.region $AWS_REGION
-    rm -f id_rsa.aws.$DEP_NAME*
-    ssh-keygen -q -t rsa -b 2048 -f id_rsa.aws.$DEP_NAME -N ''
+    rm -f keys/id_rsa.aws.$DEP_NAME*
+    ssh-keygen -q -t rsa -b 2048 -f keys/id_rsa.aws.$DEP_NAME -N ''
     aws ec2 delete-key-pair --key-name px-deploy.$DEP_NAME >&/dev/null
-    aws ec2 import-key-pair --key-name px-deploy.$DEP_NAME --public-key-material file://id_rsa.aws.$DEP_NAME.pub
+    aws ec2 import-key-pair --key-name px-deploy.$DEP_NAME --public-key-material file://keys/id_rsa.aws.$DEP_NAME.pub
     _AWS_vpc=$(aws --output text ec2 create-vpc --cidr-block 192.168.0.0/16 --query Vpc.VpcId)
     _AWS_subnet=$(aws --output text ec2 create-subnet --vpc-id $_AWS_vpc --cidr-block 192.168.0.0/16 --query Subnet.SubnetId)
     _AWS_gw=$(aws --output text ec2 create-internet-gateway --query InternetGateway.InternetGatewayId)
@@ -255,8 +240,8 @@ func create_deployment_aws() {
 
 func create_deployment_gcp() {
   output, _ := exec.Command("bash", "-c", `
-  rm -f id_rsa.gcp.$DEP_NAME*
-  ssh-keygen -q -t rsa -b 2048 -f id_rsa.gcp.$DEP_NAME -N ''
+  rm -f keys/id_rsa.gcp.$DEP_NAME*
+  ssh-keygen -q -t rsa -b 2048 -f keys/id_rsa.gcp.$DEP_NAME -N ''
   _GCP_project=pxd-$(uuidgen | tr -d -- - | cut -b 1-26 | tr 'A-Z' 'a-z')
   gcloud projects create $_GCP_project --labels px-deploy_name=$DEP_NAME
   account=$(gcloud alpha billing accounts list | tail -1 | cut -f 1 -d " ")
@@ -266,7 +251,7 @@ func create_deployment_gcp() {
   gcloud compute networks subnets create --range 192.168.0.0/16 --network px-net px-subnet --region $GCP_REGION --project $_GCP_project
   gcloud compute firewall-rules create allow-internal --allow=tcp,udp,icmp --source-ranges=192.168.0.0/16 --network px-net --project $_GCP_project &
   gcloud compute firewall-rules create allow-external --allow=tcp:22,tcp:443,tcp:6443 --network px-net --project $_GCP_project &
-  gcloud compute project-info add-metadata --metadata "ssh-keys=centos:$(cat id_rsa.gcp.$DEP_NAME.pub)" --project $_GCP_project &
+  gcloud compute project-info add-metadata --metadata "ssh-keys=centos:$(cat keys/id_rsa.gcp.$DEP_NAME.pub)" --project $_GCP_project &
   service_account=$(gcloud iam service-accounts list --project $_GCP_project --format 'flattened(email)' | tail -1 | cut -f 2 -d " ")
   _GCP_key=$(gcloud iam service-accounts keys create /dev/stdout --iam-account $service_account | base64 -w0)
   wait

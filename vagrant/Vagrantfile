@@ -3,7 +3,7 @@ env = ENV.select { |key, value| key.start_with?("DEP", "GCP", "AWS", "_AWS", "_G
 
 Vagrant.configure("2") do |config|
   config.vm.synced_folder ".", "/vagrant", disabled: true
-  config.vm.provision "file", source: "/px-deploy/.px-deploy/id_rsa.#{ENV['DEP_CLOUD']}.#{ENV['DEP_NAME']}", destination: "/tmp/id_rsa"
+  config.vm.provision "file", source: "/px-deploy/.px-deploy/keys/id_rsa.#{ENV['DEP_CLOUD']}.#{ENV['DEP_NAME']}", destination: "/tmp/id_rsa"
   if ENV['DEP_CLOUD'] == "aws"
     config.vm.box = "dummy"
     config.vm.provider :aws do |aws|
@@ -19,10 +19,10 @@ Vagrant.configure("2") do |config|
   elsif ENV['DEP_CLOUD'] == "gcp"
     config.vm.box = "google/gce"
     config.vm.provider :google do |gcp|
-      File.open("/px-deploy/.px-deploy/px-deploy_gcp_#{ENV['_GCP_project']}.json", "w") do |line| line.puts(Base64.decode64(ENV['_GCP_key'])) end
+      File.open("/px-deploy/.px-deploy/keys/px-deploy_gcp_#{ENV['_GCP_project']}.json", "w") do |line| line.puts(Base64.decode64(ENV['_GCP_key'])) end
       gcp.google_project_id = ENV['_GCP_project']
       gcp.zone = "#{ENV['GCP_REGION']}-#{ENV['GCP_ZONE']}"
-      gcp.google_json_key_location = "/px-deploy/.px-deploy/px-deploy_gcp_#{ENV['_GCP_project']}.json";
+      gcp.google_json_key_location = "/px-deploy/.px-deploy/keys/px-deploy_gcp_#{ENV['_GCP_project']}.json";
       gcp.image_family = "centos-7"
       gcp.machine_type = ENV['GCP_TYPE']
       gcp.disk_size = 15
@@ -32,7 +32,7 @@ Vagrant.configure("2") do |config|
   end
 
   config.ssh.username = "centos"
-  config.ssh.private_key_path = "/px-deploy/.px-deploy/id_rsa.#{ENV['DEP_CLOUD']}.#{ENV['DEP_NAME']}"
+  config.ssh.private_key_path = "/px-deploy/.px-deploy/keys/id_rsa.#{ENV['DEP_CLOUD']}.#{ENV['DEP_NAME']}"
   config.vm.provision "shell", path: "all-common", env: env
   config.vm.provision "shell", path: "#{ENV['DEP_PLATFORM']}-common"
 
