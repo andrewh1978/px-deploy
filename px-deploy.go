@@ -16,7 +16,7 @@ import (
 )
 
 func main() {
-  var deployName, deployPlatform, deployClusters, deployNodes, deployK8sVer, deployPxVer, deployAwsType, deployAwsEbs, deployGcpType, deployGcpDisks, deployGcpZone, deployTemplate, deployRegion, deployCloud, connectName, destroyName string
+  var deployName, deployPlatform, deployClusters, deployNodes, deployK8sVer, deployPxVer, deployAwsType, deployAwsEbs, deployGcpType, deployGcpDisks, deployGcpZone, deployTemplate, deployRegion, deployCloud, connectName, destroyName, statusName string
 
   os.Chdir("/px-deploy/.px-deploy")
   godotenv.Load("defaults")
@@ -177,6 +177,32 @@ func main() {
       w.Flush()
     },
   }
+
+  cmdStatus := &cobra.Command {
+    Use: "status name",
+    Short: "Lists master IPs in a deployment",
+    Long: "Lists master IPs in a deployment",
+    Run: func(cmd *cobra.Command, args []string) {
+      if _, err := os.Stat("./deployments/" + statusName); os.IsNotExist(err) { die("Environment '" + statusName + "' does not exist") }
+      godotenv.Overload("deployments/" + statusName)
+      var output []byte
+      var ip string
+      if (os.Getenv("DEP_CLOUD") == "aws") {
+        output, _ = exec.Command("bash", "-c", `aws ec2 describe-instances --region $AWS_REGION --filters "Name=network-interface.vpc-id,Values=$_AWS_vpc" "Name=tag:Name,Values=master-1" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PublicIpAddress" --output text`).Output()
+      } else if (os.Getenv("DEP_CLOUD") == "gcp") {
+        output, _ = exec.Command("bash", "-c", `gcloud compute instances list --project $_GCP_project --filter="name=('master-1')" --format 'flattened(networkInterfaces[0].accessConfigs[0].natIP)' | tail -1 | cut -f 2 -d " "`).Output()
+      }
+      ip = strings.TrimSuffix(string(output), "\n")
+      c := `
+        masters=$(grep master /etc/hosts | cut -f 2 -d " ")
+        for m in $masters; do
+          ip=$(sudo ssh -oStrictHostKeyChecking=no $m "curl http://ipinfo.io/ip" 2>/dev/null)
+          hostname=$(sudo ssh -oStrictHostKeyChecking=no $m "curl http://ipinfo.io/hostname" 2>/dev/null)
+          echo $m $ip $hostname
+        done`
+      syscall.Exec("/usr/bin/ssh", []string{"ssh", "-q", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa." + os.Getenv("DEP_CLOUD") + "." + os.Getenv("DEP_NAME"), "root@" + ip, c}, os.Environ())
+    },
+  }
   
   cmdDeploy.Flags().StringVarP(&deployName, "name", "n", "", "name of environment to be deployed (if blank, generate UUID)")
   cmdDeploy.Flags().StringVarP(&deployPlatform, "platform", "p", "", "k8s or ocp3 (default " + os.Getenv("DEP_PLATFORM") + ")")
@@ -199,8 +225,11 @@ func main() {
   cmdConnect.Flags().StringVarP(&connectName, "name", "n", "", "name of environment to connect to")
   cmdConnect.MarkFlagRequired("name")
 
+  cmdStatus.Flags().StringVarP(&statusName, "name", "n", "", "name of environment")
+  cmdStatus.MarkFlagRequired("name")
+
   rootCmd := &cobra.Command{Use: "px-deploy"}
-  rootCmd.AddCommand(cmdDeploy, cmdDestroy, cmdConnect, cmdList)
+  rootCmd.AddCommand(cmdDeploy, cmdDestroy, cmdConnect, cmdList, cmdStatus)
   rootCmd.Execute()
 }
 

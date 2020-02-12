@@ -57,6 +57,13 @@ foo         aws   eu-west-1     k8s      px       1        3     2020-02-11T16:1
 bar         gcp   europe-north1 gcp      <none>   1        3     2020-02-04T09:50:11Z
 ```
 
+Generate a list of IP address, suitable for training:
+```
+$ px-deploy status --name trainingDeployment
+master-1 34.247.219.101 ec2-34-247-219-101.eu-west-1.compute.amazonaws.com
+master-2 34.254.155.6 ec2-34-254-155-6.eu-west-1.compute.amazonaws.com
+```
+
 The `defaults` file sets a number of deployment variables:
  * `AWS_EBS` - a list of EBS volumes to be attached to each worker node. This is a space-separate list of type:size pairs, for example: `"gp2:30 standard:20"` will provision a gp2 volume of 30 GB and a standard volume of 20GB
  * `AWS_REGION` - AWS region
