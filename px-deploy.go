@@ -214,7 +214,7 @@ func main() {
 func create_deployment_aws() {
   output, _ := exec.Command("bash", "-c", `
     aws configure set default.region $AWS_REGION
-    rm -f keys/id_rsa.aws.$DEP_NAME*
+    rm -f keys/id_rsa.aws.$DEP_NAME keys/id_rsa.aws.$DEP_NAME.pub
     ssh-keygen -q -t rsa -b 2048 -f keys/id_rsa.aws.$DEP_NAME -N ''
     aws ec2 delete-key-pair --key-name px-deploy.$DEP_NAME >&/dev/null
     aws ec2 import-key-pair --key-name px-deploy.$DEP_NAME --public-key-material file://keys/id_rsa.aws.$DEP_NAME.pub
@@ -247,7 +247,7 @@ func create_deployment_aws() {
 
 func create_deployment_gcp() {
   output, _ := exec.Command("bash", "-c", `
-  rm -f keys/id_rsa.gcp.$DEP_NAME*
+  rm -f keys/id_rsa.gcp.$DEP_NAME keys/id_rsa.gcp.$DEP_NAME.pub
   ssh-keygen -q -t rsa -b 2048 -f keys/id_rsa.gcp.$DEP_NAME -N ''
   _GCP_project=pxd-$(uuidgen | tr -d -- - | cut -b 1-26 | tr 'A-Z' 'a-z')
   gcloud projects create $_GCP_project --labels px-deploy_name=$DEP_NAME
