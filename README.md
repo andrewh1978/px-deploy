@@ -33,7 +33,7 @@ If you are not using bash, you can edit the appropriate file manually.
 
 5. Deploy something
 ```
-px-deploy deploy --name=myDeployment --template=clusterpair
+px-deploy create --name=myDeployment --template=clusterpair
 ```
 This will provision a VPC and some other objects, and deploy into it from the template.
 
@@ -89,9 +89,9 @@ DEP_SCRIPTS="install-px clusterpair"
 
 More on `DEP_SCRIPTS` below.
 
-The second way to override the defaults is to specify on the command line. See `px-deploy deploy -h` for a full list. For example, to deploy petclinic into the `foo` deployment:
+The second way to override the defaults is to specify on the command line. See `px-deploy create -h` for a full list. For example, to deploy petclinic into the `foo` deployment:
 ```
-px-deploy deploy --name=foo --clusters=5 --template=petclinic --nodes=6
+px-deploy create --name=foo --clusters=5 --template=petclinic --nodes=6
 ```
 
 This example is a mixture of both methods. The template is applied, then the command line parameters are applied, so not only is the template overriding the defaults, but also the parameters are overriding the template.

@@ -16,82 +16,82 @@ import (
 )
 
 func main() {
-  var deployName, deployPlatform, deployClusters, deployNodes, deployK8sVer, deployPxVer, deployAwsType, deployAwsEbs, deployGcpType, deployGcpDisks, deployGcpZone, deployTemplate, deployRegion, deployCloud, connectName, destroyName, statusName string
+  var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createAwsType, createAwsEbs, createGcpType, createGcpDisks, createGcpZone, createTemplate, createRegion, createCloud, connectName, destroyName, statusName string
 
   os.Chdir("/px-deploy/.px-deploy")
   godotenv.Load("defaults")
 
-  cmdDeploy := &cobra.Command {
-    Use: "deploy",
+  cmdCreate := &cobra.Command {
+    Use: "create",
     Short: "Creates a deployment",
     Long: "Creates a deployment",
     Run: func(cmd *cobra.Command, args []string) {
-      if (deployName != "") {
-        if (!regexp.MustCompile(`^[a-zA-Z0-9_\-\.]+$`).MatchString(deployName)) { die("Invalid deployment name '" + deployName + "'") }
-        if _, err := os.Stat("deployments/" + deployName); !os.IsNotExist(err) { die("Deployment '" + deployName + "' already exists") }
+      if (createName != "") {
+        if (!regexp.MustCompile(`^[a-zA-Z0-9_\-\.]+$`).MatchString(createName)) { die("Invalid deployment name '" + createName + "'") }
+        if _, err := os.Stat("deployments/" + createName); !os.IsNotExist(err) { die("Deployment '" + createName + "' already exists") }
       } else {
-        deployName = uuid.New().String()
+        createName = uuid.New().String()
       }
-      os.Setenv("DEP_NAME", deployName)
-      if (deployTemplate != "") {
-        if _, err := os.Stat("templates/" + deployTemplate); os.IsNotExist(err) { die("Template '" + deployTemplate + "' does not exist") }
-        godotenv.Overload("templates/" + deployTemplate)
-        os.Setenv("DEP_TEMPLATE", deployTemplate)
+      os.Setenv("DEP_NAME", createName)
+      if (createTemplate != "") {
+        if _, err := os.Stat("templates/" + createTemplate); os.IsNotExist(err) { die("Template '" + createTemplate + "' does not exist") }
+        godotenv.Overload("templates/" + createTemplate)
+        os.Setenv("DEP_TEMPLATE", createTemplate)
       }
-      if (deployCloud != "") {
-        if (deployCloud != "aws" && deployCloud != "gcp") { die("Cloud must be 'aws' or 'gcp' (not '" + deployCloud + "')") }
-        os.Setenv("DEP_CLOUD", deployCloud)
+      if (createCloud != "") {
+        if (createCloud != "aws" && createCloud != "gcp") { die("Cloud must be 'aws' or 'gcp' (not '" + createCloud + "')") }
+        os.Setenv("DEP_CLOUD", createCloud)
       }
-      if (deployRegion != "") {
-        if (!regexp.MustCompile(`^[a-zA-Z0-9_\-]+$`).MatchString(deployRegion)) { die("Invalid region '" + deployRegion + "'") }
-        os.Setenv(strings.ToUpper(os.Getenv("DEP_CLOUD")) + "_REGION", deployRegion)
+      if (createRegion != "") {
+        if (!regexp.MustCompile(`^[a-zA-Z0-9_\-]+$`).MatchString(createRegion)) { die("Invalid region '" + createRegion + "'") }
+        os.Setenv(strings.ToUpper(os.Getenv("DEP_CLOUD")) + "_REGION", createRegion)
       }
-      if (deployPlatform != "") {
-        if (deployPlatform != "k8s" && deployPlatform != "ocp3") { die("Invalid platform '" + deployPlatform + "'") }
-        os.Setenv("DEP_PLATFORM", deployPlatform)
+      if (createPlatform != "") {
+        if (createPlatform != "k8s" && createPlatform != "ocp3") { die("Invalid platform '" + createPlatform + "'") }
+        os.Setenv("DEP_PLATFORM", createPlatform)
       }
-      if (deployClusters != "") {
-        if (!regexp.MustCompile(`^[0-9]+$`).MatchString(deployClusters)) { die("Invalid number of clusters") }
-        os.Setenv("DEP_CLUSTERS", deployClusters)
+      if (createClusters != "") {
+        if (!regexp.MustCompile(`^[0-9]+$`).MatchString(createClusters)) { die("Invalid number of clusters") }
+        os.Setenv("DEP_CLUSTERS", createClusters)
       }
-      if (deployNodes != "") {
-        if (!regexp.MustCompile(`^[0-9]+$`).MatchString(deployNodes)) { die("Invalid number of nodes") }
-        os.Setenv("DEP_NODES", deployNodes)
+      if (createNodes != "") {
+        if (!regexp.MustCompile(`^[0-9]+$`).MatchString(createNodes)) { die("Invalid number of nodes") }
+        os.Setenv("DEP_NODES", createNodes)
       }
-      if (deployK8sVer != "") {
-        if (!regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+$`).MatchString(deployK8sVer)) { die("Invalid Kubernetes version '" + deployK8sVer + "'") }
-        os.Setenv("DEP_K8S_VERSION", deployK8sVer)
+      if (createK8sVer != "") {
+        if (!regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+$`).MatchString(createK8sVer)) { die("Invalid Kubernetes version '" + createK8sVer + "'") }
+        os.Setenv("DEP_K8S_VERSION", createK8sVer)
       }
-      if (deployPxVer != "") {
-        if (!regexp.MustCompile(`^[0-9\.]+$`).MatchString(deployPxVer)) { die("Invalid Portworx version '" + deployPxVer + "'") }
-        os.Setenv("DEP_PX_VERSION", deployPxVer)
+      if (createPxVer != "") {
+        if (!regexp.MustCompile(`^[0-9\.]+$`).MatchString(createPxVer)) { die("Invalid Portworx version '" + createPxVer + "'") }
+        os.Setenv("DEP_PX_VERSION", createPxVer)
       }
-      if (deployAwsType != "") {
-        if (!regexp.MustCompile(`^[0-9a-z\.]+$`).MatchString(deployAwsType)) { die("Invalid AWS type '" + deployAwsType + "'") }
-        os.Setenv("AWS_TYPE", deployAwsType)
+      if (createAwsType != "") {
+        if (!regexp.MustCompile(`^[0-9a-z\.]+$`).MatchString(createAwsType)) { die("Invalid AWS type '" + createAwsType + "'") }
+        os.Setenv("AWS_TYPE", createAwsType)
       }
-      if (deployAwsEbs != "") {
-        if (!regexp.MustCompile(`^[0-9a-z\ :]+$`).MatchString(deployAwsEbs)) { die("Invalid AWS EBS volumes '" + deployAwsEbs + "'") }
-        os.Setenv("AWS_EBS", deployAwsEbs)
+      if (createAwsEbs != "") {
+        if (!regexp.MustCompile(`^[0-9a-z\ :]+$`).MatchString(createAwsEbs)) { die("Invalid AWS EBS volumes '" + createAwsEbs + "'") }
+        os.Setenv("AWS_EBS", createAwsEbs)
       }
-      if (deployGcpType != "") {
-        if (!regexp.MustCompile(`^[0-9a-z\-]+$`).MatchString(deployGcpType)) { die("Invalid GCP type '" + deployGcpType + "'") }
-        os.Setenv("GCP_TYPE", deployGcpType)
+      if (createGcpType != "") {
+        if (!regexp.MustCompile(`^[0-9a-z\-]+$`).MatchString(createGcpType)) { die("Invalid GCP type '" + createGcpType + "'") }
+        os.Setenv("GCP_TYPE", createGcpType)
       }
-      if (deployGcpDisks != "") {
-        if (!regexp.MustCompile(`^[0-9a-z\ :\-]+$`).MatchString(deployGcpDisks)) { die("Invalid GCP disks '" + deployGcpDisks + "'") }
-        os.Setenv("GCP_DISKS", deployGcpDisks)
+      if (createGcpDisks != "") {
+        if (!regexp.MustCompile(`^[0-9a-z\ :\-]+$`).MatchString(createGcpDisks)) { die("Invalid GCP disks '" + createGcpDisks + "'") }
+        os.Setenv("GCP_DISKS", createGcpDisks)
       }
-      if (deployGcpZone != "") {
-        if (deployGcpZone != "a" && deployGcpZone != "b" && deployGcpZone != "c") { die("Invalid GCP zone '" + deployGcpZone + "'") }
-        os.Setenv("GCP_ZONE", deployGcpZone)
+      if (createGcpZone != "") {
+        if (createGcpZone != "a" && createGcpZone != "b" && createGcpZone != "c") { die("Invalid GCP zone '" + createGcpZone + "'") }
+        os.Setenv("GCP_ZONE", createGcpZone)
       }
       switch (os.Getenv("DEP_CLOUD")) {
         case "aws": create_deployment_aws()
         case "gcp": create_deployment_gcp()
         default: die("Bad cloud")
       }
-      godotenv.Load("deployments/" + deployName)
+      godotenv.Load("deployments/" + createName)
       os.Chdir("/px-deploy/vagrant")
       syscall.Exec("/usr/bin/vagrant", []string{"vagrant", "up"}, os.Environ())
     },
@@ -155,11 +155,7 @@ func main() {
         if (info.Mode() & os.ModeDir != 0) { return nil }
         godotenv.Overload(file)
         var region string
-        switch os.Getenv("DEP_CLOUD") {
-          case "aws": region = os.Getenv("AWS_REGION")
-          case "gcp": region = os.Getenv("GCP_REGION")
-          default: die("Unknown cloud")
-        }
+        region = os.Getenv(strings.ToUpper(os.Getenv("DEP_CLOUD")) + "_REGION")
         template := os.Getenv("DEP_TEMPLATE");
         if (template == "") { template = "<None>" }
         fmt.Fprintln(w, filepath.Base(file) + "\t" + os.Getenv("DEP_CLOUD") + "\t" + region + "\t" + os.Getenv("DEP_PLATFORM") + "\t" + template + "\t" + os.Getenv("DEP_CLUSTERS") + "\t" + os.Getenv("DEP_NODES") + "\t" + info.ModTime().Format(time.RFC3339))
@@ -186,20 +182,20 @@ func main() {
     },
   }
   
-  cmdDeploy.Flags().StringVarP(&deployName, "name", "n", "", "name of deployment to be created (if blank, generate UUID)")
-  cmdDeploy.Flags().StringVarP(&deployPlatform, "platform", "p", "", "k8s or ocp3 (default " + os.Getenv("DEP_PLATFORM") + ")")
-  cmdDeploy.Flags().StringVarP(&deployClusters, "clusters", "c", "", "number of clusters to be deployed (default " + os.Getenv("DEP_CLUSTERS") + ")")
-  cmdDeploy.Flags().StringVarP(&deployNodes, "nodes", "N", "", "number of nodes to be deployed in each cluster (default " + os.Getenv("DEP_NODES") + ")")
-  cmdDeploy.Flags().StringVarP(&deployK8sVer, "k8s_version", "k", "", "Kubernetes version to be deployed (default " + os.Getenv("DEP_K8S_VERSION") + ")")
-  cmdDeploy.Flags().StringVarP(&deployPxVer, "px_version", "", os.Getenv("DEP_PX_VERSION"), "Portworx version to be deployed")
-  cmdDeploy.Flags().StringVarP(&deployAwsType, "aws_type", "", os.Getenv("AWS_TYPE"), "AWS type for each node")
-  cmdDeploy.Flags().StringVarP(&deployAwsEbs, "aws_ebs", "", os.Getenv("AWS_EBS"), "space-separated list of EBS volumes to be attached to worker nodes, eg \"gp2:20 standard:30\"")
-  cmdDeploy.Flags().StringVarP(&deployGcpType, "gcp_type", "", os.Getenv("GCP_TYPE"), "GCP type for each node")
-  cmdDeploy.Flags().StringVarP(&deployGcpDisks, "gcp_disks", "", os.Getenv("GCP_DISKS"), "space-separated list of EBS volumes to be attached to worker nodes, eg \"pd-standard:20 pd-ssd:30\"")
-  cmdDeploy.Flags().StringVarP(&deployGcpZone, "gcp_zone", "", os.Getenv("GCP_ZONE"), "GCP zone (a, b or c)")
-  cmdDeploy.Flags().StringVarP(&deployTemplate, "template", "t", "", "name of template to be deployed")
-  cmdDeploy.Flags().StringVarP(&deployRegion, "region", "r", "", "AWS or GCP region (default " + os.Getenv("AWS_REGION") + " or " + os.Getenv("GCP_REGION") + ")")
-  cmdDeploy.Flags().StringVarP(&deployCloud, "cloud", "C", "", "aws or gcp (default " + os.Getenv("DEP_CLOUD") + ")")
+  cmdCreate.Flags().StringVarP(&createName, "name", "n", "", "name of deployment to be created (if blank, generate UUID)")
+  cmdCreate.Flags().StringVarP(&createPlatform, "platform", "p", "", "k8s or ocp3 (default " + os.Getenv("DEP_PLATFORM") + ")")
+  cmdCreate.Flags().StringVarP(&createClusters, "clusters", "c", "", "number of clusters to be deployed (default " + os.Getenv("DEP_CLUSTERS") + ")")
+  cmdCreate.Flags().StringVarP(&createNodes, "nodes", "N", "", "number of nodes to be deployed in each cluster (default " + os.Getenv("DEP_NODES") + ")")
+  cmdCreate.Flags().StringVarP(&createK8sVer, "k8s_version", "k", "", "Kubernetes version to be deployed (default " + os.Getenv("DEP_K8S_VERSION") + ")")
+  cmdCreate.Flags().StringVarP(&createPxVer, "px_version", "", os.Getenv("DEP_PX_VERSION"), "Portworx version to be deployed")
+  cmdCreate.Flags().StringVarP(&createAwsType, "aws_type", "", os.Getenv("AWS_TYPE"), "AWS type for each node")
+  cmdCreate.Flags().StringVarP(&createAwsEbs, "aws_ebs", "", os.Getenv("AWS_EBS"), "space-separated list of EBS volumes to be attached to worker nodes, eg \"gp2:20 standard:30\"")
+  cmdCreate.Flags().StringVarP(&createGcpType, "gcp_type", "", os.Getenv("GCP_TYPE"), "GCP type for each node")
+  cmdCreate.Flags().StringVarP(&createGcpDisks, "gcp_disks", "", os.Getenv("GCP_DISKS"), "space-separated list of EBS volumes to be attached to worker nodes, eg \"pd-standard:20 pd-ssd:30\"")
+  cmdCreate.Flags().StringVarP(&createGcpZone, "gcp_zone", "", os.Getenv("GCP_ZONE"), "GCP zone (a, b or c)")
+  cmdCreate.Flags().StringVarP(&createTemplate, "template", "t", "", "name of template to be deployed")
+  cmdCreate.Flags().StringVarP(&createRegion, "region", "r", "", "AWS or GCP region (default " + os.Getenv("AWS_REGION") + " or " + os.Getenv("GCP_REGION") + ")")
+  cmdCreate.Flags().StringVarP(&createCloud, "cloud", "C", "", "aws or gcp (default " + os.Getenv("DEP_CLOUD") + ")")
 
   cmdDestroy.Flags().StringVarP(&destroyName, "name", "n", "", "name of deployment to be destroyed")
   cmdDestroy.MarkFlagRequired("name")
@@ -211,7 +207,7 @@ func main() {
   cmdStatus.MarkFlagRequired("name")
 
   rootCmd := &cobra.Command{Use: "px-deploy"}
-  rootCmd.AddCommand(cmdDeploy, cmdDestroy, cmdConnect, cmdList, cmdStatus)
+  rootCmd.AddCommand(cmdCreate, cmdDestroy, cmdConnect, cmdList, cmdStatus)
   rootCmd.Execute()
 }
 
