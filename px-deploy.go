@@ -139,17 +139,8 @@ func main() {
     Short: "Connects to a deployment",
     Long: "Connects to the first master node as root",
     Run: func(cmd *cobra.Command, args []string) {
-      if _, err := os.Stat("./deployments/" + connectName); os.IsNotExist(err) { die("Deployment '" + connectName + "' does not exist") }
-      godotenv.Overload("deployments/" + connectName)
-      var output []byte
-      var ip string
-      if (os.Getenv("DEP_CLOUD") == "aws") {
-        output, _ = exec.Command("bash", "-c", `aws ec2 describe-instances --region $AWS_REGION --filters "Name=network-interface.vpc-id,Values=$_AWS_vpc" "Name=tag:Name,Values=master-1" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PublicIpAddress" --output text`).Output()
-      } else if (os.Getenv("DEP_CLOUD") == "gcp") {
-        output, _ = exec.Command("bash", "-c", `gcloud compute instances list --project $_GCP_project --filter="name=('master-1')" --format 'flattened(networkInterfaces[0].accessConfigs[0].natIP)' | tail -1 | cut -f 2 -d " "`).Output()
-      }
-      ip = strings.TrimSuffix(string(output), "\n")
-      syscall.Exec("/usr/bin/ssh", []string{"ssh", "-oStrictHostKeyChecking=no","-i","keys/id_rsa." + os.Getenv("DEP_CLOUD") + "." + os.Getenv("DEP_NAME"),"root@" + ip}, os.Environ())
+      ip := get_ip(connectName)
+      syscall.Exec("/usr/bin/ssh", []string{"ssh", "-q", "-oStrictHostKeyChecking=no","-i","keys/id_rsa." + os.Getenv("DEP_CLOUD") + "." + os.Getenv("DEP_NAME"),"root@" + ip}, os.Environ())
     },
   }
   
@@ -183,16 +174,7 @@ func main() {
     Short: "Lists master IPs in a deployment",
     Long: "Lists master IPs in a deployment",
     Run: func(cmd *cobra.Command, args []string) {
-      if _, err := os.Stat("./deployments/" + statusName); os.IsNotExist(err) { die("Deployment '" + statusName + "' does not exist") }
-      godotenv.Overload("deployments/" + statusName)
-      var output []byte
-      var ip string
-      if (os.Getenv("DEP_CLOUD") == "aws") {
-        output, _ = exec.Command("bash", "-c", `aws ec2 describe-instances --region $AWS_REGION --filters "Name=network-interface.vpc-id,Values=$_AWS_vpc" "Name=tag:Name,Values=master-1" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PublicIpAddress" --output text`).Output()
-      } else if (os.Getenv("DEP_CLOUD") == "gcp") {
-        output, _ = exec.Command("bash", "-c", `gcloud compute instances list --project $_GCP_project --filter="name=('master-1')" --format 'flattened(networkInterfaces[0].accessConfigs[0].natIP)' | tail -1 | cut -f 2 -d " "`).Output()
-      }
-      ip = strings.TrimSuffix(string(output), "\n")
+      ip := get_ip(statusName)
       c := `
         masters=$(grep master /etc/hosts | cut -f 2 -d " ")
         for m in $masters; do
@@ -292,6 +274,18 @@ func create_deployment_gcp() {
     if (strings.HasPrefix(i, "DEP") || strings.HasPrefix(i, "GCP")) { f.WriteString(i + "\n") }
   }
   f.Close()
+}
+
+func get_ip(deployment string) string {
+  if _, err := os.Stat("deployments/" + deployment); os.IsNotExist(err) { die("Deployment '" + deployment + "' does not exist") }
+  godotenv.Overload("deployments/" + deployment)
+  var output []byte
+  if (os.Getenv("DEP_CLOUD") == "aws") {
+    output, _ = exec.Command("bash", "-c", `aws ec2 describe-instances --region $AWS_REGION --filters "Name=network-interface.vpc-id,Values=$_AWS_vpc" "Name=tag:Name,Values=master-1" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PublicIpAddress" --output text`).Output()
+  } else if (os.Getenv("DEP_CLOUD") == "gcp") {
+    output, _ = exec.Command("bash", "-c", `gcloud compute instances list --project $_GCP_project --filter="name=('master-1')" --format 'flattened(networkInterfaces[0].accessConfigs[0].natIP)' | tail -1 | cut -f 2 -d " "`).Output()
+  }
+  return strings.TrimSuffix(string(output), "\n")
 }
 
 func die(msg string) {
