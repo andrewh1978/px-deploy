@@ -52,9 +52,9 @@ px-deploy destroy --name myDeployment
 The deployments can be listed:
 ```
 $ px-deploy list
-Environment Cloud Region        Platform Template Clusters Nodes Created
-foo         aws   eu-west-1     k8s      px       1        3     2020-02-11T16:14:06Z
-bar         gcp   europe-north1 gcp      <none>   1        3     2020-02-04T09:50:11Z
+Deployment Cloud Region        Platform Template Clusters Nodes Created
+foo        aws   eu-west-1     k8s      px       1        3     2020-02-11T16:14:06Z
+bar        gcp   europe-north1 gcp      <none>   1        3     2020-02-04T09:50:11Z
 ```
 
 Generate a list of IP address, suitable for training:

@@ -23,8 +23,8 @@ func main() {
 
   cmdDeploy := &cobra.Command {
     Use: "deploy",
-    Short: "Deploys an environment",
-    Long: "Deploys an environment",
+    Short: "Creates a deployment",
+    Long: "Creates a deployment",
     Run: func(cmd *cobra.Command, args []string) {
       if (deployName != "") {
         if (!regexp.MustCompile(`^[a-zA-Z0-9_\-\.]+$`).MatchString(deployName)) { die("Invalid deployment name '" + deployName + "'") }
@@ -99,10 +99,10 @@ func main() {
   
   cmdDestroy := &cobra.Command {
     Use: "destroy",
-    Short: "Destroys an environment",
-    Long: "Destroys an environment",
+    Short: "Destroys a deployment",
+    Long: "Destroys a deployment",
     Run: func(cmd *cobra.Command, args []string) {
-      if _, err := os.Stat("./deployments/" + destroyName); os.IsNotExist(err) { die("Environment '" + destroyName + "' does not exist") }
+      if _, err := os.Stat("./deployments/" + destroyName); os.IsNotExist(err) { die("Deployment '" + destroyName + "' does not exist") }
       godotenv.Overload("deployments/" + destroyName)
       var output []byte
       if (os.Getenv("DEP_CLOUD") == "aws") {
@@ -136,10 +136,10 @@ func main() {
   
   cmdConnect := &cobra.Command {
     Use: "connect name",
-    Short: "Connects to an environment",
+    Short: "Connects to a deployment",
     Long: "Connects to the first master node as root",
     Run: func(cmd *cobra.Command, args []string) {
-      if _, err := os.Stat("./deployments/" + connectName); os.IsNotExist(err) { die("Environment '" + connectName + "' does not exist") }
+      if _, err := os.Stat("./deployments/" + connectName); os.IsNotExist(err) { die("Deployment '" + connectName + "' does not exist") }
       godotenv.Overload("deployments/" + connectName)
       var output []byte
       var ip string
@@ -159,7 +159,7 @@ func main() {
     Long: "Lists available deployments",
     Run: func(cmd *cobra.Command, args []string) {
       w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
-      fmt.Fprintln(w, "Environment\tCloud\tRegion\tPlatform\tTemplate\tClusters\tNodes\tCreated")
+      fmt.Fprintln(w, "Deployment\tCloud\tRegion\tPlatform\tTemplate\tClusters\tNodes\tCreated")
       filepath.Walk("deployments", func(file string, info os.FileInfo, err error) error {
         if (info.Mode() & os.ModeDir != 0) { return nil }
         godotenv.Overload(file)
@@ -183,7 +183,7 @@ func main() {
     Short: "Lists master IPs in a deployment",
     Long: "Lists master IPs in a deployment",
     Run: func(cmd *cobra.Command, args []string) {
-      if _, err := os.Stat("./deployments/" + statusName); os.IsNotExist(err) { die("Environment '" + statusName + "' does not exist") }
+      if _, err := os.Stat("./deployments/" + statusName); os.IsNotExist(err) { die("Deployment '" + statusName + "' does not exist") }
       godotenv.Overload("deployments/" + statusName)
       var output []byte
       var ip string
@@ -204,7 +204,7 @@ func main() {
     },
   }
   
-  cmdDeploy.Flags().StringVarP(&deployName, "name", "n", "", "name of environment to be deployed (if blank, generate UUID)")
+  cmdDeploy.Flags().StringVarP(&deployName, "name", "n", "", "name of deployment to be created (if blank, generate UUID)")
   cmdDeploy.Flags().StringVarP(&deployPlatform, "platform", "p", "", "k8s or ocp3 (default " + os.Getenv("DEP_PLATFORM") + ")")
   cmdDeploy.Flags().StringVarP(&deployClusters, "clusters", "c", "", "number of clusters to be deployed (default " + os.Getenv("DEP_CLUSTERS") + ")")
   cmdDeploy.Flags().StringVarP(&deployNodes, "nodes", "N", "", "number of nodes to be deployed in each cluster (default " + os.Getenv("DEP_NODES") + ")")
@@ -219,13 +219,13 @@ func main() {
   cmdDeploy.Flags().StringVarP(&deployRegion, "region", "r", "", "AWS or GCP region (default " + os.Getenv("AWS_REGION") + " or " + os.Getenv("GCP_REGION") + ")")
   cmdDeploy.Flags().StringVarP(&deployCloud, "cloud", "C", "", "aws or gcp (default " + os.Getenv("DEP_CLOUD") + ")")
 
-  cmdDestroy.Flags().StringVarP(&destroyName, "name", "n", "", "name of environment to be destroyed")
+  cmdDestroy.Flags().StringVarP(&destroyName, "name", "n", "", "name of deployment to be destroyed")
   cmdDestroy.MarkFlagRequired("name")
 
-  cmdConnect.Flags().StringVarP(&connectName, "name", "n", "", "name of environment to connect to")
+  cmdConnect.Flags().StringVarP(&connectName, "name", "n", "", "name of deployment to connect to")
   cmdConnect.MarkFlagRequired("name")
 
-  cmdStatus.Flags().StringVarP(&statusName, "name", "n", "", "name of environment")
+  cmdStatus.Flags().StringVarP(&statusName, "name", "n", "", "name of deployment")
   cmdStatus.MarkFlagRequired("name")
 
   rootCmd := &cobra.Command{Use: "px-deploy"}
