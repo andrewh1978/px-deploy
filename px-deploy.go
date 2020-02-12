@@ -187,7 +187,7 @@ func main() {
   cmdCreate.Flags().StringVarP(&createClusters, "clusters", "c", "", "number of clusters to be deployed (default " + os.Getenv("DEP_CLUSTERS") + ")")
   cmdCreate.Flags().StringVarP(&createNodes, "nodes", "N", "", "number of nodes to be deployed in each cluster (default " + os.Getenv("DEP_NODES") + ")")
   cmdCreate.Flags().StringVarP(&createK8sVer, "k8s_version", "k", "", "Kubernetes version to be deployed (default " + os.Getenv("DEP_K8S_VERSION") + ")")
-  cmdCreate.Flags().StringVarP(&createPxVer, "px_version", "", os.Getenv("DEP_PX_VERSION"), "Portworx version to be deployed")
+  cmdCreate.Flags().StringVarP(&createPxVer, "px_version", "P", os.Getenv("DEP_PX_VERSION"), "Portworx version to be deployed")
   cmdCreate.Flags().StringVarP(&createAwsType, "aws_type", "", os.Getenv("AWS_TYPE"), "AWS type for each node")
   cmdCreate.Flags().StringVarP(&createAwsEbs, "aws_ebs", "", os.Getenv("AWS_EBS"), "space-separated list of EBS volumes to be attached to worker nodes, eg \"gp2:20 standard:30\"")
   cmdCreate.Flags().StringVarP(&createGcpType, "gcp_type", "", os.Getenv("GCP_TYPE"), "GCP type for each node")
