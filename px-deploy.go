@@ -28,13 +28,13 @@ func main() {
     Run: func(cmd *cobra.Command, args []string) {
       if (deployName != "") {
         if (!regexp.MustCompile(`^[a-zA-Z0-9_\-\.]+$`).MatchString(deployName)) { die("Invalid deployment name '" + deployName + "'") }
-        if _, err := os.Stat("./deployments/" + deployName); os.IsExist(err) { die("Deployment '" + deployName + "' already exists") }
+        if _, err := os.Stat("deployments/" + deployName); !os.IsNotExist(err) { die("Deployment '" + deployName + "' already exists") }
       } else {
         deployName = uuid.New().String()
       }
       os.Setenv("DEP_NAME", deployName)
       if (deployTemplate != "") {
-        if _, err := os.Stat("./templates/" + deployTemplate); os.IsNotExist(err) { die("Template '" + deployTemplate + "' does not exist") }
+        if _, err := os.Stat("templates/" + deployTemplate); os.IsNotExist(err) { die("Template '" + deployTemplate + "' does not exist") }
         godotenv.Overload("templates/" + deployTemplate)
         os.Setenv("DEP_TEMPLATE", deployTemplate)
       }
@@ -102,7 +102,7 @@ func main() {
     Short: "Destroys a deployment",
     Long: "Destroys a deployment",
     Run: func(cmd *cobra.Command, args []string) {
-      if _, err := os.Stat("./deployments/" + destroyName); os.IsNotExist(err) { die("Deployment '" + destroyName + "' does not exist") }
+      if _, err := os.Stat("deployments/" + destroyName); os.IsNotExist(err) { die("Deployment '" + destroyName + "' does not exist") }
       godotenv.Overload("deployments/" + destroyName)
       var output []byte
       if (os.Getenv("DEP_CLOUD") == "aws") {
