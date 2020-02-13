@@ -120,7 +120,7 @@ These variables are passed to the script:
  * `$nodes`
  * `$clusters`
  * `$px_version`
- * `$k8s_verion`
+ * `$k8s_version`
 
 In addition to these, there are some more variables available:
  * `$cluster` - cluster number
