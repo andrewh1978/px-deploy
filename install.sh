@@ -3,7 +3,7 @@ if [ -d $HOME/.px-deploy ]; then
   echo Not overwriting existing $HOME/.px-deploy
 else
   mkdir $HOME/.px-deploy
-  cp -r scripts templates defaults $HOME/.px-deploy
+  cp -r scripts templates defaults.yaml $HOME/.px-deploy
 fi
 mkdir -p $HOME/.px-deploy/deployments $HOME/.px-deploy/keys
 grep -q "alias px-deploy" $HOME/.bash_profile || cat <<EOF >>$HOME/.bash_profile
