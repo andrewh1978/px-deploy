@@ -1,0 +1,2 @@
+clusters: 2
+scripts: ["install-px", "clusterpair"]

@@ -50,21 +50,12 @@ EOF
 #cat <<EOF >/root/sudoers.d/vagrant
 #Defaults !requiretty
 #EOF
-for n in $(seq 1 $DEP_NODES); do
+for n in $(seq 1 $nodes); do
   echo "node-$cluster-$n openshift_node_group_name='node-config-compute'" >>/root/inventory
 done
 git clone https://github.com/openshift/openshift-ansible
 cd openshift-ansible
 git checkout release-3.11
-#export ANSIBLE_SSH_PIPELINING=1
-#export ANSIBLE_FORKS=20
 ansible-playbook playbooks/prerequisites.yml -i /root/inventory
-#ansible-playbook playbooks/deploy_cluster.yml -i /root/inventory &
 ansible-playbook playbooks/deploy_cluster.yml -i /root/inventory
-#while : ; do
-  #echo Waiting for Openshift to be deployed
-  #n=$(oc get node --selector='!node-role.kubernetes.io/master' 2>/dev/null | grep " Ready " | wc -l)
-  #[ $n -eq $DEP_NODES ] && break
-  #sleep 5
-#done
 echo Openshift deployed

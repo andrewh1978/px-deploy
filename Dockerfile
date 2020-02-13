@@ -13,8 +13,9 @@ RUN vagrant box add dummy https://github.com/mitchellh/vagrant-aws/raw/master/du
 RUN vagrant box add google/gce https://vagrantcloud.com/google/boxes/gce/versions/0.1.0/providers/google.box
 RUN pip3 install awscli
 RUN go get -u github.com/spf13/cobra/cobra
-RUN go get -u github.com/joho/godotenv
 RUN go get -u github.com/google/uuid
+RUN go get -u github.com/go-yaml/yaml
+RUN go get -u github.com/imdario/mergo
 RUN mkdir /root/go/src/px-deploy
 COPY px-deploy.go /root/go/src/px-deploy/main.go
 COPY vagrant /px-deploy/vagrant

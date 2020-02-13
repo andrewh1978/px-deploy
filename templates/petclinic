@@ -1,2 +1,0 @@
-DEP_PX_CLUSTER_PREFIX=px-deploy
-DEP_SCRIPTS="install-px px-wait petclinic"

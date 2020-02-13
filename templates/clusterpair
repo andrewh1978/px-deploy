@@ -1,3 +1,0 @@
-DEP_CLUSTERS=2
-DEP_PX_CLUSTER_PREFIX=px-deploy
-DEP_SCRIPTS="install-px clusterpair"

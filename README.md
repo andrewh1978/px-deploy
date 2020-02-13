@@ -64,30 +64,29 @@ master-1 34.247.219.101 ec2-34-247-219-101.eu-west-1.compute.amazonaws.com
 master-2 34.254.155.6 ec2-34-254-155-6.eu-west-1.compute.amazonaws.com
 ```
 
-The `defaults` file sets a number of deployment variables:
- * `AWS_EBS` - a list of EBS volumes to be attached to each worker node. This is a space-separate list of type:size pairs, for example: `"gp2:30 standard:20"` will provision a gp2 volume of 30 GB and a standard volume of 20GB
- * `AWS_REGION` - AWS region
- * `AWS_TYPE` - the AWS machine type for each node
- * `DEP_CLOUD` - the cloud on which to deploy (aws or gcp)
- * `DEP_CLUSTERS` - the number of clusters to deploy
- * `DEP_K8S_VERSION` - the version of Kubernetes to deploy
- * `DEP_NODES` - the number of worker nodes on each cluster
- * `DEP_PLATFORM` - can be set to either k8s or ocp3
- * `DEP_PX_VERSION` - the version of Portworx to install
- * `GCP_DISKS` - similar to AWS_EBS, for example: `"pd-standard:20 pd-ssd:30"`
- * `GCP_REGION` - GCP region
- * `GCP_TYPE` - the GCP machine type for each node
- * `GCP_ZONE` - GCP zone
+The `defaults.yml` file sets a number of deployment variables:
+ * `aws_ebs` - a list of EBS volumes to be attached to each worker node. This is a space-separate list of type:size pairs, for example: `"gp2:30 standard:20"` will provision a gp2 volume of 30 GB and a standard volume of 20GB
+ * `aws_region` - AWS region
+ * `aws_type` - the AWS machine type for each node
+ * `cloud` - the cloud on which to deploy (aws or gcp)
+ * `clusters` - the number of clusters to deploy
+ * `k8s_version` - the version of Kubernetes to deploy
+ * `nodes` - the number of worker nodes on each cluster
+ * `platform` - can be set to either k8s or ocp3
+ * `px_version` - the version of Portworx to install
+ * `gcp_disks` - similar to AWS_EBS, for example: `"pd-standard:20 pd-ssd:30"`
+ * `gcp_region` - GCP region
+ * `gcp_type` - the GCP machine type for each node
+ * `gcp_zone` - GCP zone
 
 There are two ways to override these variables. The first is to specify a template with the `--template=...` parameter. For example:
 ```
-$ cat templates/clusterpair
-DEP_CLUSTERS=2
-DEP_PX_CLUSTER_PREFIX=px-deploy
-DEP_SCRIPTS="install-px clusterpair"
+$ cat templates/clusterpair.yml
+clusters: 2
+scripts: ["install-px", "clusterpair"]
 ```
 
-More on `DEP_SCRIPTS` below.
+More on `scripts` below.
 
 The second way to override the defaults is to specify on the command line. See `px-deploy create -h` for a full list. For example, to deploy petclinic into the `foo` deployment:
 ```
@@ -96,7 +95,7 @@ px-deploy create --name=foo --clusters=5 --template=petclinic --nodes=6
 
 This example is a mixture of both methods. The template is applied, then the command line parameters are applied, so not only is the template overriding the defaults, but also the parameters are overriding the template.
 
-`DEP_SCRIPTS` is a list of scripts to be executed on each master node. For example:
+`scripts` is a list of scripts to be executed on each master node. For example:
 ```
 $ cat ~/.px-deploy/scripts/clusterpair
 exec &>/var/log/vagrant.$script
@@ -117,6 +116,12 @@ if [ $cluster != 1 ]; then
 fi
 ```
 
-All of the variables above are passed to the script. In addition to these, there are some more variables available:
+These variables are passed to the script:
+ * `$nodes`
+ * `$clusters`
+ * `$px_version`
+ * `$k8s_verion`
+
+In addition to these, there are some more variables available:
  * `$cluster` - cluster number
  * `$script` - filename of the script

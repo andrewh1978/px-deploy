@@ -1,30 +1,32 @@
 require "base64"
-env = ENV.select { |key, value| key.start_with?("DEP", "GCP", "AWS", "_AWS", "_GCP") }
+require "yaml"
+yaml = YAML.load(File.read("/px-deploy/.px-deploy/deployments/#{ENV['deployment']}.yml"))
+env = ({:clusters => yaml['clusters'], :nodes => yaml['nodes'], :px_version => yaml['px_version'], :k8s_version => yaml['k8s_version']})
 
 Vagrant.configure("2") do |config|
   config.vm.synced_folder ".", "/vagrant", disabled: true
-  config.vm.provision "file", source: "/px-deploy/.px-deploy/keys/id_rsa.#{ENV['DEP_CLOUD']}.#{ENV['DEP_NAME']}", destination: "/tmp/id_rsa"
-  if ENV['DEP_CLOUD'] == "aws"
+  config.vm.provision "file", source: "/px-deploy/.px-deploy/keys/id_rsa.#{yaml['cloud']}.#{yaml['name']}", destination: "/tmp/id_rsa"
+  if yaml['cloud'] == "aws"
     config.vm.box = "dummy"
     config.vm.provider :aws do |aws|
-      aws.security_groups = ENV['_AWS_sg']
-      aws.keypair_name = "px-deploy.#{ENV['DEP_NAME']}"
-      aws.region = ENV['AWS_REGION']
-      aws.instance_type = ENV['AWS_TYPE']
-      aws.ami = ENV['_AWS_ami']
-      aws.subnet_id = ENV['_AWS_subnet']
+      aws.security_groups = yaml['aws__sg']
+      aws.keypair_name = "px-deploy.#{yaml['name']}"
+      aws.region = yaml['aws_region']
+      aws.instance_type = yaml['aws_type']
+      aws.ami = yaml['aws__ami']
+      aws.subnet_id = yaml['aws__subnet']
       aws.associate_public_ip = true
       aws.block_device_mapping = [{ :DeviceName => "/dev/sda1", "Ebs.DeleteOnTermination" => true, "Ebs.VolumeSize" => 15 }]
     end
-  elsif ENV['DEP_CLOUD'] == "gcp"
+  elsif yaml['cloud'] == "gcp"
     config.vm.box = "google/gce"
     config.vm.provider :google do |gcp|
-      File.open("/px-deploy/.px-deploy/keys/px-deploy_gcp_#{ENV['_GCP_project']}.json", "w") do |line| line.puts(Base64.decode64(ENV['_GCP_key'])) end
-      gcp.google_project_id = ENV['_GCP_project']
-      gcp.zone = "#{ENV['GCP_REGION']}-#{ENV['GCP_ZONE']}"
-      gcp.google_json_key_location = "/px-deploy/.px-deploy/keys/px-deploy_gcp_#{ENV['_GCP_project']}.json";
+      File.open("/px-deploy/.px-deploy/keys/px-deploy_gcp_#{yaml['gcp__project']}.json", "w") do |line| line.puts(Base64.decode64(yaml['gcp__key'])) end
+      gcp.google_project_id = yaml['gcp__project']
+      gcp.zone = "#{yaml['gcp_region']}-#{yaml['gcp_zone']}"
+      gcp.google_json_key_location = "/px-deploy/.px-deploy/keys/px-deploy_gcp_#{yaml['gcp__project']}.json";
       gcp.image_family = "centos-7"
-      gcp.machine_type = ENV['GCP_TYPE']
+      gcp.machine_type = yaml['gcp_type']
       gcp.disk_size = 15
       gcp.network = "px-net"
       gcp.subnetwork = "px-subnet"
@@ -32,54 +34,54 @@ Vagrant.configure("2") do |config|
   end
 
   config.ssh.username = "centos"
-  config.ssh.private_key_path = "/px-deploy/.px-deploy/keys/id_rsa.#{ENV['DEP_CLOUD']}.#{ENV['DEP_NAME']}"
+  config.ssh.private_key_path = "/px-deploy/.px-deploy/keys/id_rsa.#{yaml['cloud']}.#{yaml['name']}"
   config.vm.provision "shell", path: "all-common", env: env
-  config.vm.provision "shell", path: "#{ENV['DEP_PLATFORM']}-common"
+  config.vm.provision "shell", path: "#{yaml['platform']}-common"
 
-  (1..ENV['DEP_CLUSTERS'].to_i).each do |c|
+  (1..yaml['clusters'].to_i).each do |c|
     subnet = "192.168.#{100+c}"
-    config.vm.define "#{ENV['DEP_NAME']}-master-#{c}" do |master|
+    config.vm.define "#{yaml['name']}-master-#{c}" do |master|
       master.vm.hostname = "master-#{c}"
-      if ENV['DEP_CLOUD'] == "aws"
+      if yaml['cloud'] == "aws"
         master.vm.provider :aws do |aws|
           aws.private_ip_address = "#{subnet}.90"
-          aws.tags = { "Name" => "master-#{c}", "px-deploy_name" => ENV['DEP_NAME'] }
+          aws.tags = { "Name" => "master-#{c}", "px-deploy_name" => yaml['name'] }
         end
-      elsif ENV['DEP_CLOUD'] == "gcp"
+      elsif yaml['cloud'] == "gcp"
         master.vm.provider :google do |gcp|
           gcp.name = "master-#{c}"
           gcp.network_ip = "#{subnet}.90"
         end
       end
-      master.vm.provision "shell", path: "#{ENV['DEP_PLATFORM']}-master", env: (env.merge({ :cluster => c }))
-      ENV['DEP_SCRIPTS'].split(' ').each do |i| master.vm.provision "shell", path: "/px-deploy/.px-deploy/scripts/#{i}", env: (env.merge({ :cluster => c, :script => i })) end if ENV['DEP_SCRIPTS']
+      master.vm.provision "shell", path: "#{yaml['platform']}-master", env: (env.merge({ :cluster => c }))
+      yaml['scripts'].each do |i| master.vm.provision "shell", path: "/px-deploy/.px-deploy/scripts/#{i}", env: (env.merge({ :cluster => c, :script => i })) end if !yaml['scripts'].empty?
     end
 
-    (1..ENV['DEP_NODES'].to_i).each do |n|
-      config.vm.define "#{ENV['DEP_NAME']}-node-#{c}-#{n}" do |node|
+    (1..yaml['nodes'].to_i).each do |n|
+      config.vm.define "#{yaml['name']}-node-#{c}-#{n}" do |node|
         node.vm.hostname = "node-#{c}-#{n}"
-        if ENV['DEP_CLOUD'] == "aws"
+        if yaml['cloud'] == "aws"
           node.vm.provider :aws do |aws|
             aws.private_ip_address = "#{subnet}.#{100+n}"
             aws.tags = { "Name" => "node-#{c}-#{n}" }
             d = 97
-            ENV['AWS_EBS'].split(' ').each do |i|
+            yaml['aws_ebs'].split(' ').each do |i|
               (type, size) = i.split(':')
               aws.block_device_mapping.push({:DeviceName => "/dev/sd#{(d+=1).chr}", "Ebs.DeleteOnTermination" => true, "Ebs.VolumeSize" => size, "Ebs.VolumeType" => type })
             end
           end
-        elsif ENV['DEP_CLOUD'] == "gcp"
+        elsif yaml['cloud'] == "gcp"
           node.vm.provider :google do |gcp|
             gcp.network_ip = "#{subnet}.#{100+n}"
             gcp.name = "node-#{c}-#{n}"
             d = 0
-            ENV['GCP_DISKS'].split(' ').each do |i|
+            yaml['gcp_disks'].split(' ').each do |i|
               (type, size) = i.split(':')
               gcp.additional_disks.push({ :disk_name => "disk-#{c}-#{n}-#{d+=1}", :disk_type => type, :disk_size => size })
             end
           end
         end
-        node.vm.provision "shell", path: "#{ENV['DEP_PLATFORM']}-node", env: (env.merge({ :cluster => c }))
+        node.vm.provision "shell", path: "#{yaml['platform']}-node", env: (env.merge({ :cluster => c }))
       end
     end
   end
