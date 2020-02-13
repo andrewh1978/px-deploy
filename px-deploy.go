@@ -122,9 +122,7 @@ func main() {
           aws ec2 delete-key-pair --key-name px-deploy.$DEP_NAME >&/dev/null
         `).CombinedOutput()
       } else if (os.Getenv("DEP_CLOUD") == "gcp") {
-        output, _ = exec.Command("bash", "-c", `
-          gcloud projects delete $_GCP_project --quiet
-        `).CombinedOutput()
+        output, _ = exec.Command("bash", "-c", "gcloud projects delete $_GCP_project --quiet").CombinedOutput()
         os.Remove("keys/px-deploy_gcp_" + os.Getenv("_GCP_project") + ".json")
       }
       fmt.Print(string(output))
@@ -214,8 +212,7 @@ func main() {
 func create_deployment_aws() {
   output, _ := exec.Command("bash", "-c", `
     aws configure set default.region $AWS_REGION
-    rm -f keys/id_rsa.aws.$DEP_NAME keys/id_rsa.aws.$DEP_NAME.pub
-    ssh-keygen -q -t rsa -b 2048 -f keys/id_rsa.aws.$DEP_NAME -N ''
+    yes | ssh-keygen -q -t rsa -b 2048 -f keys/id_rsa.aws.$DEP_NAME -N ''
     aws ec2 delete-key-pair --key-name px-deploy.$DEP_NAME >&/dev/null
     aws ec2 import-key-pair --key-name px-deploy.$DEP_NAME --public-key-material file://keys/id_rsa.aws.$DEP_NAME.pub
     _AWS_vpc=$(aws --output text ec2 create-vpc --cidr-block 192.168.0.0/16 --query Vpc.VpcId)
@@ -247,22 +244,21 @@ func create_deployment_aws() {
 
 func create_deployment_gcp() {
   output, _ := exec.Command("bash", "-c", `
-  rm -f keys/id_rsa.gcp.$DEP_NAME keys/id_rsa.gcp.$DEP_NAME.pub
-  ssh-keygen -q -t rsa -b 2048 -f keys/id_rsa.gcp.$DEP_NAME -N ''
-  _GCP_project=pxd-$(uuidgen | tr -d -- - | cut -b 1-26 | tr 'A-Z' 'a-z')
-  gcloud projects create $_GCP_project --labels px-deploy_name=$DEP_NAME
-  account=$(gcloud alpha billing accounts list | tail -1 | cut -f 1 -d " ")
-  gcloud alpha billing projects link $_GCP_project --billing-account $account
-  gcloud services enable compute.googleapis.com --project $_GCP_project
-  gcloud compute networks create px-net --project $_GCP_project
-  gcloud compute networks subnets create --range 192.168.0.0/16 --network px-net px-subnet --region $GCP_REGION --project $_GCP_project
-  gcloud compute firewall-rules create allow-internal --allow=tcp,udp,icmp --source-ranges=192.168.0.0/16 --network px-net --project $_GCP_project &
-  gcloud compute firewall-rules create allow-external --allow=tcp:22,tcp:443,tcp:6443 --network px-net --project $_GCP_project &
-  gcloud compute project-info add-metadata --metadata "ssh-keys=centos:$(cat keys/id_rsa.gcp.$DEP_NAME.pub)" --project $_GCP_project &
-  service_account=$(gcloud iam service-accounts list --project $_GCP_project --format 'flattened(email)' | tail -1 | cut -f 2 -d " ")
-  _GCP_key=$(gcloud iam service-accounts keys create /dev/stdout --iam-account $service_account | base64 -w0)
-  wait
-  set | grep ^_GCP >deployments/$DEP_NAME
+    yes | ssh-keygen -q -t rsa -b 2048 -f keys/id_rsa.gcp.$DEP_NAME -N ''
+    _GCP_project=pxd-$(uuidgen | tr -d -- - | cut -b 1-26 | tr 'A-Z' 'a-z')
+    gcloud projects create $_GCP_project --labels px-deploy_name=$DEP_NAME
+    account=$(gcloud alpha billing accounts list | tail -1 | cut -f 1 -d " ")
+    gcloud alpha billing projects link $_GCP_project --billing-account $account
+    gcloud services enable compute.googleapis.com --project $_GCP_project
+    gcloud compute networks create px-net --project $_GCP_project
+    gcloud compute networks subnets create --range 192.168.0.0/16 --network px-net px-subnet --region $GCP_REGION --project $_GCP_project
+    gcloud compute firewall-rules create allow-internal --allow=tcp,udp,icmp --source-ranges=192.168.0.0/16 --network px-net --project $_GCP_project &
+    gcloud compute firewall-rules create allow-external --allow=tcp:22,tcp:443,tcp:6443 --network px-net --project $_GCP_project &
+    gcloud compute project-info add-metadata --metadata "ssh-keys=centos:$(cat keys/id_rsa.gcp.$DEP_NAME.pub)" --project $_GCP_project &
+    service_account=$(gcloud iam service-accounts list --project $_GCP_project --format 'flattened(email)' | tail -1 | cut -f 2 -d " ")
+    _GCP_key=$(gcloud iam service-accounts keys create /dev/stdout --iam-account $service_account | base64 -w0)
+    wait
+    set | grep ^_GCP >deployments/$DEP_NAME
   `).CombinedOutput()
   fmt.Print(string(output))
   f, _ := os.OpenFile("deployments/" + os.Getenv("DEP_NAME"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
