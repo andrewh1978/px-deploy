@@ -306,7 +306,7 @@ func create_deployment_gcp(config Config) {
 }
 
 func get_ip(deployment string) string {
-  config := parse_yaml("deployments/" + deployment + ".yml")
+  config := parse_yaml("/px-deploy/.px-deploy/deployments/" + deployment + ".yml")
   var output []byte
   if (config.Cloud == "aws") {
     output, _ = exec.Command("bash", "-c", `aws ec2 describe-instances --region ` + config.Aws_Region + ` --filters "Name=network-interface.vpc-id,Values=` + config.Aws__Vpc + `" "Name=tag:Name,Values=master-1" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PublicIpAddress" --output text`).Output()
