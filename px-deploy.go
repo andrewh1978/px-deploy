@@ -46,6 +46,7 @@ type Config struct {
 
 func main() {
   var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createAwsType, createAwsEbs, createGcpType, createGcpDisks, createGcpZone, createTemplate, createRegion, createCloud, connectName, destroyName, statusName string
+  var destroyAll bool
   os.Chdir("/px-deploy/.px-deploy")
 
   cmdCreate := &cobra.Command {
@@ -137,42 +138,19 @@ func main() {
     Short: "Destroys a deployment",
     Long: "Destroys a deployment",
     Run: func(cmd *cobra.Command, args []string) {
-      config := parse_yaml("deployments/" + destroyName + ".yml")
-      var output []byte
-      ip := get_ip(config.Name)
-      if (config.Cloud == "aws") {
-        _ = exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no","-i","keys/id_rsa." + config.Cloud + "." + config.Name, "root@" + ip, `
-          for i in $(tail -n +3 /etc/hosts | cut -f 1 -d " "); do
-            ssh $i poweroff --force --force &
-          done
-          wait
-          poweroff --force --force
-          done
-        `).Start()
-        time.Sleep(5 * time.Second)
-        output, _ = exec.Command("bash", "-c", `
-          aws configure set default.region ` + config.Aws_Region + `
-          instances=$(aws ec2 describe-instances --filters "Name=network-interface.vpc-id,Values=` + config.Aws__Vpc + `" --query "Reservations[*].Instances[*].InstanceId" --output text)
-          [[ "$instances" ]] && {
-            aws ec2 terminate-instances --instance-ids $instances >/dev/null
-            aws ec2 wait instance-terminated --instance-ids $instances
-          }
-          aws ec2 delete-security-group --group-id ` + config.Aws__Sg + ` &&
-          aws ec2 delete-subnet --subnet-id ` + config.Aws__Subnet + ` &&
-          aws ec2 detach-internet-gateway --internet-gateway-id ` + config.Aws__Gw + ` --vpc-id ` + config.Aws__Vpc + ` &&
-          aws ec2 delete-internet-gateway --internet-gateway-id ` + config.Aws__Gw + ` &&
-          aws ec2 delete-route-table --route-table-id ` +config.Aws__Routetable + ` &&
-          aws ec2 delete-vpc --vpc-id ` + config.Aws__Vpc + `
-          aws ec2 delete-key-pair --key-name px-deploy.` + config.Name + ` >&/dev/null
-        `).CombinedOutput()
-      } else if (config.Cloud == "gcp") {
-        output, _ = exec.Command("bash", "-c", "gcloud projects delete " + config.Gcp__Project + " --quiet").CombinedOutput()
-        os.Remove("keys/px-deploy_gcp_" + config.Gcp__Project + ".json")
-      } else { die ("Bad cloud") }
-      fmt.Print(string(output))
-      os.Remove("deployments/" + destroyName + ".yml")
-      os.Remove("keys/id_rsa." + config.Cloud + "." + destroyName)
-      os.Remove("keys/id_rsa." + config.Cloud + "." + destroyName + ".pub")
+      if (destroyAll) {
+        if (destroyName != "") { die("Specify either -a or -n, not both") }
+        filepath.Walk("deployments", func(file string, info os.FileInfo, err error) error {
+          if (info.Mode() & os.ModeDir != 0) { return nil }
+          config := parse_yaml(file)
+          destroy_deployment(config.Name)
+          return nil
+        })
+      } else {
+        if (destroyName == "") { die("Must specify deployment to destroy") }
+	fmt.Println("destroying " + destroyName)
+	destroy_deployment(destroyName)
+      }
     },
   }
 
@@ -246,8 +224,8 @@ func main() {
   cmdCreate.Flags().StringVarP(&createRegion, "region", "r", "", "AWS or GCP region (default " + defaults.Aws_Region + " or " + defaults.Gcp_Region + ")")
   cmdCreate.Flags().StringVarP(&createCloud, "cloud", "C", "", "aws or gcp (default " + defaults.Cloud + ")")
 
+  cmdDestroy.Flags().BoolVarP(&destroyAll, "all", "a", false, "destroy all deployments")
   cmdDestroy.Flags().StringVarP(&destroyName, "name", "n", "", "name of deployment to be destroyed")
-  cmdDestroy.MarkFlagRequired("name")
 
   cmdConnect.Flags().StringVarP(&connectName, "name", "n", "", "name of deployment to connect to")
   cmdConnect.MarkFlagRequired("name")
@@ -314,6 +292,45 @@ func create_deployment_gcp(config Config) {
     echo gcp__key: $_GCP_key >>deployments/` + config.Name + `.yml
   `).CombinedOutput()
   fmt.Print(string(output))
+}
+
+func destroy_deployment(name string) {
+  config := parse_yaml("deployments/" + name + ".yml")
+  var output []byte
+  ip := get_ip(config.Name)
+  if (config.Cloud == "aws") {
+    _ = exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no","-i","keys/id_rsa." + config.Cloud + "." + config.Name, "root@" + ip, `
+      for i in $(tail -n +3 /etc/hosts | cut -f 1 -d " "); do
+        ssh $i poweroff --force --force &
+      done
+      wait
+      poweroff --force --force
+      done
+    `).Start()
+    time.Sleep(5 * time.Second)
+    output, _ = exec.Command("bash", "-c", `
+      aws configure set default.region ` + config.Aws_Region + `
+      instances=$(aws ec2 describe-instances --filters "Name=network-interface.vpc-id,Values=` + config.Aws__Vpc + `" --query "Reservations[*].Instances[*].InstanceId" --output text)
+      [[ "$instances" ]] && {
+        aws ec2 terminate-instances --instance-ids $instances >/dev/null
+        aws ec2 wait instance-terminated --instance-ids $instances
+      }
+      aws ec2 delete-security-group --group-id ` + config.Aws__Sg + ` &&
+      aws ec2 delete-subnet --subnet-id ` + config.Aws__Subnet + ` &&
+      aws ec2 detach-internet-gateway --internet-gateway-id ` + config.Aws__Gw + ` --vpc-id ` + config.Aws__Vpc + ` &&
+      aws ec2 delete-internet-gateway --internet-gateway-id ` + config.Aws__Gw + ` &&
+      aws ec2 delete-route-table --route-table-id ` +config.Aws__Routetable + ` &&
+      aws ec2 delete-vpc --vpc-id ` + config.Aws__Vpc + `
+      aws ec2 delete-key-pair --key-name px-deploy.` + config.Name + ` >&/dev/null
+    `).CombinedOutput()
+  } else if (config.Cloud == "gcp") {
+    output, _ = exec.Command("bash", "-c", "gcloud projects delete " + config.Gcp__Project + " --quiet").CombinedOutput()
+    os.Remove("keys/px-deploy_gcp_" + config.Gcp__Project + ".json")
+  } else { die ("Bad cloud") }
+  fmt.Print(string(output))
+  os.Remove("deployments/" + name + ".yml")
+  os.Remove("keys/id_rsa." + config.Cloud + "." + name)
+  os.Remove("keys/id_rsa." + config.Cloud + "." + name + ".pub")
 }
 
 func get_ip(deployment string) string {
