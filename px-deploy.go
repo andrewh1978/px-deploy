@@ -122,11 +122,7 @@ func main() {
       y, _ := yaml.Marshal(config)
       err := ioutil.WriteFile("deployments/" + createName + ".yml", y, 0644)
       if err != nil { die("err") }
-      switch (config.Cloud) {
-        case "aws": create_deployment_aws(config)
-        case "gcp": create_deployment_gcp(config)
-        default: die("Bad cloud")
-      }
+      create_deployment(config)
       os.Chdir("/px-deploy/vagrant")
       os.Setenv("deployment", config.Name)
       syscall.Exec("/usr/bin/vagrant", []string{"vagrant", "up"}, os.Environ())
@@ -148,7 +144,6 @@ func main() {
         })
       } else {
         if (destroyName == "") { die("Must specify deployment to destroy") }
-	fmt.Println("destroying " + destroyName)
 	destroy_deployment(destroyName)
       }
     },
@@ -238,59 +233,63 @@ func main() {
   rootCmd.Execute()
 }
 
-func create_deployment_aws(config Config) {
-  output, _ := exec.Command("bash", "-c", `
-    aws configure set default.region ` + config.Aws_Region + `
-    yes | ssh-keygen -q -t rsa -b 2048 -f keys/id_rsa.aws.` + config.Name + ` -N ''
-    aws ec2 delete-key-pair --key-name px-deploy.` + config.Name + ` >&/dev/null
-    aws ec2 import-key-pair --key-name px-deploy.` + config.Name + ` --public-key-material file://keys/id_rsa.aws.` + config.Name + `.pub >&/dev/null
-    _AWS_vpc=$(aws --output text ec2 create-vpc --cidr-block 192.168.0.0/16 --query Vpc.VpcId)
-    _AWS_subnet=$(aws --output text ec2 create-subnet --vpc-id $_AWS_vpc --cidr-block 192.168.0.0/16 --query Subnet.SubnetId)
-    _AWS_gw=$(aws --output text ec2 create-internet-gateway --query InternetGateway.InternetGatewayId)
-    aws ec2 attach-internet-gateway --vpc-id $_AWS_vpc --internet-gateway-id $_AWS_gw
-    _AWS_routetable=$(aws --output text ec2 create-route-table --vpc-id $_AWS_vpc --query RouteTable.RouteTableId)
-    aws ec2 create-route --route-table-id $_AWS_routetable --destination-cidr-block 0.0.0.0/0 --gateway-id $_AWS_gw >/dev/null
-    aws ec2 associate-route-table  --subnet-id $_AWS_subnet --route-table-id $_AWS_routetable >/dev/null
-    _AWS_sg=$(aws --output text ec2 create-security-group --group-name px-cloud --description "Security group for px-cloud" --vpc-id $_AWS_vpc --query GroupId)
-    aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 22 --cidr 0.0.0.0/0 &
-    aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 443 --cidr 0.0.0.0/0 &
-    aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 5900 --cidr 0.0.0.0/0 &
-    aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 8080 --cidr 0.0.0.0/0 &
-    aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 30000-32767 --cidr 0.0.0.0/0 &
-    aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol all --cidr 192.168.0.0/16 &
-    aws ec2 create-tags --resources $_AWS_vpc $_AWS_subnet $_AWS_gw $_AWS_routetable $_AWS_sg --tags Key=px-deploy_name,Value=` + config.Name + ` &
-    aws ec2 create-tags --resources $_AWS_vpc --tags Key=Name,Value=px-deploy.` + config.Name + ` &
-    _AWS_ami=$(aws --output text ec2 describe-images --owners 679593333241 --filters Name=name,Values='CentOS Linux 7 x86_64 HVM EBS*' Name=architecture,Values=x86_64 Name=root-device-type,Values=ebs --query 'sort_by(Images, &Name)[-1].ImageId')
-    wait
-    echo aws__vpc: $_AWS_vpc >>deployments/` + config.Name + `.yml
-    echo aws__sg: $_AWS_sg >>deployments/` + config.Name + `.yml
-    echo aws__subnet: $_AWS_subnet >>deployments/` + config.Name + `.yml
-    echo aws__gw: $_AWS_gw >>deployments/` + config.Name + `.yml
-    echo aws__routetable: $_AWS_routetable >>deployments/` + config.Name + `.yml
-    echo aws__ami: $_AWS_ami >>deployments/` + config.Name + `.yml
-  `).CombinedOutput()
-  fmt.Print(string(output))
-}
-
-func create_deployment_gcp(config Config) {
-  output, _ := exec.Command("bash", "-c", `
-    yes | ssh-keygen -q -t rsa -b 2048 -f keys/id_rsa.gcp.` + config.Name + ` -N ''
-    _GCP_project=pxd-$(uuidgen | tr -d -- - | cut -b 1-26 | tr 'A-Z' 'a-z')
-    gcloud projects create $_GCP_project --labels px-deploy_name=` + config.Name + `
-    account=$(gcloud alpha billing accounts list | tail -1 | cut -f 1 -d " ")
-    gcloud alpha billing projects link $_GCP_project --billing-account $account
-    gcloud services enable compute.googleapis.com --project $_GCP_project
-    gcloud compute networks create px-net --project $_GCP_project
-    gcloud compute networks subnets create --range 192.168.0.0/16 --network px-net px-subnet --region ` + config.Gcp_Region + ` --project $_GCP_project
-    gcloud compute firewall-rules create allow-internal --allow=tcp,udp,icmp --source-ranges=192.168.0.0/16 --network px-net --project $_GCP_project &
-    gcloud compute firewall-rules create allow-external --allow=tcp:22,tcp:443,tcp:6443,tcp:5900 --network px-net --project $_GCP_project &
-    gcloud compute project-info add-metadata --metadata "ssh-keys=centos:$(cat keys/id_rsa.gcp.` + config.Name + `.pub)" --project $_GCP_project &
-    service_account=$(gcloud iam service-accounts list --project $_GCP_project --format 'flattened(email)' | tail -1 | cut -f 2 -d " ")
-    _GCP_key=$(gcloud iam service-accounts keys create /dev/stdout --iam-account $service_account | base64 -w0)
-    wait
-    echo gcp__project: $_GCP_project >>deployments/` + config.Name + `.yml
-    echo gcp__key: $_GCP_key >>deployments/` + config.Name + `.yml
-  `).CombinedOutput()
+func create_deployment(config Config) {
+  var output []byte
+  switch(config.Cloud) {
+    case "aws": {
+      output, _ = exec.Command("bash", "-c", `
+        aws configure set default.region ` + config.Aws_Region + `
+        yes | ssh-keygen -q -t rsa -b 2048 -f keys/id_rsa.aws.` + config.Name + ` -N ''
+        aws ec2 delete-key-pair --key-name px-deploy.` + config.Name + ` >&/dev/null
+        aws ec2 import-key-pair --key-name px-deploy.` + config.Name + ` --public-key-material file://keys/id_rsa.aws.` + config.Name + `.pub >&/dev/null
+        _AWS_vpc=$(aws --output text ec2 create-vpc --cidr-block 192.168.0.0/16 --query Vpc.VpcId)
+        _AWS_subnet=$(aws --output text ec2 create-subnet --vpc-id $_AWS_vpc --cidr-block 192.168.0.0/16 --query Subnet.SubnetId)
+        _AWS_gw=$(aws --output text ec2 create-internet-gateway --query InternetGateway.InternetGatewayId)
+        aws ec2 attach-internet-gateway --vpc-id $_AWS_vpc --internet-gateway-id $_AWS_gw
+        _AWS_routetable=$(aws --output text ec2 create-route-table --vpc-id $_AWS_vpc --query RouteTable.RouteTableId)
+        aws ec2 create-route --route-table-id $_AWS_routetable --destination-cidr-block 0.0.0.0/0 --gateway-id $_AWS_gw >/dev/null
+        aws ec2 associate-route-table  --subnet-id $_AWS_subnet --route-table-id $_AWS_routetable >/dev/null
+        _AWS_sg=$(aws --output text ec2 create-security-group --group-name px-cloud --description "Security group for px-cloud" --vpc-id $_AWS_vpc --query GroupId)
+        aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 22 --cidr 0.0.0.0/0 &
+        aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 443 --cidr 0.0.0.0/0 &
+        aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 5900 --cidr 0.0.0.0/0 &
+        aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 8080 --cidr 0.0.0.0/0 &
+        aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 30000-32767 --cidr 0.0.0.0/0 &
+        aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol all --cidr 192.168.0.0/16 &
+        aws ec2 create-tags --resources $_AWS_vpc $_AWS_subnet $_AWS_gw $_AWS_routetable $_AWS_sg --tags Key=px-deploy_name,Value=` + config.Name + ` &
+        aws ec2 create-tags --resources $_AWS_vpc --tags Key=Name,Value=px-deploy.` + config.Name + ` &
+        _AWS_ami=$(aws --output text ec2 describe-images --owners 679593333241 --filters Name=name,Values='CentOS Linux 7 x86_64 HVM EBS*' Name=architecture,Values=x86_64 Name=root-device-type,Values=ebs --query 'sort_by(Images, &Name)[-1].ImageId')
+        wait
+        echo aws__vpc: $_AWS_vpc >>deployments/` + config.Name + `.yml
+        echo aws__sg: $_AWS_sg >>deployments/` + config.Name + `.yml
+        echo aws__subnet: $_AWS_subnet >>deployments/` + config.Name + `.yml
+        echo aws__gw: $_AWS_gw >>deployments/` + config.Name + `.yml
+        echo aws__routetable: $_AWS_routetable >>deployments/` + config.Name + `.yml
+        echo aws__ami: $_AWS_ami >>deployments/` + config.Name + `.yml
+      `).CombinedOutput()
+    }
+    case "gcp": {
+      output, _ = exec.Command("bash", "-c", `
+        yes | ssh-keygen -q -t rsa -b 2048 -f keys/id_rsa.gcp.` + config.Name + ` -N ''
+        _GCP_project=pxd-$(uuidgen | tr -d -- - | cut -b 1-26 | tr 'A-Z' 'a-z')
+        gcloud projects create $_GCP_project --labels px-deploy_name=` + config.Name + `
+        account=$(gcloud alpha billing accounts list | tail -1 | cut -f 1 -d " ")
+        gcloud alpha billing projects link $_GCP_project --billing-account $account
+        gcloud services enable compute.googleapis.com --project $_GCP_project
+        gcloud compute networks create px-net --project $_GCP_project
+        gcloud compute networks subnets create --range 192.168.0.0/16 --network px-net px-subnet --region ` + config.Gcp_Region + ` --project $_GCP_project
+        gcloud compute firewall-rules create allow-internal --allow=tcp,udp,icmp --source-ranges=192.168.0.0/16 --network px-net --project $_GCP_project &
+        gcloud compute firewall-rules create allow-external --allow=tcp:22,tcp:443,tcp:6443,tcp:5900 --network px-net --project $_GCP_project &
+        gcloud compute project-info add-metadata --metadata "ssh-keys=centos:$(cat keys/id_rsa.gcp.` + config.Name + `.pub)" --project $_GCP_project &
+        service_account=$(gcloud iam service-accounts list --project $_GCP_project --format 'flattened(email)' | tail -1 | cut -f 2 -d " ")
+        _GCP_key=$(gcloud iam service-accounts keys create /dev/stdout --iam-account $service_account | base64 -w0)
+        wait
+        echo gcp__project: $_GCP_project >>deployments/` + config.Name + `.yml
+        echo gcp__key: $_GCP_key >>deployments/` + config.Name + `.yml
+      `).CombinedOutput()
+    }
+    default: die("Invalid cloud '"+ config.Cloud + "'")
+  }
   fmt.Print(string(output))
 }
 
