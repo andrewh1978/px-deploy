@@ -5,6 +5,7 @@ import (
   "os"
   "regexp"
   "syscall"
+  "strconv"
   "time"
   "os/exec"
   "text/tabwriter"
@@ -298,15 +299,19 @@ func destroy_deployment(name string) {
   var output []byte
   ip := get_ip(config.Name)
   if (config.Cloud == "aws") {
-    _ = exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no","-i","keys/id_rsa." + config.Cloud + "." + config.Name, "root@" + ip, `
-      for i in $(tail -n +3 /etc/hosts | cut -f 1 -d " "); do
-        ssh $i poweroff --force --force &
-      done
-      wait
-      poweroff --force --force
-      done
-    `).Start()
-    time.Sleep(5 * time.Second)
+    c, _ := strconv.Atoi(config.Clusters)
+    n, _ := strconv.Atoi(config.Nodes)
+    if (c < 3 && n < 5) {
+      _ = exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa." + config.Cloud + "." + config.Name, "root@" + ip, `
+        for i in $(tail -n +3 /etc/hosts | cut -f 1 -d " "); do
+          ssh $i poweroff --force --force &
+        done
+        wait
+        poweroff --force --force
+        done
+      `).Start()
+      time.Sleep(5 * time.Second)
+    }
     output, _ = exec.Command("bash", "-c", `
       aws configure set default.region ` + config.Aws_Region + `
       instances=$(aws ec2 describe-instances --filters "Name=network-interface.vpc-id,Values=` + config.Aws__Vpc + `" --query "Reservations[*].Instances[*].InstanceId" --output text)
