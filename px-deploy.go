@@ -139,7 +139,17 @@ func main() {
     Run: func(cmd *cobra.Command, args []string) {
       config := parse_yaml("deployments/" + destroyName + ".yml")
       var output []byte
+      ip := get_ip(config.Name)
       if (config.Cloud == "aws") {
+        _ = exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no","-i","keys/id_rsa." + config.Cloud + "." + config.Name, "root@" + ip, `
+          for i in $(tail -n +3 /etc/hosts | cut -f 1 -d " "); do
+            ssh $i poweroff --force --force &
+          done
+          wait
+          poweroff --force --force
+          done
+        `).Start()
+        time.Sleep(5 * time.Second)
         output, _ = exec.Command("bash", "-c", `
           aws configure set default.region ` + config.Aws_Region + `
           instances=$(aws ec2 describe-instances --filters "Name=network-interface.vpc-id,Values=` + config.Aws__Vpc + `" --query "Reservations[*].Instances[*].InstanceId" --output text)
@@ -165,7 +175,7 @@ func main() {
       os.Remove("keys/id_rsa." + config.Cloud + "." + destroyName + ".pub")
     },
   }
-  
+
   cmdConnect := &cobra.Command {
     Use: "connect name",
     Short: "Connects to a deployment",
@@ -266,6 +276,7 @@ func create_deployment_aws(config Config) {
     _AWS_sg=$(aws --output text ec2 create-security-group --group-name px-cloud --description "Security group for px-cloud" --vpc-id $_AWS_vpc --query GroupId)
     aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 22 --cidr 0.0.0.0/0 &
     aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 443 --cidr 0.0.0.0/0 &
+    aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 5900 --cidr 0.0.0.0/0 &
     aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 8080 --cidr 0.0.0.0/0 &
     aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 30000-32767 --cidr 0.0.0.0/0 &
     aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol all --cidr 192.168.0.0/16 &
