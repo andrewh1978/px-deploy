@@ -49,6 +49,7 @@ func main() {
   var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createAwsType, createAwsEbs, createGcpType, createGcpDisks, createGcpZone, createTemplate, createRegion, createCloud, connectName, destroyName, statusName string
   var destroyAll bool
   os.Chdir("/px-deploy/.px-deploy")
+  rootCmd := &cobra.Command{Use: "px-deploy"}
 
   cmdCreate := &cobra.Command {
     Use: "create",
@@ -203,6 +204,17 @@ func main() {
       syscall.Exec("/usr/bin/ssh", []string{"ssh", "-q", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa." + config.Cloud + "." + config.Name, "root@" + ip, c}, []string{})
     },
   }
+
+  cmdCompletion := &cobra.Command {
+    Use:   "completion",
+    Short: "Generates bash completion scripts",
+    Long: `To load completion run
+
+  . <(px-deploy completion)`,
+    Run: func(cmd *cobra.Command, args []string) {
+      rootCmd.GenBashCompletion(os.Stdout)
+    },
+  }
   
   defaults := parse_yaml("defaults.yml")
   cmdCreate.Flags().StringVarP(&createName, "name", "n", "", "name of deployment to be created (if blank, generate UUID)")
@@ -229,8 +241,7 @@ func main() {
   cmdStatus.Flags().StringVarP(&statusName, "name", "n", "", "name of deployment")
   cmdStatus.MarkFlagRequired("name")
 
-  rootCmd := &cobra.Command{Use: "px-deploy"}
-  rootCmd.AddCommand(cmdCreate, cmdDestroy, cmdConnect, cmdList, cmdStatus)
+  rootCmd.AddCommand(cmdCreate, cmdDestroy, cmdConnect, cmdList, cmdStatus, cmdCompletion)
   rootCmd.Execute()
 }
 

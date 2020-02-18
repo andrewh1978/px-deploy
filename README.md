@@ -18,31 +18,39 @@ This will deploy one or more clusters in the cloud, with optional post-install t
 
 2. Install and enable Docker.
 
-3. Clone this repo and cd to it.
+3. Install bash-completion (optional), eg:
+```
+$ brew install bash-completion
+```
+You will need to restart your shell.
 
-4. Run the install script:
+4. Clone this repo and cd to it.
+
+5. Run the install script:
 ```
 sh install.sh
 ```
 This will:
  * build the Docker image
  * create and populate `$HOME/.px-deploy`
- * add an alias to `.bash_profile`, which will require sourcing
+ * create `$HOME/.px-deploy/bash-completion`
+ * add an alias to `.bash_profile`
+ * source `bash-completion` in `.bash_profile`
 
-If you are not using bash, you can edit the appropriate file manually.
+If you are not using bash, you can edit the appropriate file manually. If you are, `.bash_profile` will need sourcing.
 
-5. Deploy something
+6. Deploy something
 ```
 px-deploy create --name=myDeployment --template=clusterpair
 ```
 This will provision a VPC and some other objects, and deploy into it from the template.
 
-6. Connect via SSH:
+7. Connect via SSH:
 ```
 px-deploy connect --name myDeployment
 ```
 
-7. Tear down the deployment:
+8. Tear down the deployment:
 ```
 px-deploy destroy --name myDeployment
 ```
