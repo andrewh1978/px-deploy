@@ -1,3 +1,2 @@
-exec &>/var/log/vagrant.$script
 yum install -y python3-pip
 pip3 install awscli

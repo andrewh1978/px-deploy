@@ -1,4 +1,3 @@
-exec &>/var/log/vagrant.$script
 while : ; do
   n=$(ssh node-$cluster-1 pxctl status 2>/dev/null | grep "Yes.*Online.*Up" | wc -l)
   [ $n -eq $nodes ] && break

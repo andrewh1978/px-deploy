@@ -1,4 +1,3 @@
-exec &>/var/log/vagrant.$script
 if [ $cluster != 1 ]; then
   while : ; do
     token=$(ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no node-$cluster-1 pxctl cluster token show 2>/dev/null | cut -f 3 -d " ")

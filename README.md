@@ -106,7 +106,6 @@ This example is a mixture of both methods. The template is applied, then the com
 `scripts` is a list of scripts to be executed on each master node. For example:
 ```
 $ cat ~/.px-deploy/scripts/clusterpair
-exec &>/var/log/vagrant.$script
 if [ $cluster != 1 ]; then
   while : ; do
     token=$(ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no node-$cluster-1 pxctl cluster token show 2>/dev/null | cut -f 3 -d " ")
@@ -132,4 +131,3 @@ These variables are passed to the script:
 
 In addition to these, there are some more variables available:
  * `$cluster` - cluster number
- * `$script` - filename of the script

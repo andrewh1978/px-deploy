@@ -56,7 +56,14 @@ Vagrant.configure("2") do |config|
       end
       master.vm.provision "shell", path: "all-master"
       master.vm.provision "shell", path: "#{yaml['platform']}-master", env: (env.merge({ :cluster => c }))
-      yaml['scripts'].each do |i| master.vm.provision "shell", path: "/px-deploy/.px-deploy/scripts/#{i}", env: (env.merge({ :cluster => c, :script => i })) end if !yaml['scripts'].empty?
+      if !yaml['scripts'].empty?
+        script = ""
+        yaml['scripts'].each do |i|
+          script << "exec &>>/var/log/vagrant.#{i}\n"
+          script << File.read("/px-deploy/.px-deploy/scripts/#{i}") + "\n"
+        end
+        master.vm.provision "shell", inline: script, env: (env.merge({ :cluster => c }))
+      end
       master.vm.provision "shell", inline: "echo IP is $(curl -s https://ipinfo.io/ip)" if c == 1
     end
 

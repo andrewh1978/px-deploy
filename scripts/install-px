@@ -1,4 +1,3 @@
-exec &>/var/log/vagrant.$script
 k8s_version=$(kubectl version --short | awk -Fv '/Server Version: / {print $3}')
 url="https://install.portworx.com/$(cut -f 1,2 -d . <<<$px_version)?kbver=$k8s_version&b=true&c=px-deploy-$cluster&stork=true&st=k8s&lh=true"
 [ -e /usr/bin/oc ] && url="$url&osft=true"

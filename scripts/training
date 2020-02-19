@@ -1,4 +1,3 @@
-exec &>/var/log/vagrant.$script
 yum install -y git epel-release vim-enhanced
 yum install -y shellinabox
 rm -f /etc/securetty
