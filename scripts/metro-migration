@@ -1,10 +1,3 @@
-exec &>/var/log/vagrant.$script
-while : ; do
-  n=$(ssh node-$cluster-1 pxctl status 2>/dev/null | grep "Yes.*Online.*Up" | wc -l)
-  [ $n -eq 6 ] && break
-  sleep 1
-done
-
 kubectl apply -f - <<EOF
 apiVersion: stork.libopenstorage.org/v1alpha1
 kind: SchedulePolicy

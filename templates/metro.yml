@@ -1,2 +1,3 @@
 clusters: 2
-scripts: ["metro", "petclinic", "clusterpair", "metro-migration"]
+nodes: 3
+scripts: ["install-awscli", "metro", "petclinic", "clusterpair", "metro-migration"]

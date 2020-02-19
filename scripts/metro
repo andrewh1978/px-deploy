@@ -1,10 +1,3 @@
-exec &>/var/log/vagrant.$script
-
-yum install -y python3-pip
-pip3 install awscli
-
-ln -s /usr/local/bin/aws /usr/bin/aws
-
 curl -fsSL https://github.com/coreos/etcd/releases/download/v3.3.8/etcd-v3.3.8-linux-amd64.tar.gz | sudo tar -xvz --strip=1 -f - -C /usr/local/bin etcd-v3.3.8-linux-amd64/etcdctl etcd-v3.3.8-linux-amd64/etcd
 sudo useradd -d /var/lib/etcd-host -s /bin/false -m etcd && chown -R etcd:etcd /var/lib/etcd-host
 HOSTNAME=$(hostname -i)
@@ -35,6 +28,9 @@ url="https://install.portworx.com/$(cut -f 1,2 -d . <<<$px_version)?kbver=$k8s_v
 curl -so /tmp/px.yml $url
 kubectl apply -f /tmp/px.yml
 
+yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+yum install jq -y
+
 while : ; do
   STORK_POD=$(kubectl get pods -n kube-system -l name=stork -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
   if [ "$STORK_POD" ]; then
@@ -45,10 +41,6 @@ while : ; do
   sleep 5
   echo waiting for stork
 done
-
-yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm && yum install jq -y
-PATH=$PATH:/bin:/usr/bin:/snap/bin/jq
-export PATH
 
 while : ; do
   PWX_POD=$(kubectl get pods -n kube-system -l name=portworx -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
@@ -62,7 +54,6 @@ while : ; do
   echo Waiting for Portworx to come up
 done
 
-exec &>/var/log/vagrant.$script
 while : ; do
   n=$(ssh node-$cluster-1 pxctl status 2>/dev/null | grep "Yes.*Online.*Up" | wc -l)
   [ $n -eq 6 ] && break
