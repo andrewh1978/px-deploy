@@ -261,8 +261,9 @@ func create_deployment(config Config) {
         _AWS_routetable=$(aws --output text ec2 create-route-table --vpc-id $_AWS_vpc --query RouteTable.RouteTableId)
         aws ec2 create-route --route-table-id $_AWS_routetable --destination-cidr-block 0.0.0.0/0 --gateway-id $_AWS_gw >/dev/null
         aws ec2 associate-route-table  --subnet-id $_AWS_subnet --route-table-id $_AWS_routetable >/dev/null
-        _AWS_sg=$(aws --output text ec2 create-security-group --group-name px-cloud --description "Security group for px-cloud" --vpc-id $_AWS_vpc --query GroupId)
+        _AWS_sg=$(aws --output text ec2 create-security-group --group-name px-deploy --description "Security group for px-deploy" --vpc-id $_AWS_vpc --query GroupId)
         aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 22 --cidr 0.0.0.0/0 &
+        aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 80 --cidr 0.0.0.0/0 &
         aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 443 --cidr 0.0.0.0/0 &
         aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 5900 --cidr 0.0.0.0/0 &
         aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 8080 --cidr 0.0.0.0/0 &
@@ -291,7 +292,7 @@ func create_deployment(config Config) {
         gcloud compute networks create px-net --project $_GCP_project
         gcloud compute networks subnets create --range 192.168.0.0/16 --network px-net px-subnet --region ` + config.Gcp_Region + ` --project $_GCP_project
         gcloud compute firewall-rules create allow-internal --allow=tcp,udp,icmp --source-ranges=192.168.0.0/16 --network px-net --project $_GCP_project &
-        gcloud compute firewall-rules create allow-external --allow=tcp:22,tcp:443,tcp:6443,tcp:5900 --network px-net --project $_GCP_project &
+        gcloud compute firewall-rules create allow-external --allow=tcp:22,tcp:80,tcp:443,tcp:6443,tcp:5900 --network px-net --project $_GCP_project &
         gcloud compute project-info add-metadata --metadata "ssh-keys=centos:$(cat keys/id_rsa.gcp.` + config.Name + `.pub)" --project $_GCP_project &
         service_account=$(gcloud iam service-accounts list --project $_GCP_project --format 'flattened(email)' | tail -1 | cut -f 2 -d " ")
         _GCP_key=$(gcloud iam service-accounts keys create /dev/stdout --iam-account $service_account | base64 -w0)
