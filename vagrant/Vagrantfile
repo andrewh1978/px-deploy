@@ -43,6 +43,7 @@ Vagrant.configure("2") do |config|
     config.vm.define "#{yaml['name']}-master-#{c}" do |master|
       master.vm.hostname = "master-#{c}"
       if yaml['cloud'] == "aws"
+        master.vm.provision "file", source: "/root/.aws/credentials", destination: "/tmp/credentials"
         master.vm.provider :aws do |aws|
           aws.private_ip_address = "#{subnet}.90"
           aws.tags = { "Name" => "master-#{c}", "px-deploy_name" => yaml['name'] }
@@ -53,6 +54,7 @@ Vagrant.configure("2") do |config|
           gcp.network_ip = "#{subnet}.90"
         end
       end
+      master.vm.provision "shell", path: "all-master"
       master.vm.provision "shell", path: "#{yaml['platform']}-master", env: (env.merge({ :cluster => c }))
       yaml['scripts'].each do |i| master.vm.provision "shell", path: "/px-deploy/.px-deploy/scripts/#{i}", env: (env.merge({ :cluster => c, :script => i })) end if !yaml['scripts'].empty?
       master.vm.provision "shell", inline: "echo IP is $(curl -s https://ipinfo.io/ip)" if c == 1
