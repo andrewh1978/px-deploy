@@ -1,0 +1,100 @@
+exec &>/var/log/vagrant.$script
+
+yum install -y python3-pip
+pip3 install awscli
+
+ln -s /usr/local/bin/aws /usr/bin/aws
+
+curl -fsSL https://github.com/coreos/etcd/releases/download/v3.3.8/etcd-v3.3.8-linux-amd64.tar.gz | sudo tar -xvz --strip=1 -f - -C /usr/local/bin etcd-v3.3.8-linux-amd64/etcdctl etcd-v3.3.8-linux-amd64/etcd
+sudo useradd -d /var/lib/etcd-host -s /bin/false -m etcd && chown -R etcd:etcd /var/lib/etcd-host
+HOSTNAME=$(hostname -i)
+cat << EOF > /lib/systemd/system/etcd.service
+[Unit]
+Description=etcd key-value store
+After=network.target
+
+[Service]
+User=etcd
+Type=notify
+PermissionsStartOnly=true
+Environment=ETCD_NAME=%H
+EnvironmentFile=-/etc/default/%p
+ExecStart=/usr/local/bin/etcd --advertise-client-urls 'http://localhost:2382,http://$HOSTNAME:2382' --listen-client-urls 'http://0.0.0.0:2382' --data-dir /var/lib/etcd-host
+Restart=on-abnormal
+RestartSec=10s
+LimitNOFILE=40000
+
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl enable etcd && systemctl restart etcd
+
+k8s_version=$(kubectl version --short | awk -Fv '/Server Version: / {print $3}')
+url="https://install.portworx.com/$(cut -f 1,2 -d . <<<$px_version)?kbver=$k8s_version&c=px-cluster&stork=true&st=k8s&lh=true&k=etcd%3Ahttp%3A%2F%2Fmaster-1%3A2382"
+[ -e /usr/bin/oc ] && url="$url&osft=true"
+curl -so /tmp/px.yml $url
+kubectl apply -f /tmp/px.yml
+
+while : ; do
+  STORK_POD=$(kubectl get pods -n kube-system -l name=stork -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+  if [ "$STORK_POD" ]; then
+    kubectl cp -n kube-system $STORK_POD:/storkctl/linux/storkctl /usr/bin/storkctl 2>/dev/null
+    chmod +x /usr/bin/storkctl
+    [ $? -eq 0 ] && break
+  fi
+  sleep 5
+  echo waiting for stork
+done
+
+yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm && yum install jq -y
+PATH=$PATH:/bin:/usr/bin:/snap/bin/jq
+export PATH
+
+while : ; do
+  PWX_POD=$(kubectl get pods -n kube-system -l name=portworx -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+  if [ "$PWX_POD" ]; then
+    x=$(kubectl get ds/portworx -n kube-system -o json | jq -c '.spec.template.spec.containers[0].args')
+    x="${x%]},-cluster_domain, cluster-$cluster]"
+    kubectl patch ds/portworx -n kube-system --type json -p="[{\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/args\", \"value\":$x}]"
+    [ $? -eq 0 ] && break
+  fi
+  sleep 5
+  echo Waiting for Portworx to come up
+done
+
+exec &>/var/log/vagrant.$script
+while : ; do
+  n=$(ssh node-$cluster-1 pxctl status 2>/dev/null | grep "Yes.*Online.*Up" | wc -l)
+  [ $n -eq 6 ] && break
+  sleep 1
+done
+
+ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no node-1-1 pxctl license activate --ep UAT <HERE>
+ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no node-1-1 pxctl license activate --ep UAT <HERE>
+
+cat << EOF > ~/cluster-1-down.yaml
+apiVersion: stork.libopenstorage.org/v1alpha1
+kind: ClusterDomainUpdate
+metadata:
+ name: deactivate-cluster1
+ namespace: kube-system
+spec:
+  clusterdomain: cluster-1
+  active: false
+EOF
+
+region=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//')
+aws configure set default.region $region
+instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+vpc=$(aws ec2 describe-instances --instance-ids $instance_id --query Reservations[0].Instances[0].VpcId --output text)
+subnet=$(aws ec2 describe-instances --instance-ids $instance_id --query Reservations[0].Instances[0].SubnetId --output text)
+sg=$(aws ec2 describe-security-groups --filters Name=group-name,Values=px-deploy --query SecurityGroups[].GroupId --output text)
+instances=$(aws ec2 describe-instances --filters "Name=network-interface.vpc-id,Values=$vpc" --query "Reservations[*].Instances[*].InstanceId" --output text)
+for i in $instances; do
+  aws ec2 describe-instances --instance-id $i --query Reservations[].Instances[].Tags --output text | grep -q Name.*node
+ [ $? -eq 0 ] && elb_instances="$elb_instances $i"
+done
+aws elb create-load-balancer --load-balancer-name px-metro-demo --listeners Protocol=http,LoadBalancerPort=80,InstanceProtocol=http,InstancePort=30333 --security-groups $sg --subnets $subnet
+aws elb configure-health-check --load-balancer-name px-metro-demo --health-check Target=HTTP:30333/,Interval=10,UnhealthyThreshold=2,HealthyThreshold=2,Timeout=5
+aws elb register-instances-with-load-balancer --load-balancer-name px-metro-demo --instances $elb_instances
+
