@@ -1,2 +1,2 @@
 clusters: 2
-scripts: ["metro"]
+scripts: ["metro", "petclinic", "clusterpair", "metro-migration"]
