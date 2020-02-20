@@ -6,3 +6,4 @@ systemctl start vncserver@:0
 systemctl enable vncserver@:0
 while [ $(ps auxw | grep 'firefox.*childI[D]' | wc -l) -lt 4 ] ; do echo waiting for firefox; sleep 1; done
 pkill -9 firefox
+rm -rf /home/centos/.mozilla
