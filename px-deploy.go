@@ -326,6 +326,9 @@ func destroy_deployment(name string) {
     }
     output, _ = exec.Command("bash", "-c", `
       aws configure set default.region ` + config.Aws_Region + `
+      for i in $(aws elb describe-load-balancers --query "LoadBalancerDescriptions[].{a:VPCId,b:LoadBalancerName}" --output text | awk '/` + config.Aws__Vpc + `/{print$2}'); do
+        aws elb delete-load-balancer --load-balancer-name $i
+      done
       instances=$(aws ec2 describe-instances --filters "Name=network-interface.vpc-id,Values=` + config.Aws__Vpc + `" --query "Reservations[*].Instances[*].InstanceId" --output text)
       [[ "$instances" ]] && {
         aws ec2 terminate-instances --instance-ids $instances >/dev/null
