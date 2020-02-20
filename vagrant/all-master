@@ -1,2 +1,2 @@
-exec &>/var/log/vagrant.master-common
+exec &>/var/log/px-deploy/all-master
 [ -f /tmp/credentials ] && mkdir /root/.aws && mv /tmp/credentials /root/.aws

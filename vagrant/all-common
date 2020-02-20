@@ -13,7 +13,7 @@ for i in $(seq 1 $clusters); do
   done
 done
 
-mkdir -p /root/.ssh
+mkdir -p /root/.ssh /var/log/px-deploy
 mv /tmp/id_rsa /root/.ssh
 chown root.root /root/.ssh/id_rsa
 chmod 600 /root/.ssh/id_rsa

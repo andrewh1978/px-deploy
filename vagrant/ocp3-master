@@ -1,4 +1,4 @@
-exec &>/var/log/vagrant.ocp3-master
+exec &>/var/log/px-deploy/ocp3-master
 yum install -y docker git epel-release NetworkManager
 yum install -y python-pip
 pip install ansible

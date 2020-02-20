@@ -1,4 +1,4 @@
-exec &>/var/log/vagrant.ocp3-master
+exec &>/var/log/px-deploy/ocp3-common
 modprobe br_netfilter
 sysctl -w net.bridge.bridge-nf-call-iptables=1 >/etc/sysctl.conf
 cat <<EOF >/etc/yum.repos.d/okd.repo

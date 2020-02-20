@@ -1,4 +1,4 @@
-exec &>/var/log/vagrant.k8s-common
+exec &>/var/log/px-deploy/k8s-common
 modprobe br_netfilter
 sysctl -w net.bridge.bridge-nf-call-iptables=1 >/etc/sysctl.conf
 cat <<EOF >/etc/yum.repos.d/kubernetes.repo

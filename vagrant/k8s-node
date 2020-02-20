@@ -1,4 +1,4 @@
-exec &>/var/log/vagrant.k8s-node
+exec &>/var/log/px-deploy/k8s-node
 yum install -y kubelet-$k8s_version-0 docker
 yum install -y kubeadm-$k8s_version-0 kubectl-$k8s_version-0
 systemctl enable docker kubelet
