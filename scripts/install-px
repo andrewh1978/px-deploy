@@ -7,7 +7,7 @@ while : ; do
   STORK_POD=$(kubectl get pods -n kube-system -l name=stork -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
   if [ "$STORK_POD" ]; then
     kubectl cp -n kube-system $STORK_POD:/storkctl/linux/storkctl /usr/bin/storkctl 2>/dev/null
-    chmod +x /usr/bin/storkctl
+    chmod +x /usr/bin/storkctl 2>/dev/null
     [ $? -eq 0 ] && break
   fi
   sleep 5
