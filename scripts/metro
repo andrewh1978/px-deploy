@@ -35,7 +35,7 @@ while : ; do
   STORK_POD=$(kubectl get pods -n kube-system -l name=stork -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
   if [ "$STORK_POD" ]; then
     kubectl cp -n kube-system $STORK_POD:/storkctl/linux/storkctl /usr/bin/storkctl 2>/dev/null
-    chmod +x /usr/bin/storkctl
+    chmod +x /usr/bin/storkctl 2>/dev/null
     [ $? -eq 0 ] && break
   fi
   sleep 5
@@ -58,6 +58,7 @@ while : ; do
   n=$(ssh node-$cluster-1 pxctl status 2>/dev/null | grep "Yes.*Online.*Up" | wc -l)
   [ $n -eq 6 ] && break
   sleep 1
+  echo Waiting for Portworx cluster to come up
 done
 
 ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no node-1-1 pxctl license activate --ep UAT <HERE>
@@ -85,7 +86,11 @@ for i in $instances; do
   aws ec2 describe-instances --instance-id $i --query Reservations[].Instances[].Tags --output text | grep -q Name.*node
  [ $? -eq 0 ] && elb_instances="$elb_instances $i"
 done
-aws elb create-load-balancer --load-balancer-name px-metro-demo --listeners Protocol=http,LoadBalancerPort=80,InstanceProtocol=http,InstancePort=30333 --security-groups $sg --subnets $subnet
-aws elb configure-health-check --load-balancer-name px-metro-demo --health-check Target=HTTP:30333/,Interval=10,UnhealthyThreshold=2,HealthyThreshold=2,Timeout=5
-aws elb register-instances-with-load-balancer --load-balancer-name px-metro-demo --instances $elb_instances
+aws elb create-load-balancer --load-balancer-name $vpc --listeners Protocol=http,LoadBalancerPort=80,InstanceProtocol=http,InstancePort=30333 --security-groups $sg --subnets $subnet
+aws elb configure-health-check --load-balancer-name $vpc --health-check Target=HTTP:30333/,Interval=10,UnhealthyThreshold=2,HealthyThreshold=2,Timeout=5
+aws elb register-instances-with-load-balancer --load-balancer-name $vpc --instances $elb_instances
 
+pkill -9 firefox
+elb_dnsname=$(aws elb describe-load-balancers --query "LoadBalancerDescriptions[].{a:VPCId,b:DNSName}" --output text | awk /$vpc/'{print$2}')
+su - centos -c "DISPLAY=:0 firefox -width 1920 -height 1080" &
+su - centos -c "DISPLAY=:0 firefox --new-window http://$elb_dnsname" &
