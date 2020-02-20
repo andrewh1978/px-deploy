@@ -1,3 +1,4 @@
+[ $cluster != 1 ] && exit
 sleep 30
 kubectl apply -f - <<EOF
 apiVersion: stork.libopenstorage.org/v1alpha1
