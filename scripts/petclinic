@@ -2,17 +2,17 @@ kubectl apply -f - <<\EOF
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
-    name: px-repl3-sc
+    name: px-repl2-sc
 provisioner: kubernetes.io/portworx-volume
 parameters:
-   repl: "3"
+   repl: "2"
    io_profile: "db"
 ---
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   annotations:
-    volume.beta.kubernetes.io/storage-class: px-repl3-sc
+    volume.beta.kubernetes.io/storage-class: px-repl2-sc
   name: petclinic-db-mysql
 spec:
   accessModes:
