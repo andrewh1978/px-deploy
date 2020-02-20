@@ -1,7 +1,7 @@
-curl -fsSL https://github.com/coreos/etcd/releases/download/v3.3.8/etcd-v3.3.8-linux-amd64.tar.gz | sudo tar -xvz --strip=1 -f - -C /usr/local/bin etcd-v3.3.8-linux-amd64/etcdctl etcd-v3.3.8-linux-amd64/etcd
-sudo useradd -d /var/lib/etcd-host -s /bin/false -m etcd && chown -R etcd:etcd /var/lib/etcd-host
-HOSTNAME=$(hostname -i)
-cat << EOF > /lib/systemd/system/etcd.service
+if [ $cluster = 1 ]; then
+  curl -fsSL https://github.com/coreos/etcd/releases/download/v3.3.8/etcd-v3.3.8-linux-amd64.tar.gz | sudo tar -xvz --strip=1 -f - -C /usr/local/bin etcd-v3.3.8-linux-amd64/etcdctl etcd-v3.3.8-linux-amd64/etcd
+  useradd -d /var/lib/etcd-host -s /bin/false -m etcd && chown -R etcd:etcd /var/lib/etcd-host
+  cat << EOF > /lib/systemd/system/etcd.service
 [Unit]
 Description=etcd key-value store
 After=network.target
@@ -12,7 +12,7 @@ Type=notify
 PermissionsStartOnly=true
 Environment=ETCD_NAME=%H
 EnvironmentFile=-/etc/default/%p
-ExecStart=/usr/local/bin/etcd --advertise-client-urls 'http://localhost:2382,http://$HOSTNAME:2382' --listen-client-urls 'http://0.0.0.0:2382' --data-dir /var/lib/etcd-host
+ExecStart=/usr/local/bin/etcd --advertise-client-urls 'http://localhost:2382,http://$(hostname -i):2382' --listen-client-urls 'http://0.0.0.0:2382' --data-dir /var/lib/etcd-host
 Restart=on-abnormal
 RestartSec=10s
 LimitNOFILE=40000
@@ -20,7 +20,8 @@ LimitNOFILE=40000
 [Install]
 WantedBy=multi-user.target
 EOF
-systemctl enable etcd && systemctl restart etcd
+  systemctl enable etcd && systemctl restart etcd
+fi
 
 k8s_version=$(kubectl version --short | awk -Fv '/Server Version: / {print $3}')
 url="https://install.portworx.com/$(cut -f 1,2 -d . <<<$px_version)?kbver=$k8s_version&c=px-cluster&stork=true&st=k8s&lh=true&k=etcd%3Ahttp%3A%2F%2Fmaster-1%3A2382"
@@ -61,9 +62,6 @@ while : ; do
   echo Waiting for Portworx cluster to come up
 done
 
-ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no node-1-1 pxctl license activate --ep UAT <HERE>
-ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no node-1-1 pxctl license activate --ep UAT <HERE>
-
 cat << EOF > ~/cluster-1-down.yaml
 apiVersion: stork.libopenstorage.org/v1alpha1
 kind: ClusterDomainUpdate
@@ -75,22 +73,26 @@ spec:
   active: false
 EOF
 
-region=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//')
-aws configure set default.region $region
-instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
-vpc=$(aws ec2 describe-instances --instance-ids $instance_id --query Reservations[0].Instances[0].VpcId --output text)
-subnet=$(aws ec2 describe-instances --instance-ids $instance_id --query Reservations[0].Instances[0].SubnetId --output text)
-sg=$(aws ec2 describe-security-groups --filters Name=group-name,Values=px-deploy --query SecurityGroups[].GroupId --output text)
-instances=$(aws ec2 describe-instances --filters "Name=network-interface.vpc-id,Values=$vpc" --query "Reservations[*].Instances[*].InstanceId" --output text)
-for i in $instances; do
-  aws ec2 describe-instances --instance-id $i --query Reservations[].Instances[].Tags --output text | grep -q Name.*node
- [ $? -eq 0 ] && elb_instances="$elb_instances $i"
-done
-aws elb create-load-balancer --load-balancer-name $vpc --listeners Protocol=http,LoadBalancerPort=80,InstanceProtocol=http,InstancePort=30333 --security-groups $sg --subnets $subnet
-aws elb configure-health-check --load-balancer-name $vpc --health-check Target=HTTP:30333/,Interval=10,UnhealthyThreshold=2,HealthyThreshold=2,Timeout=5
-aws elb register-instances-with-load-balancer --load-balancer-name $vpc --instances $elb_instances
+if [ $cluster = 1 ]; then
+  ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no node-1-1 pxctl license activate --ep UAT <HERE>
+  ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no node-1-1 pxctl license activate --ep UAT <HERE>
+  region=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//')
+  aws configure set default.region $region
+  instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+  vpc=$(aws ec2 describe-instances --instance-ids $instance_id --query Reservations[0].Instances[0].VpcId --output text)
+  subnet=$(aws ec2 describe-instances --instance-ids $instance_id --query Reservations[0].Instances[0].SubnetId --output text)
+  sg=$(aws ec2 describe-security-groups --filters Name=group-name,Values=px-deploy --query SecurityGroups[].GroupId --output text)
+  instances=$(aws ec2 describe-instances --filters "Name=network-interface.vpc-id,Values=$vpc" --query "Reservations[*].Instances[*].InstanceId" --output text)
+  for i in $instances; do
+    aws ec2 describe-instances --instance-id $i --query Reservations[].Instances[].Tags --output text | grep -q Name.*node
+   [ $? -eq 0 ] && elb_instances="$elb_instances $i"
+  done
+  aws elb create-load-balancer --load-balancer-name $vpc --listeners Protocol=http,LoadBalancerPort=80,InstanceProtocol=http,InstancePort=30333 --security-groups $sg --subnets $subnet
+  aws elb configure-health-check --load-balancer-name $vpc --health-check Target=HTTP:30333/,Interval=10,UnhealthyThreshold=2,HealthyThreshold=2,Timeout=5
+  aws elb register-instances-with-load-balancer --load-balancer-name $vpc --instances $elb_instances
 
-pkill -9 firefox
-elb_dnsname=$(aws elb describe-load-balancers --query "LoadBalancerDescriptions[].{a:VPCId,b:DNSName}" --output text | awk /$vpc/'{print$2}')
-su - centos -c "DISPLAY=:0 firefox -width 1920 -height 1080" &
-su - centos -c "DISPLAY=:0 firefox --new-window http://$elb_dnsname" &
+  elb_dnsname=$(aws elb describe-load-balancers --query "LoadBalancerDescriptions[].{a:VPCId,b:DNSName}" --output text | awk /$vpc/'{print$2}')
+  su - centos -c "DISPLAY=:0 firefox -width 1920 -height 1080" &
+  while [ $(ps auxw | grep 'firefox.*childI[D]' | wc -l) -lt 4 ] ; do echo waiting for firefox; sleep 1; done
+  su - centos -c "DISPLAY=:0 firefox --new-window http://$elb_dnsname" &
+fi
