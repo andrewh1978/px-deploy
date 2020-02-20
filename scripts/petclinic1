@@ -1,4 +1,4 @@
-[ $cluster != 1 ] && exit
+if [ $cluster = 1 ]; then
 kubectl apply -f - <<\EOF
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
@@ -202,3 +202,4 @@ spec:
         - name: MYSQL_PASSWORD
           value: supermysql
 EOF
+fi

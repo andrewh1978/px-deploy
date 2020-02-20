@@ -1,4 +1,4 @@
-[ $cluster != 1 ] && exit
+if [ $cluster = 1 ]; then
 sleep 30
 kubectl apply -f - <<EOF
 apiVersion: stork.libopenstorage.org/v1alpha1
@@ -26,3 +26,4 @@ spec:
       - default
   schedulePolicyName: appschedule
 EOF
+fi
