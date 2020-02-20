@@ -1,9 +1,7 @@
-yum install -y tigervnc-server xorg-x11-fonts-Type1 firefox-68.4.1 dbus-x11
+yum install -y tigervnc-server xorg-x11-fonts-Type1 dbus-x11
 sed 's/<USER>/centos/g' /lib/systemd/system/vncserver@.service >/etc/systemd/system/vncserver@:0.service
 su - centos -c "mkdir .vnc ; vncpasswd -f <<<portworx >.vnc/passwd; echo geometry=1920x1080 >.vnc/config"
 chmod 600 /home/centos/.vnc/passwd
 systemctl start vncserver@:0
 systemctl enable vncserver@:0
-while [ $(ps auxw | grep 'firefox.*childI[D]' | wc -l) -lt 4 ] ; do echo waiting for firefox; sleep 1; done
-pkill -9 firefox
-rm -rf /home/centos/.mozilla
+yum install -y firefox-68.4.1 
