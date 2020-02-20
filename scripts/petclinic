@@ -6,7 +6,6 @@ metadata:
 provisioner: kubernetes.io/portworx-volume
 parameters:
    repl: "2"
-   io_profile: "db"
 ---
 kind: PersistentVolumeClaim
 apiVersion: v1
