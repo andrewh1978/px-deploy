@@ -139,9 +139,9 @@ spec:
       - name: data
         persistentVolumeClaim:
           claimName: petclinic-db-mysql
-kind: Service
 ---
 apiVersion: v1
+kind: Service
 metadata:
   name: petclinic
   labels:
