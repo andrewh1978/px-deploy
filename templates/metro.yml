@@ -2,6 +2,7 @@ cloud: aws
 clusters: 2
 nodes: 3
 scripts: ["install-awscli", "vncserver", "metro", "install-storkctl", "petclinic1", "clusterpair"]
+assets: ["petclinic.yml"]
 
 # Verify all is working with `storkctl get clusterdomainsstatus` (take around 7 minutes)
 # Stop the nodes on cluster 1
