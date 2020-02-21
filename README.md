@@ -99,22 +99,9 @@ This example is a mixture of both methods. The template is applied, then the com
 
 `scripts` is a list of scripts to be executed on each master node. For example:
 ```
-$ cat ~/.px-deploy/scripts/clusterpair
-if [ $cluster != 1 ]; then
-  while : ; do
-    token=$(ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no node-$cluster-1 pxctl cluster token show 2>/dev/null | cut -f 3 -d " ")
-    echo $token | grep -Eq '\w{128}'
-    [ $? -eq 0 ] && break
-    sleep 5
-    echo waiting for portworx
-  done
-  storkctl generate clusterpair -n default remotecluster-$cluster | sed "/insert_storage_options_here/c\    ip: node-$cluster-1\n    token: $token" >/var/tmp/cp.yaml
-  while : ; do
-    cat /var/tmp/cp.yaml | ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no master-1 kubectl apply -f -
-    [ $? -eq 0 ] && break
-    sleep 5
-  done
-fi
+$ cat ~/.px-deploy/scripts/petclinic
+# Install petclinic on each cluster
+kubectl apply -f /assets/petclinic.yml
 ```
 
 These variables are passed to the script:
@@ -122,6 +109,14 @@ These variables are passed to the script:
  * `$clusters`
  * `$px_version`
  * `$k8s_version`
+
+A template can also define a list of `assets`:
+```
+$ cat ~/.px-deploy/templates/petclinic.yml
+scripts: ["install-px", "px-wait", "petclinic"]
+assets: ["petclinic.yml"]
+```
+These assets will be copied from `~/.px-deploy/assets/` to `/assets` on each master node. They are then available to be used by the script, as above.
 
 In addition to these, there are some more variables available:
  * `$cluster` - cluster number
