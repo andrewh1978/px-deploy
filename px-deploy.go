@@ -123,7 +123,7 @@ func main() {
       }
       y, _ := yaml.Marshal(config)
       err := ioutil.WriteFile("deployments/" + createName + ".yml", y, 0644)
-      if err != nil { die("err") }
+      if err != nil { die(err.Error()) }
       create_deployment(config)
       os.Chdir("/px-deploy/vagrant")
       os.Setenv("deployment", config.Name)
