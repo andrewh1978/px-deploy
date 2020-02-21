@@ -1,0 +1,24 @@
+apiVersion: stork.libopenstorage.org/v1alpha1
+kind: SchedulePolicy
+metadata:
+  name: appschedule
+  namespace: default
+policy:
+  interval:
+    intervalMinutes: 1
+---
+apiVersion: stork.libopenstorage.org/v1alpha1
+kind: MigrationSchedule
+metadata:
+  name: appmigrationschedule
+  namespace: default
+spec:
+  template:
+    spec:
+      clusterPair: remotecluster-2
+      includeResources: true
+      startApplications: false
+      includeVolumes: false
+      namespaces:
+      - default
+  schedulePolicyName: appschedule
