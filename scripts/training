@@ -1,3 +1,4 @@
+# Set up training clusters, including vim, git and shellinabox
 yum install -y git epel-release vim-enhanced
 yum install -y shellinabox
 rm -f /etc/securetty

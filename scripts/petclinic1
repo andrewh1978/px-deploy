@@ -1,3 +1,4 @@
+# Install petclinic on cluster 1
 if [ $cluster = 1 ]; then
 kubectl apply -f - <<\EOF
 kind: StorageClass
