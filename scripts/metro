@@ -1,3 +1,4 @@
+# Install etcd on cluster 1, PX-Metro across the clusters, create yaml to failover
 if [ $cluster = 1 ]; then
   curl -fsSL https://github.com/coreos/etcd/releases/download/v3.3.8/etcd-v3.3.8-linux-amd64.tar.gz | sudo tar -xvz --strip=1 -f - -C /usr/local/bin etcd-v3.3.8-linux-amd64/etcdctl etcd-v3.3.8-linux-amd64/etcd
   useradd -d /var/lib/etcd-host -s /bin/false -m etcd && chown -R etcd:etcd /var/lib/etcd-host
@@ -31,17 +32,6 @@ kubectl apply -f /tmp/px.yml
 
 yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 yum install jq -y
-
-while : ; do
-  STORK_POD=$(kubectl get pods -n kube-system -l name=stork -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-  if [ "$STORK_POD" ]; then
-    kubectl cp -n kube-system $STORK_POD:/storkctl/linux/storkctl /usr/bin/storkctl 2>/dev/null
-    chmod +x /usr/bin/storkctl 2>/dev/null
-    [ $? -eq 0 ] && break
-  fi
-  sleep 5
-  echo waiting for stork
-done
 
 while : ; do
   PWX_POD=$(kubectl get pods -n kube-system -l name=portworx -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
@@ -95,4 +85,31 @@ if [ $cluster = 1 ]; then
   su - centos -c "DISPLAY=:0 firefox -width 1920 -height 1080" &
   while [ $(ps auxw | grep 'firefox.*childI[D]' | wc -l) -lt 4 ] ; do echo waiting for firefox; sleep 1; done
   su - centos -c "DISPLAY=:0 firefox --new-window http://$elb_dnsname" &
+  sleep 30
+  kubectl apply -f - <<EOF
+apiVersion: stork.libopenstorage.org/v1alpha1
+kind: SchedulePolicy
+metadata:
+  name: appschedule
+  namespace: default
+policy:
+  interval:
+    intervalMinutes: 1
+---
+apiVersion: stork.libopenstorage.org/v1alpha1
+kind: MigrationSchedule
+metadata:
+  name: appmigrationschedule
+  namespace: default
+spec:
+  template:
+    spec:
+      clusterPair: remotecluster-2
+      includeResources: true
+      startApplications: false
+      includeVolumes: false
+      namespaces:
+      - default
+  schedulePolicyName: appschedule
+EOF
 fi
