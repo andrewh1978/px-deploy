@@ -56,6 +56,9 @@ Vagrant.configure("2") do |config|
       end
       master.vm.provision "shell", path: "all-master"
       master.vm.provision "shell", path: "#{yaml['platform']}-master", env: (env.merge({ :cluster => c }))
+      if !yaml['assets'].empty?
+        yaml['assets'].each do |i| master.vm.provision "file", source: "/px-deploy/.px-deploy/assets/#{i}", destination: "/assets/#{i}" end
+      end
       if !yaml['scripts'].empty?
         script = ""
         yaml['scripts'].each do |i|
