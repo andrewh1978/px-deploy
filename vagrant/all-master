@@ -1,2 +1,4 @@
 exec &>/var/log/px-deploy/all-master
 [ -f /tmp/credentials ] && mkdir /root/.aws && mv /tmp/credentials /root/.aws
+mkdir /assets
+chown centos /assets
