@@ -13,7 +13,7 @@ git clone https://github.com/andrewh1978/px-deploy >&/dev/null
 cd px-deploy
 echo Building container
 docker build -t px-deploy . >&/dev/null
-mkdir -p /.px-deploy/keys
+mkdir -p /.px-deploy/{keys,deployments}
 time=$(date +%s)
 for i in scripts templates defaults.yml; do
   [ -e /.px-deploy/$i ] && echo Backing up $home/.px-deploy/$i to $home/.px-deploy/$i.$time && mv /.px-deploy/$i /.px-deploy/$i.$time
