@@ -1,1 +1,1 @@
-scripts: ["install-px"]
+scripts: ["install-px", "install-storkctl"]
