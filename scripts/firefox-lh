@@ -1,3 +1,4 @@
+# Start a Firefox with a list of tabs
 su - centos -c "DISPLAY=:0 firefox -width 1920 -height 1080" &
 while [ $(ps auxw | grep 'firefox.*childI[D]' | wc -l) -lt 4 ] ; do echo waiting for firefox; sleep 1; done
 su - centos -c "DISPLAY=:0 firefox --new-window http://localhost:$(kubectl get service px-lighthouse -o custom-columns=PROTO:.spec.ports[].name,PORT:.spec.ports[].nodePort -n kube-system | awk '/http/{print$2}')" &
