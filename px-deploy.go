@@ -57,6 +57,7 @@ func main() {
     Short: "Creates a deployment",
     Long: "Creates a deployment",
     Run: func(cmd *cobra.Command, args []string) {
+      if (len(args) > 0) { die("Invalid arguments") }
       config := parse_yaml("defaults.yml")
       if (createTemplate != "") {
         config.Template = createTemplate
