@@ -1,2 +1,3 @@
 clusters: 2
-scripts: ["install-px", "clusterpair"]
+scripts: ["install-px", "clusterpair", "mongo", "petclinic1", "mysql", "redis", "wordpress", "postgres"]
+assets: ["petclinic.yml", "mongo.yml", "mysql.yml", "redis.yml", "wordpress.yml", "postgres.yml"]
