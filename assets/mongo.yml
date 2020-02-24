@@ -1,0 +1,63 @@
+kind: StorageClass
+apiVersion: storage.k8s.io/v1beta1
+metadata:
+  name: px-ha-sc
+provisioner: kubernetes.io/portworx-volume
+parameters:
+  repl: "3"
+  io_profile: "db"
+  io_priority: "high"
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: px-mongo-pvc
+  annotations:
+    volume.beta.kubernetes.io/storage-class: px-ha-sc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 3Gi
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: mongodb
+spec:
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      schedulerName: stork
+      containers:
+      - name: mongodb
+        image: mongo:4
+        imagePullPolicy: "IfNotPresent"
+        env:
+        - name: MONGODB_ROOT_PASSWORD
+          value: password
+        - name: MONGODB_USERNAME
+          value: admin
+        - name: MONGODB_PASSWORD
+          value: password
+        - name: MONGODB_DATABASE
+          value: demo
+        ports:
+        - name: mongodb
+          containerPort: 27017
+        volumeMounts:
+        - name: data
+          mountPath: /data/db
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: px-mongo-pvc

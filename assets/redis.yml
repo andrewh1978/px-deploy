@@ -1,0 +1,80 @@
+kind: StorageClass
+apiVersion: storage.k8s.io/v1beta1
+metadata:
+    name: px-repl3-sc
+provisioner: kubernetes.io/portworx-volume
+parameters:
+   repl: "3"
+   io_profile: "db"
+   priority_io: "high"
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+   name: px-redis-data
+   annotations:
+     volume.beta.kubernetes.io/storage-class: px-repl3-sc
+spec:
+   accessModes:
+     - ReadWriteOnce
+   resources:
+     requests:
+       storage: 1Gi
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+   name: px-redis-conf
+   annotations:
+     volume.beta.kubernetes.io/storage-class: px-repl3-sc
+spec:
+   accessModes:
+     - ReadWriteOnce
+   resources:
+     requests:
+       storage: 1Gi
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: "redis"
+spec:
+  template:
+    metadata:
+      labels:
+        app: redis
+        name: "redis"
+    spec:
+      containers:
+        - name: redis
+          image: "redis:3.2.0-alpine"
+          command:
+            - "redis-server"
+          args:
+            - "--protected-mode"
+            - "no"
+            - "--appendonly"
+            - "yes"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "100Mi"
+          ports:
+            - name: redis
+              containerPort: 6379
+              protocol: "TCP"
+            - name: cluster
+              containerPort: 16379
+              protocol: "TCP"
+          volumeMounts:
+            - name: "redis-conf"
+              mountPath: "/etc/redis"
+            - name: "redis-data"
+              mountPath: "/data"
+      volumes:
+        - name: "redis-data"
+          persistentVolumeClaim:
+             claimName: px-redis-data
+        - name: "redis-conf"
+          persistentVolumeClaim:
+             claimName: px-redis-conf

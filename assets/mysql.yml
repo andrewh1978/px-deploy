@@ -1,0 +1,62 @@
+kind: StorageClass
+apiVersion: storage.k8s.io/v1beta1
+metadata:
+    name: px-repl3-sc
+provisioner: kubernetes.io/portworx-volume
+parameters:
+   repl: "3"
+   io_profile: "db"
+   priority_io: "high"
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+   name: px-mysql-pvc
+   annotations:
+     volume.beta.kubernetes.io/storage-class: px-repl3-sc
+spec:
+   accessModes:
+     - ReadWriteOnce
+   resources:
+     requests:
+       storage: 1Gi
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: mysql
+spec:
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      schedulerName: stork
+      containers:
+      - name: mysql
+        image: mysql:5.6.32
+        imagePullPolicy: "IfNotPresent"
+        ports:
+        - containerPort: 5432
+        env:
+        - name: MYSQL_USER
+          value: mysql
+        - name: MYSQL_PASSWORD
+          value: supermysql
+        - name: MYSQL_DATABASE
+          value: pxdemo
+        - name: MYSQL_ROOT_PASSWORD
+          value: supermysql
+        volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: mysql
+      volumes:
+      - name: mysql
+        persistentVolumeClaim:
+          claimName: px-mysql-pvc

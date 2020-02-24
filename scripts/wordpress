@@ -1,0 +1,2 @@
+# Install wordpress on cluster 1
+[ $cluster = 1 ] && kubectl apply -f /assets/wordpress.yml

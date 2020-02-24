@@ -1,0 +1,2 @@
+# Install postgres on cluster 1
+[ $cluster = 1 ] && kubectl apply -f /assets/postgres.yml
