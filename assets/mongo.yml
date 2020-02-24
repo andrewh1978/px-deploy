@@ -21,11 +21,14 @@ spec:
     requests:
       storage: 3Gi
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mongodb
 spec:
+  selector:
+    matchLabels:
+      app: mongodb
   strategy:
     rollingUpdate:
       maxSurge: 1
