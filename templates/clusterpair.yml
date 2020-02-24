@@ -1,3 +1,2 @@
 clusters: 2
 scripts: ["install-px", "install-storkctl", "clusterpair"]
-assets: ["petclinic.yml"]
