@@ -1,0 +1,2 @@
+# Install mongo on cluster 1
+[ $cluster = 1 ] && kubectl apply -f /assets/mongo.yml

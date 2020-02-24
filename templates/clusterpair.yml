@@ -1,2 +1,2 @@
 clusters: 2
-scripts: ["install-px", "clusterpair"]
+scripts: ["install-px", "install-storkctl", "clusterpair"]
