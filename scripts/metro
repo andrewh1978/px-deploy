@@ -22,8 +22,10 @@ x="${x%]},-cluster_domain, cluster-$cluster]"
 kubectl patch ds/portworx -n kube-system --type json -p="[{\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/args\", \"value\":$x}]"
 
 if [ $cluster = 1 ]; then
-  ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no node-1-1 pxctl license activate --ep UAT <HERE>
-  ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no node-1-1 pxctl license activate --ep UAT <HERE>
+  for i in $licenses; do
+    ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no node-1-1 pxctl license activate --ep UAT $i
+    sleep 1
+  done
   region=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//')
   aws configure set default.region $region
   instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
@@ -43,6 +45,9 @@ if [ $cluster = 1 ]; then
   su - centos -c "DISPLAY=:0 firefox -width 1920 -height 1080" &
   while [ $(ps auxw | grep 'firefox.*childI[D]' | wc -l) -lt 4 ] ; do echo waiting for firefox; sleep 1; done
   su - centos -c "DISPLAY=:0 firefox --new-window http://$elb_dnsname" &
-  sleep 30
+  while [ "$(kubectl get crd | grep -E 'migrationschedules|schedulepolicies' | wc -l)" -lt 2 ]; do
+    echo waiting for CRDs
+    sleep 1
+  done
   kubectl apply -f /assets/metro-schedule.yml
 fi

@@ -132,3 +132,11 @@ These assets will be copied from `~/.px-deploy/assets/` to `/assets` on each mas
 
 In addition to these, there are some more variables available:
  * `$cluster` - cluster number
+
+Last, environment variables can be define in templates, and these are also available to scripts:
+```
+$ cat templates/metro.yml
+...
+env:
+  licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
+```

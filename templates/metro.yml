@@ -4,7 +4,10 @@ clusters: 2
 nodes: 3
 scripts: ["etcd1", "install-awscli", "vncserver", "metro", "install-storkctl", "petclinic1", "clusterpair-metro"]
 assets: ["petclinic.yml", "metro-c1-down.yml", "metro-schedule.yml"]
+env:
+  licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
 
+# NOTE: edit env.licenses above
 # Verify all is working with `storkctl get clusterdomainsstatus` (take around 7 minutes)
 # Stop the nodes on cluster 1
 # Mark cluster 1 as down with `kubectl apply -f /assets/metro-c1-down.yml` on master-2

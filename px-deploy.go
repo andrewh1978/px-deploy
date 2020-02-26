@@ -37,6 +37,7 @@ type Config struct {
   Assets []string
   Scripts []string
   Description string
+  Env map[string]string
   Aws__Vpc string `yaml:"aws__vpc,omitempty"`
   Aws__Sg string `yaml:"aws__sg,omitempty"`
   Aws__Subnet string `yaml:"aws__subnet,omitempty"`
@@ -360,8 +361,8 @@ func destroy_deployment(name string) {
         aws ec2 terminate-instances --instance-ids $instances >/dev/null
         aws ec2 wait instance-terminated --instance-ids $instances
       }
-      aws ec2 delete-security-group --group-id ` + config.Aws__Sg + ` &&
       aws ec2 delete-subnet --subnet-id ` + config.Aws__Subnet + ` &&
+      aws ec2 delete-security-group --group-id ` + config.Aws__Sg + ` &&
       aws ec2 detach-internet-gateway --internet-gateway-id ` + config.Aws__Gw + ` --vpc-id ` + config.Aws__Vpc + ` &&
       aws ec2 delete-internet-gateway --internet-gateway-id ` + config.Aws__Gw + ` &&
       aws ec2 delete-route-table --route-table-id ` +config.Aws__Routetable + ` &&
