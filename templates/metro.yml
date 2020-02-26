@@ -1,7 +1,8 @@
+description: Deploy 2 clusters in AWS with a stretched Portworx cluster, configure Metro, a GUI and Petclinic, ready for a failover demo
 cloud: aws
 clusters: 2
 nodes: 3
-scripts: ["etcd1", "install-awscli", "vncserver", "metro", "install-storkctl", "petclinic1", "clusterpair"]
+scripts: ["etcd1", "install-awscli", "vncserver", "metro", "install-storkctl", "petclinic1", "clusterpair-metro"]
 assets: ["petclinic.yml", "metro-c1-down.yml", "metro-schedule.yml"]
 
 # Verify all is working with `storkctl get clusterdomainsstatus` (take around 7 minutes)
