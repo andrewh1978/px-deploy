@@ -59,6 +59,18 @@ foo        aws   eu-west-1     k8s      px       1        3     2020-02-11T16:14
 bar        gcp   europe-north1 gcp      <none>   1        3     2020-02-04T09:50:11Z
 ```
 
+The templates can be listed:
+```
+$ px-deploy templates
+Name                           Description
+templates/clusterpair-apps.yml 2 clusters with Portworx, pair them and deploy some apps on cluster-1
+templates/clusterpair.yml      2 clusters with Portworx and pair them
+templates/metro.yml            2 clusters in AWS with a stretched Portworx cluster, configure Metro, a GUI and Petclinic, ready for a failover demo
+templates/px-with-gui.yml      Cluster with Portworx, wait for it to be up, run a GUI with a Lighthouse Firefox tab
+templates/px.yml               Cluster with Portworx
+templates/training.yml         Deploy training clusters
+```
+
 Generate a list of IP address, suitable for training:
 ```
 $ px-deploy status --name trainingDeployment
