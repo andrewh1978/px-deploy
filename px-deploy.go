@@ -36,6 +36,7 @@ type Config struct {
   Gcp_Zone string
   Assets []string
   Scripts []string
+  Description string
   Aws__Vpc string `yaml:"aws__vpc,omitempty"`
   Aws__Sg string `yaml:"aws__sg,omitempty"`
   Aws__Subnet string `yaml:"aws__subnet,omitempty"`
@@ -191,6 +192,23 @@ func main() {
     },
   }
 
+  cmdTemplates := &cobra.Command {
+    Use: "templates",
+    Short: "Lists available templates",
+    Long: "Lists available templates",
+    Run: func(cmd *cobra.Command, args []string) {
+      w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
+      fmt.Fprintln(w, "Name\tDescription")
+      filepath.Walk("templates", func(file string, info os.FileInfo, err error) error {
+        if (info.Mode() & os.ModeDir != 0) { return nil }
+        config := parse_yaml(file)
+        fmt.Fprintln(w, file + "\t" + config.Description)
+        return nil
+      })
+      w.Flush()
+    },
+  }
+
   cmdStatus := &cobra.Command {
     Use: "status name",
     Short: "Lists master IPs in a deployment",
@@ -245,7 +263,7 @@ func main() {
   cmdStatus.Flags().StringVarP(&statusName, "name", "n", "", "name of deployment")
   cmdStatus.MarkFlagRequired("name")
 
-  rootCmd.AddCommand(cmdCreate, cmdDestroy, cmdConnect, cmdList, cmdStatus, cmdCompletion)
+  rootCmd.AddCommand(cmdCreate, cmdDestroy, cmdConnect, cmdList, cmdTemplates, cmdStatus, cmdCompletion)
   rootCmd.Execute()
 }
 

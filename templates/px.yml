@@ -1,1 +1,2 @@
+description: Cluster with Portworx
 scripts: ["install-px", "install-storkctl"]

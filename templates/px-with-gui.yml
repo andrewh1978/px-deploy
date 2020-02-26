@@ -1,1 +1,2 @@
+description: Cluster with Portworx, wait for it to be up, run a GUI with a Lighthouse Firefox tab
 scripts: ["install-px", "install-storkctl", "px-wait", "vncserver", "firefox-lh"]

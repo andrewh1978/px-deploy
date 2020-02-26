@@ -1,4 +1,4 @@
-description: Deploy 2 clusters in AWS with a stretched Portworx cluster, configure Metro, a GUI and Petclinic, ready for a failover demo
+description: 2 clusters in AWS with a stretched Portworx cluster, configure Metro, a GUI and Petclinic, ready for a failover demo
 cloud: aws
 clusters: 2
 nodes: 3
