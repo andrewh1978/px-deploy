@@ -1,4 +1,6 @@
 # What
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fandrewh1978%2Fpx-deploy.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fandrewh1978%2Fpx-deploy?ref=badge_shield)
+
 
 This will deploy one or more clusters in the cloud, with optional post-install tasks defined by template.
 
@@ -120,3 +122,7 @@ These assets will be copied from `~/.px-deploy/assets/` to `/assets` on each mas
 
 In addition to these, there are some more variables available:
  * `$cluster` - cluster number
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fandrewh1978%2Fpx-deploy.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fandrewh1978%2Fpx-deploy?ref=badge_large)
