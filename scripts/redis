@@ -1,2 +1,4 @@
 # Install redis on cluster 1
-[ $cluster = 1 ] && kubectl apply -f /assets/redis.yml
+if [ $cluster = 1 ]; then
+  kubectl apply -f /assets/redis.yml
+fi

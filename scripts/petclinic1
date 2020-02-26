@@ -1,2 +1,4 @@
 # Install petclinic on cluster 1
-[ $cluster = 1 ] && kubectl apply -f /assets/petclinic.yml
+if [ $cluster = 1 ]; then
+  kubectl apply -f /assets/petclinic.yml
+fi

@@ -1,2 +1,4 @@
 # Install mysql on cluster 1
-[ $cluster = 1 ] && kubectl apply -f /assets/mysql.yml
+if [ $cluster = 1 ]; then
+  kubectl apply -f /assets/mysql.yml
+fi
