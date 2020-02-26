@@ -1,2 +1,0 @@
-scripts: ["install-px", "px-wait", "petclinic"]
-assets: ["petclinic.yml"]
