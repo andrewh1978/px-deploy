@@ -6,6 +6,7 @@ provisioner: kubernetes.io/portworx-volume
 parameters:
   repl: "2"
   shared: "true"
+allowVolumeExpansion: true
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -87,6 +88,7 @@ provisioner: kubernetes.io/portworx-volume
 parameters:
   repl: "3"
   priority_io: "high"
+allowVolumeExpansion: true
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
