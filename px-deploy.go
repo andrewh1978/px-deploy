@@ -3,6 +3,7 @@ package main
 import (
   "fmt"
   "os"
+  "path"
   "regexp"
   "syscall"
   "strconv"
@@ -212,7 +213,10 @@ func main() {
       fmt.Fprintln(w, "Name\tDescription")
       filepath.Walk("templates", func(file string, info os.FileInfo, err error) error {
         if (info.Mode() & os.ModeDir != 0) { return nil }
+        if (path.Ext(file) != ".yml") { return nil }
         config := parse_yaml(file)
+        file = path.Base(file)
+        file = strings.Trim(file, ".yml")
         fmt.Fprintln(w, file + "\t" + config.Description)
         return nil
       })
