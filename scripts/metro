@@ -4,7 +4,7 @@ yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarc
 yum install jq -y
 
 k8s_version=$(kubectl version --short | awk -Fv '/Server Version: / {print $3}')
-url="https://install.portworx.com/$(cut -f 1,2 -d . <<<$px_version)?kbver=$k8s_version&c=px-cluster&stork=true&st=k8s&lh=true&k=etcd%3Ahttp%3A%2F%2Fmaster-1%3A2382"
+url="https://install.portworx.com/$px_version?kbver=$k8s_version&c=px-cluster&stork=true&st=k8s&lh=true&k=etcd%3Ahttp%3A%2F%2Fmaster-1%3A2382"
 [ -e /usr/bin/oc ] && url="$url&osft=true"
 curl -so /tmp/px.yml $url
 kubectl apply -f /tmp/px.yml
