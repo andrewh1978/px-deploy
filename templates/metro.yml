@@ -3,7 +3,6 @@ cloud: aws
 clusters: 2
 nodes: 3
 scripts: ["etcd1", "install-awscli", "vncserver", "metro", "install-storkctl", "petclinic1", "clusterpair-metro"]
-assets: ["petclinic.yml", "metro-c1-down.yml", "metro-schedule.yml"]
 env:
   licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
 

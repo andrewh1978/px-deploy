@@ -122,13 +122,7 @@ These variables are passed to the script:
  * `$px_version`
  * `$k8s_version`
 
-A template can also define a list of `assets`:
-```
-$ cat ~/.px-deploy/templates/petclinic.yml
-scripts: ["install-px", "px-wait", "petclinic"]
-assets: ["petclinic.yml"]
-```
-These assets will be copied from `~/.px-deploy/assets/` to `/assets` on each master node. They are then available to be used by the script, as above.
+All files in `~/.px-deploy/assets` will be copied to `/assets` on the master nodes. They are then available to be used by the script, as above.
 
 In addition to these, there are some more variables available:
  * `$cluster` - cluster number

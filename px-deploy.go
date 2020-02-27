@@ -34,7 +34,6 @@ type Config struct {
   Gcp_Type string
   Gcp_Disks string
   Gcp_Zone string
-  Assets []string
   Scripts []string
   Description string
   Env map[string]string
@@ -126,7 +125,6 @@ func main() {
         config.Gcp_Zone = createGcpZone
       }
       for _, s := range config.Scripts { if _, err := os.Stat("scripts/" + s); os.IsNotExist(err) { die("Script '" + s + "' does not exist") } }
-      for _, a := range config.Assets { if _, err := os.Stat("assets/" + a); os.IsNotExist(err) { die("Asset '" + a + "' does not exist") } }
       y, _ := yaml.Marshal(config)
       err := ioutil.WriteFile("deployments/" + createName + ".yml", y, 0644)
       if err != nil { die(err.Error()) }

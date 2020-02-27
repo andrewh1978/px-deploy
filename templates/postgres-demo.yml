@@ -1,3 +1,2 @@
 description: Cluster with Portworx
 scripts: ["install-px", "install-storkctl", "px-wait", "vncserver", "firefox-lh"]
-assets: ["postgres.yml", "postgres-snap.yml", "postgres-restore.yml"]
