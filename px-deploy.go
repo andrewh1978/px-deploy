@@ -216,7 +216,7 @@ func main() {
         if (path.Ext(file) != ".yml") { return nil }
         config := parse_yaml(file)
         file = path.Base(file)
-        file = strings.Trim(file, ".yml")
+        file = strings.TrimSuffix(file, ".yml")
         fmt.Fprintln(w, file + "\t" + config.Description)
         return nil
       })
