@@ -48,7 +48,7 @@ type Config struct {
 }
 
 func main() {
-  var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createAwsType, createAwsEbs, createGcpType, createGcpDisks, createGcpZone, createTemplate, createRegion, createCloud, connectName, destroyName, statusName string
+  var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createAwsType, createAwsEbs, createGcpType, createGcpDisks, createGcpZone, createTemplate, createRegion, createCloud, createEnv, connectName, destroyName, statusName string
   var destroyAll bool
   os.Chdir("/px-deploy/.px-deploy")
   rootCmd := &cobra.Command{Use: "px-deploy"}
@@ -103,6 +103,13 @@ func main() {
       if (createPxVer != "") {
         if (!regexp.MustCompile(`^[0-9\.]+$`).MatchString(createPxVer)) { die("Invalid Portworx version '" + createPxVer + "'") }
         config.Px_Version = createPxVer
+      }
+      if (createEnv != "") {
+        if config.Env == nil { config.Env = make(map[string]string) }
+        for _, kv := range strings.Split(createEnv, ",") {
+          s := strings.Split(kv, "=")
+          config.Env[s[0]] = s[1]
+        }
       }
       if (createAwsType != "") {
         if (!regexp.MustCompile(`^[0-9a-z\.]+$`).MatchString(createAwsType)) { die("Invalid AWS type '" + createAwsType + "'") }
@@ -252,6 +259,7 @@ func main() {
   cmdCreate.Flags().StringVarP(&createTemplate, "template", "t", "", "name of template to be deployed")
   cmdCreate.Flags().StringVarP(&createRegion, "region", "r", "", "AWS or GCP region (default " + defaults.Aws_Region + " or " + defaults.Gcp_Region + ")")
   cmdCreate.Flags().StringVarP(&createCloud, "cloud", "C", "", "aws or gcp (default " + defaults.Cloud + ")")
+  cmdCreate.Flags().StringVarP(&createEnv, "env", "e", "", "Comma-separated list of environment variables to be passed, for example foo=bar,abc=123")
 
   cmdDestroy.Flags().BoolVarP(&destroyAll, "all", "a", false, "destroy all deployments")
   cmdDestroy.Flags().StringVarP(&destroyName, "name", "n", "", "name of deployment to be destroyed")

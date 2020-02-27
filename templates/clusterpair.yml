@@ -1,3 +1,5 @@
 description: 2 clusters with Portworx and pair them
 clusters: 2
-scripts: ["install-px", "install-storkctl", "clusterpair"]
+scripts: ["install-px", "install-storkctl", "clusterpair", "optional-apps-1"]
+
+# use `-e install_apps=true` to install the optional apps

@@ -1,3 +1,0 @@
-description: 2 clusters with Portworx, pair them and deploy some apps on cluster-1
-clusters: 2
-scripts: ["install-px", "install-storkctl", "clusterpair", "mongo", "petclinic1", "mysql", "redis", "wordpress", "postgres"]

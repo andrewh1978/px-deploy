@@ -134,3 +134,6 @@ $ cat templates/metro.yml
 env:
   licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
 ```
+Enviroment variables can also be defined on the command line:
+```
+px-deploy create -n foo -t clusterpair -e install_apps=true,foo=bar
