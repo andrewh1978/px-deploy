@@ -367,7 +367,7 @@ func destroy_deployment(name string) {
       for i in $(aws elb describe-load-balancers --query "LoadBalancerDescriptions[].{a:VPCId,b:LoadBalancerName}" --output text | awk '/` + config.Aws__Vpc + `/{print$2}'); do
         aws elb delete-load-balancer --load-balancer-name $i
       done
-      while [ "$(aws elb describe-load-balancers --query "LoadBalancerDescriptions[].VPCId" --output text)" ]; do
+      while [ "$(aws elb describe-load-balancers --query "LoadBalancerDescriptions[].VPCId" --output text | grep ` + config.Aws__Vpc + `)" ]; do
         echo "waiting for ELB to disappear"
         sleep 2
       done
