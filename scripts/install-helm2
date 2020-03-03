@@ -1,0 +1,9 @@
+# Install Helm v2
+kubectl apply -f /assets/helm2/tiller-sa.yml
+kubectl apply -f /assets/helm2/tiller-crb.yml
+
+cd /var/tmp
+curl -O https://get.helm.sh/helm-v2.16.3-linux-amd64.tar.gz
+tar xzf helm-v2.16.3-linux-amd64.tar.gz
+mv linux-amd64/helm /usr/bin/helm
+helm init --history-max 200 --service-account tiller
