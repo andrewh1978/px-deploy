@@ -1,0 +1,2 @@
+description: Cluster with Portworx and CockroachDB
+scripts: ["install-px", "cockroach"]
