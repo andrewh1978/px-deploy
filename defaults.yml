@@ -3,7 +3,7 @@ platform: k8s
 clusters: 1
 nodes: 3
 k8s_version: 1.17.0
-px_version: 2.3.5
+px_version: 2.4.0
 
 aws_region: eu-west-1
 aws_type: t3.large
