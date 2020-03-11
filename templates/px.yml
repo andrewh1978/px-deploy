@@ -1,2 +1,2 @@
-description: Cluster with Portworx
+description: A single Kubernetes cluster with Portworx installed
 scripts: ["install-px", "install-storkctl"]

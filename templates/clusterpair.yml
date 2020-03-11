@@ -1,4 +1,4 @@
-description: 2 clusters with Portworx and pair them
+description: Deploys 2 clusters with Portworx, sets up and conifugres a cluster pairing, and deploys a set of apps and a migration template.
 clusters: 2
 scripts: ["install-px", "install-storkctl", "clusterpair", "optional-apps-1"]
 
