@@ -1,2 +1,2 @@
-description: A sigle K8s cluster with Portworx, Lighthouse and VNC access to access the Lighthouse UI for demo purposes
+description: A single K8s cluster with Portworx, Lighthouse and VNC access to access the Lighthouse UI for demo purposes
 scripts: ["install-px", "install-storkctl", "px-wait", "vncserver", "firefox-lh"]
