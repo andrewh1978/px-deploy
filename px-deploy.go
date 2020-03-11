@@ -175,7 +175,7 @@ func main() {
     Run: func(cmd *cobra.Command, args []string) {
       config := parse_yaml("deployments/" + connectName + ".yml")
       ip := get_ip(connectName)
-      syscall.Exec("/usr/bin/ssh", []string{"ssh", "-q", "-oStrictHostKeyChecking=no","-i","keys/id_rsa." + config.Cloud + "." + config.Name,"root@" + ip}, os.Environ())
+      syscall.Exec("/usr/bin/ssh", []string{"ssh", "-oStrictHostKeyChecking=no","-i","keys/id_rsa." + config.Cloud + "." + config.Name,"root@" + ip}, os.Environ())
     },
   }
   
