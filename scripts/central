@@ -1,0 +1,21 @@
+while [ "$(kubectl get crd | grep -E 'migrationschedules|schedulepolicies' | wc -l)" -lt 2 ]; do
+    echo waiting for CRDs
+    sleep 1
+done
+if [ $cluster = 1 ]; then
+    IP=$(curl https://ipinfo.io/ip)
+    (sh /assets/central-install.sh --license-password 'Adm1n!Ur' --pxcentral-endpoint $IP) >&/var/log/central
+fi
+
+cat <<EOF > /etc/motd
++================================================+
+SAVE THE FOLLOWING DETAILS FOR FUTURE REFERENCES
++================================================+
+PX-Central User Interface Access URL : http://$IP:31234/frontend
+PX-Central admin user name: pxadmin@portworx.com
+PX-Central admin user password: Password1
+
+PX-Central grafana admin user name: pxadmin@portworx.com
+PX-Central grafana admin user password: Password1
++================================================+
+EOF
