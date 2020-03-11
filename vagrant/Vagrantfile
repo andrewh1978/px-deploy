@@ -75,7 +75,7 @@ Vagrant.configure("2") do |config|
         if yaml['cloud'] == "aws"
           node.vm.provider :aws do |aws|
             aws.private_ip_address = "#{subnet}.#{100+n}"
-            aws.tags = { "Name" => "node-#{c}-#{n}" }
+            aws.tags = { "Name" => "node-#{c}-#{n}", "px-deploy_name" => yaml['name'] }
             d = 97
             yaml['aws_ebs'].split(' ').each do |i|
               (type, size) = i.split(':')
