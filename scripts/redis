@@ -1,2 +1,0 @@
-# Install redis
-kubectl apply -f /assets/redis.yml

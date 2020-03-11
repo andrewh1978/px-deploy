@@ -1,2 +1,2 @@
-description: Cluster with Portworx, wait for it to be up, run a GUI with a Lighthouse Firefox tab
+description: A single K8s cluster with Portworx, Lighthouse and VNC access to access the Lighthouse UI for demo purposes
 scripts: ["install-px", "install-storkctl", "px-wait", "vncserver", "firefox-lh"]

@@ -1,2 +1,2 @@
-# Install CockroachDH on each cluster
-kubectl apply -f /assets/cockroach.yml
+# Install CockroachDB on each cluster
+kubectl apply -f /assets/cockroach/cockroach.yml

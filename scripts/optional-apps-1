@@ -1,5 +1,5 @@
 if [ "$cluster" = 1 -a "$install_apps" = true ]; then
-  for i in mongo petclinic1 mysql redis wordpress postgres; do
-    kubectl apply -f /assets/$i.yml
+  for i in mongo petclinic mysql redis wordpress postgres; do
+    kubectl apply -f /assets/$i/$i.yml
   done
 fi

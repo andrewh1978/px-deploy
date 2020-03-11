@@ -1,3 +1,3 @@
-description: Cluster with Portworx and Harbor
+description: Deploys a single K8s cluster with Portworx and Harbor (https://goharbor.io/)
 clusters: 1
 scripts: ["install-px", "install-helm2", "px-wait", "harbor"]

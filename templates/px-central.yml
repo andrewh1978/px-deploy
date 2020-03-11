@@ -1,4 +1,4 @@
-description: Cluster with Portworx and Central
+description: A single K8s and Portworx cluster with PX-Central Alpha & Grafana installed
 cloud: aws
 clusters: 1
 nodes: 6

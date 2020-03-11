@@ -1,2 +1,2 @@
-description: Deploy training clusters
+description: Deploys training clusters
 scripts: ["training"]

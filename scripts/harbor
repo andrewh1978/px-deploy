@@ -1,6 +1,6 @@
 # Deploy Harbor, along with PostgreSQL and Redis prerequisites
 NAMESPACE=harbor
-kubectl apply -f /assets/harbor.yml
+kubectl apply -f /assets/harbor/harbor.yml
 kubectl wait pod -lapp=postgres --for=condition=ready -n $NAMESPACE
 DB_POD=$(kubectl get pods -n $NAMESPACE -l app=postgres | awk '/postgres/{print$1}')
 sleep 5

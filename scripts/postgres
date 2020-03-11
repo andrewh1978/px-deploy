@@ -1,2 +1,0 @@
-# Install postgres
-kubectl apply -f /assets/postgres.yml
