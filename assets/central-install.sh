@@ -1481,8 +1481,6 @@ while [ $postsetupjob -ne "1" ]
     fi
   done
 
-touch /complete
-
 echo ""
 echo -e -n "PX-Central cluster deployment complete."
 
