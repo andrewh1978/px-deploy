@@ -1,0 +1,8 @@
+description: Cluster with Portworx and Central
+cloud: aws
+clusters: 1
+nodes: 6
+aws_type: t3.2xlarge
+aws_ebs: "gp2:80 gp2:100"
+
+scripts: ["install-px", "install-storkctl", "central"]
