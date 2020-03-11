@@ -1,2 +1,0 @@
-# Install wordpress
-kubectl apply -f /assets/wordpress.yml

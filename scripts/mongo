@@ -1,2 +1,0 @@
-# Install mongo
-kubectl apply -f /assets/mongo.yml

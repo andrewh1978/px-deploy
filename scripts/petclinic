@@ -1,2 +1,0 @@
-# Install petclinic on each cluster
-kubectl apply -f /assets/petclinic.yml
