@@ -1,7 +1,7 @@
 # Configures cluster pairs between cluster 1 and each of the other clusters
 if [ $cluster != 1 ]; then
   while : ; do
-    token=$(ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no node-$cluster-1 pxctl cluster token show 2>/dev/null | cut -f 3 -d " ")
+    token=$(kubectl exec -n kube-system -it $(kubectl get pods -n kube-system -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- /opt/pwx/bin/pxctl cluster token show 2>/dev/null | cut -f 3 -d " ")
     echo $token | grep -Eq '\w{128}'
     [ $? -eq 0 ] && break
     sleep 5

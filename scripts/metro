@@ -15,7 +15,7 @@ x="${x%]},-cluster_domain, cluster-$cluster]"
 kubectl patch ds/portworx -n kube-system --type json -p="[{\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/args\", \"value\":$x}]"
 
 while : ; do
-  n=$(ssh node-$cluster-1 pxctl status 2>/dev/null | grep "Yes.*Online.*Up" | wc -l)
+  n=$(kubectl exec -n kube-system -it $(kubectl get pods -n kube-system -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- /opt/pwx/bin/pxctl status status 2>/dev/null | grep "Yes.*Online.*Up" | wc -l)
   [ $n -eq 6 ] && break
   sleep 1
   echo Waiting for Portworx cluster to come up
@@ -23,7 +23,7 @@ done
 
 if [ $cluster = 1 ]; then
   for i in $licenses; do
-    while ! ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no node-1-1 pxctl license activate --ep UAT $i; do
+    while ! kubectl exec -n kube-system -it $(kubectl get pods -n kube-system -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- /opt/pwx/bin/pxctl license activate --ep UAT $i; do
       sleep 1
     done
   done
