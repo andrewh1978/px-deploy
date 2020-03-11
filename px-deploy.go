@@ -141,7 +141,10 @@ func main() {
       y, _ := yaml.Marshal(config)
       err := ioutil.WriteFile("deployments/" + createName + ".yml", y, 0644)
       if err != nil { die(err.Error()) }
-      create_deployment(config)
+      if (create_deployment(config) != 0) {
+        destroy_deployment(config.Name)
+        die("Aborted")
+      }
       os.Chdir("/px-deploy/vagrant")
       os.Setenv("deployment", config.Name)
       syscall.Exec("/usr/bin/vagrant", []string{"vagrant", "up"}, os.Environ())
@@ -283,13 +286,16 @@ func main() {
   rootCmd.Execute()
 }
 
-func create_deployment(config Config) {
+func create_deployment(config Config) int {
   var output []byte
+  var err error
   switch(config.Cloud) {
     case "aws": {
-      output, _ = exec.Command("bash", "-c", `
+      output, err = exec.Command("bash", "-c", `
         aws configure set default.region ` + config.Aws_Region + `
         yes | ssh-keygen -q -t rsa -b 2048 -f keys/id_rsa.aws.` + config.Name + ` -N ''
+        aws ec2 describe-instance-types --instance-types ` + config.Aws_Type + `>&/dev/null
+        [ $? -ne 0 ] && echo "Invalid AWS type '` + config.Aws_Type + `' for region '` + config.Aws_Region + `'" && exit 1
         aws ec2 delete-key-pair --key-name px-deploy.` + config.Name + ` >&/dev/null
         aws ec2 import-key-pair --key-name px-deploy.` + config.Name + ` --public-key-material file://keys/id_rsa.aws.` + config.Name + `.pub >&/dev/null
         _AWS_vpc=$(aws --output text ec2 create-vpc --cidr-block 192.168.0.0/16 --query Vpc.VpcId)
@@ -342,6 +348,8 @@ func create_deployment(config Config) {
     default: die("Invalid cloud '"+ config.Cloud + "'")
   }
   fmt.Print(string(output))
+  if err != nil { return 1 }
+  return 0
 }
 
 func destroy_deployment(name string) {
@@ -364,6 +372,8 @@ func destroy_deployment(name string) {
     }
     output, _ = exec.Command("bash", "-c", `
       aws configure set default.region ` + config.Aws_Region + `
+      aws ec2 delete-key-pair --key-name px-deploy.` + config.Name + ` >&/dev/null
+      [ "` + config.Aws__Vpc + `" ] || exit
       for i in $(aws elb describe-load-balancers --query "LoadBalancerDescriptions[].{a:VPCId,b:LoadBalancerName}" --output text | awk '/` + config.Aws__Vpc + `/{print$2}'); do
         aws elb delete-load-balancer --load-balancer-name $i
       done
@@ -382,7 +392,6 @@ func destroy_deployment(name string) {
       aws ec2 delete-internet-gateway --internet-gateway-id ` + config.Aws__Gw + ` &&
       aws ec2 delete-route-table --route-table-id ` +config.Aws__Routetable + ` &&
       aws ec2 delete-vpc --vpc-id ` + config.Aws__Vpc + `
-      aws ec2 delete-key-pair --key-name px-deploy.` + config.Name + ` >&/dev/null
     `).CombinedOutput()
   } else if (config.Cloud == "gcp") {
     output, _ = exec.Command("bash", "-c", "gcloud projects delete " + config.Gcp__Project + " --quiet").CombinedOutput()
