@@ -9,10 +9,10 @@ import (
   "strconv"
   "time"
   "os/exec"
-  "text/tabwriter"
   "path/filepath"
   "io/ioutil"
   "strings"
+  "github.com/olekukonko/tablewriter"
   "github.com/imdario/mergo"
   "github.com/go-yaml/yaml"
   "github.com/spf13/cobra"
@@ -187,8 +187,7 @@ func main() {
     Short: "Lists available deployments",
     Long: "Lists available deployments",
     Run: func(cmd *cobra.Command, args []string) {
-      w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
-      fmt.Fprintln(w, "Deployment\tCloud\tRegion\tPlatform\tTemplate\tClusters\tNodes\tCreated")
+      var data [][]string
       filepath.Walk("deployments", func(file string, info os.FileInfo, err error) error {
         if (info.Mode() & os.ModeDir != 0) { return nil }
         config := parse_yaml(file)
@@ -200,10 +199,11 @@ func main() {
         }
         template := config.Template
         if (template == "") { template = "<None>" }
-        fmt.Fprintln(w, config.Name + "\t" + config.Cloud + "\t" + region + "\t" + config.Platform + "\t" + template + "\t" + config.Clusters + "\t" + config.Nodes + "\t" + info.ModTime().Format(time.RFC3339))
+        data = append(data, []string{config.Name, config.Cloud, region, config.Platform, template, config.Clusters, config.Nodes, info.ModTime().Format(time.RFC3339)})
+
         return nil
       })
-      w.Flush()
+      print_table([]string{"Deployment", "Cloud", "Region", "Platform", "Template", "Clusters", "Nodes", "Created"}, data)
     },
   }
 
@@ -212,18 +212,17 @@ func main() {
     Short: "Lists available templates",
     Long: "Lists available templates",
     Run: func(cmd *cobra.Command, args []string) {
-      w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
-      fmt.Fprintln(w, "Name\tDescription")
+      var data [][]string
       filepath.Walk("templates", func(file string, info os.FileInfo, err error) error {
         if (info.Mode() & os.ModeDir != 0) { return nil }
         if (path.Ext(file) != ".yml") { return nil }
         config := parse_yaml(file)
         file = path.Base(file)
         file = strings.TrimSuffix(file, ".yml")
-        fmt.Fprintln(w, file + "\t" + config.Description)
+        data = append(data, []string{file, config.Description})
         return nil
       })
-      w.Flush()
+      print_table([]string{"Name", "Description"}, data)
     },
   }
 
@@ -425,4 +424,17 @@ func parse_yaml(filename string) Config {
   var d Config
   yaml.Unmarshal(b, &d)
   return d
+}
+
+func print_table(header []string, data [][]string) {
+  table := tablewriter.NewWriter(os.Stdout)
+  table.SetHeader(header)
+  table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
+  table.SetColWidth(80)
+  table.SetHeaderLine(false)
+  table.SetBorder(false)
+  table.SetTablePadding("  ")
+  table.SetNoWhiteSpace(true)
+  table.AppendBulk(data)
+  table.Render()
 }

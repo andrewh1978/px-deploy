@@ -12,6 +12,7 @@ RUN vagrant plugin install vagrant-google --plugin-version 2.5.0
 RUN vagrant box add dummy https://github.com/mitchellh/vagrant-aws/raw/master/dummy.box
 RUN vagrant box add google/gce https://vagrantcloud.com/google/boxes/gce/versions/0.1.0/providers/google.box
 RUN pip3 install awscli
+RUN go get -u github.com/olekukonko/tablewriter
 RUN go get -u github.com/spf13/cobra/cobra
 RUN go get -u github.com/google/uuid
 RUN go get -u github.com/go-yaml/yaml
