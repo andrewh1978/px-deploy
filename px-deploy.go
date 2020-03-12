@@ -61,10 +61,14 @@ func main() {
     Run: func(cmd *cobra.Command, args []string) {
       if (len(args) > 0) { die("Invalid arguments") }
       config := parse_yaml("defaults.yml")
+      env := config.Env
+      var env_template map[string]string
       if (createTemplate != "") {
         config.Template = createTemplate
         config_template := parse_yaml("templates/" + createTemplate + ".yml")
+        env_template = config_template.Env
        	mergo.MergeWithOverwrite(&config, config_template)
+        mergo.MergeWithOverwrite(&env, env_template)
       }
       if (createName != "") {
         if (!regexp.MustCompile(`^[a-zA-Z0-9_\-\.]+$`).MatchString(createName)) { die("Invalid deployment name '" + createName + "'") }
@@ -106,12 +110,14 @@ func main() {
         config.Px_Version = createPxVer
       }
       if (createEnv != "") {
-        if config.Env == nil { config.Env = make(map[string]string) }
+        env_cli := make(map[string]string)
         for _, kv := range strings.Split(createEnv, ",") {
           s := strings.Split(kv, "=")
-          config.Env[s[0]] = s[1]
+          env_cli[s[0]] = s[1]
         }
+        mergo.MergeWithOverwrite(&env, env_cli)
       }
+      config.Env = env
       if (createAwsType != "") {
         if (!regexp.MustCompile(`^[0-9a-z\.]+$`).MatchString(createAwsType)) { die("Invalid AWS type '" + createAwsType + "'") }
         config.Aws_Type = createAwsType

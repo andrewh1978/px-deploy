@@ -133,12 +133,12 @@ All files in `~/.px-deploy/assets` will be copied to `/assets` on the master nod
 In addition to these, there are some more variables available:
  * `$cluster` - cluster number
 
-Last, environment variables can be define in templates, and these are also available to scripts:
+Last, environment variables can be define in templates or defaults.yml, and these are also available to scripts:
 ```
 $ cat templates/metro.yml
 ...
 env:
-  licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
+  dr_licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
 ```
 Enviroment variables can also be defined on the command line:
 ```
