@@ -1,0 +1,68 @@
+# Install Portworx with IBM OEM license
+curl -O https://ibm-open-platform.ibm.com/repos/cpd/v2.5/EE/cloudpak4data-ee-v2.5.0.0.tgz
+#---- extract distribution
+mkdir -p cp4d /tmp/cpd-px-images
+tar -C cp4d -xf cloudpak4data-ee-v2.5.0.0.tgz
+tar -C cp4d -xf cp4d/cpd-portworx.tgz 
+#--- pull images to local /tmp dir, push them back out to each node's image-layer cache
+#./cp4d/cpd-portworx/bin/px-images.sh -d /tmp/cpd-px-images download
+#./cp4d/cpd-portworx/bin/px-images.sh -e 'ssh -o StrictHostKeyChecking=no -l root' -d /tmp/cpd-px-images load
+#--- 
+## (needed for IBM OEM cp4d license) setup ibm oem license entitlement, and install portworx (including px specific storageclasses)
+./cp4d/cpd-portworx/bin/px-util initialize
+#--- patch the storageclasses, shared->sharedv4
+cat > /var/tmp/px-sc.sh.patch <<_EOF
+--- px-sc.sh.orig 2020-02-25 13:02:58.653685214 +0000
++++ px-sc.sh 2020-02-25 13:03:46.797411783 +0000
+@@ -115,7 +115,8 @@
+ parameters:
+   priority_io: high
+   repl: "1"
+-  shared: "true"
++  sharedv4: "true"
++  labels: "allow_others=true"
+ allowVolumeExpansion: true
+ provisioner: kubernetes.io/portworx-volume
+ reclaimPolicy: Delete
+@@ -130,7 +131,8 @@
+ parameters:
+   priority_io: high
+   repl: "2"
+-  shared: "true"
++  sharedv4: "true"
++  labels: "allow_others=true"
+ allowVolumeExpansion: true
+ provisioner: kubernetes.io/portworx-volume
+ reclaimPolicy: Delete
+@@ -145,7 +147,8 @@
+ parameters:
+   priority_io: high 
+   repl: "3"
+-  shared: "true"
++  sharedv4: "true"
++  labels: "allow_others=true"
+ allowVolumeExpansion: true
+ provisioner: kubernetes.io/portworx-volume
+ reclaimPolicy: Delete
+_EOF
+patch cp4d/cpd-portworx/bin/px-sc.sh < /var/tmp/px-sc.sh.patch
+./cp4d/cpd-portworx/bin/px-sc.sh
+#--- load/install portworx resources (with a pull policy of Never) 
+./cp4d/cpd-portworx/bin/px-install.sh -y install
+#### END OF PORTWORX SPECIFIC CONFIG - rest of this is deploying cp4d control plane
+#--- setup separate (cluster-admin) account for cp4d installation
+htpasswd -b /etc/origin/master/htpasswd cpadmin mycpadmpassword
+oc adm policy add-cluster-role-to-user cluster-admin cpadmin
+oc login -u cpadmin -p mycpadmpassword
+NS=zen
+chmod +x cp4d/bin/cpd-*
+mv cp4d/repo.yaml{,.orig} && curl -so cp4d/repo.yaml http://158.85.173.111/repos/zen/cp4d-builds/2.5.0.0/production/internal/repo.yaml
+rm -rf cp4d/LICENSES
+./cp4d/bin/cpd-linux adm --repo cp4d/repo.yaml -a lite -n $NS --apply
+## start the cp4d install, except specify portworx-powered storage-class for given (control-plane) components
+echo -e "zenCoreMetaDb:\n  storageClass: portworx-metastoredb-sc" > cp4d/cp-override.yaml
+./cp4d/bin/cpd-linux -s cp4d/repo.yaml -a lite --verbose -o cp4d/cp-override.yaml --target-registry-password $(oc whoami -t) --target-registry-username cpadmin --insecure-skip-tls-verify --transfer-image-to docker-registry.default.svc:5000/$NS -n $NS -c portworx-shared-gp
+#./cp4d/bin/cpd-linux -s cp4d/repo.yaml -a lite --verbose -o cp4d/cp-override.yaml -n $NS -c portworx-shared-gp
+nohup su - centos -c "DISPLAY=:0 firefox -width 1920 -height 1080" &
+while [ $(ps auxw | grep 'firefox.*childI[D]' | wc -l) -lt 4 ] ; do echo waiting for firefox; sleep 1; done
+nohup su - centos -c "DISPLAY=:0 firefox --new-window https://zen-cpd-zen.apps" &
