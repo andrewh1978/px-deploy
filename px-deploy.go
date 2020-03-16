@@ -90,7 +90,7 @@ func main() {
         }
       }
       if (createPlatform != "") {
-        if (createPlatform != "k8s" && createPlatform != "ocp3") { die("Invalid platform '" + createPlatform + "'") }
+        if (createPlatform != "k8s" && createPlatform != "ocp3" && createPlatform != "ocp3c") { die("Invalid platform '" + createPlatform + "'") }
         config.Platform = createPlatform
       }
       if (createClusters != "") {
@@ -263,7 +263,7 @@ func main() {
   
   defaults := parse_yaml("defaults.yml")
   cmdCreate.Flags().StringVarP(&createName, "name", "n", "", "name of deployment to be created (if blank, generate UUID)")
-  cmdCreate.Flags().StringVarP(&createPlatform, "platform", "p", "", "k8s or ocp3 (default " + defaults.Platform + ")")
+  cmdCreate.Flags().StringVarP(&createPlatform, "platform", "p", "", "k8s | ocp3 | ocp3c (default " + defaults.Platform + ")")
   cmdCreate.Flags().StringVarP(&createClusters, "clusters", "c", "", "number of clusters to be deployed (default " + defaults.Clusters + ")")
   cmdCreate.Flags().StringVarP(&createNodes, "nodes", "N", "", "number of nodes to be deployed in each cluster (default " + defaults.Nodes + ")")
   cmdCreate.Flags().StringVarP(&createK8sVer, "k8s_version", "k", "", "Kubernetes version to be deployed (default " + defaults.K8s_Version + ")")
@@ -316,6 +316,7 @@ func create_deployment(config Config) int {
         aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 443 --cidr 0.0.0.0/0 &
         aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 5900 --cidr 0.0.0.0/0 &
         aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 8080 --cidr 0.0.0.0/0 &
+        aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 8443 --cidr 0.0.0.0/0 &
         aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 30000-32767 --cidr 0.0.0.0/0 &
         aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol all --cidr 192.168.0.0/16 &
         aws ec2 create-tags --resources $_AWS_vpc $_AWS_subnet $_AWS_gw $_AWS_routetable $_AWS_sg --tags Key=px-deploy_name,Value=` + config.Name + ` &

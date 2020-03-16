@@ -7,6 +7,7 @@ This will deploy one or more clusters in the cloud, with optional post-install t
 ## Container
  * Kubernetes
  * Openshift 3.11
+ * Openshift 3.11 with CRI-O
 
 ## Cloud
  * AWS
@@ -92,7 +93,7 @@ The `defaults.yml` file sets a number of deployment variables:
  * `clusters` - the number of clusters to deploy
  * `k8s_version` - the version of Kubernetes to deploy
  * `nodes` - the number of worker nodes on each cluster
- * `platform` - can be set to either k8s or ocp3
+ * `platform` - can be set to either k8s, ocp3 or ocp3c (OCPv3 with CRI-O)
  * `px_version` - the version of Portworx to install
  * `gcp_disks` - similar to AWS_EBS, for example: `"pd-standard:20 pd-ssd:30"`
  * `gcp_region` - GCP region

@@ -1,0 +1,57 @@
+(yum install -y podman cri-tools git epel-release NetworkManager
+yum install -y python-pip
+pip install ansible
+systemctl enable NetworkManager
+systemctl start NetworkManager
+cd /root
+htpasswd='$apr1$zTCG/myL$mj1ZMOSkYg7a9NLZK9Tk9.'
+ip=$(curl http://ipinfo.io/ip)
+cat <<EOF >/root/prereq.sh
+oc adm policy add-scc-to-user privileged system:serviceaccount:kube-system:px-account
+oc adm policy add-scc-to-user privileged system:serviceaccount:kube-system:portworx-pvc-controller-account
+oc adm policy add-scc-to-user privileged system:serviceaccount:kube-system:px-lh-account
+oc adm policy add-scc-to-user anyuid system:serviceaccount:kube-system:px-lh-account
+oc adm policy add-scc-to-user anyuid system:serviceaccount:default:default
+oc adm policy add-scc-to-user privileged system:serviceaccount:kube-system:px-csi-account
+oc adm policy add-scc-to-user privileged system:serviceaccount:default:default
+EOF
+cat <<EOF >/root/inventory
+[OSEv3:children]
+masters
+etcd
+nodes
+[OSEv3:vars]
+ansible_become=false
+ansible_ssh_user=root
+ansible_sudo=false
+deployment_type=origin
+openshift_disable_check=disk_availability,docker_storage,memory_availability
+openshift_enable_service_catalog=false
+openshift_hosted_router_selector='node-role.kubernetes.io/infra=true'
+openshift_install_examples=true
+openshift_master_cluster_hostname=master-$cluster
+openshift_master_cluster_public_hostname=$ip
+openshift_master_default_subdomain=apps
+openshift_master_htpasswd_users={'admin' : '$htpasswd'}
+openshift_master_identity_providers=[{'name': 'htpasswd_auth', 'login': 'true', 'challenge': 'true', 'kind': 'HTPasswdPasswordIdentityProvider'}]
+openshift_node_open_ports=[{'service': 'rpcbind-tcp', 'port': '111/tcp'}, {'service': 'rpcbind-udp', 'port': '111/udp'}, {'service': 'nfsd-tcp', 'port': '2049/tcp'}, {'service': 'nfsd-udp', 'port': '2049/udp'}, {'service': 'mountd-tcp', 'port': '20048/tcp'}, {'service': 'mountd-udp', 'port': '20048/udp'}, {'service': 'vnc-tcp', 'port': '5900/tcp'}]
+openshift_use_crio=True
+openshift_use_crio_only=True
+openshift_web_console_install=false
+os_sdn_network_plugin_name='redhat/openshift-ovs-multitenant'
+[masters]
+master-$cluster
+[etcd]
+master-$cluster
+[nodes]
+master-$cluster openshift_node_group_name='node-config-master-infra-crio' openshift_schedulable=true
+EOF
+for n in $(seq 1 $nodes); do
+  echo "node-$cluster-$n openshift_node_group_name='node-config-compute-crio'" >>/root/inventory
+done
+git clone https://github.com/openshift/openshift-ansible
+cd openshift-ansible
+git checkout release-3.11
+ansible-playbook playbooks/prerequisites.yml -i /root/inventory
+ansible-playbook playbooks/deploy_cluster.yml -i /root/inventory
+echo Openshift deployed) &>/var/log/px-deploy/ocp3c-master

@@ -1,0 +1,4 @@
+exec &>/var/log/px-deploy/ocp3c-node
+yum install -y NetworkManager
+systemctl enable NetworkManager
+systemctl start NetworkManager
