@@ -47,9 +47,6 @@ master-$cluster
 [nodes]
 master-$cluster openshift_node_group_name='node-config-master-infra' openshift_schedulable=true
 EOF
-#cat <<EOF >/root/sudoers.d/vagrant
-#Defaults !requiretty
-#EOF
 for n in $(seq 1 $nodes); do
   echo "node-$cluster-$n openshift_node_group_name='node-config-compute'" >>/root/inventory
 done
