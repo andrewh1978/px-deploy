@@ -5,3 +5,5 @@ aws_ebs: "gp2:80"
 scripts: ["vncserver", "install-px-ibm-oem"]
 
 # This takes approximately one hour to complete
+# Sometimes the zen-watchdog pod needs to be deleted and recreated. Not sure why.
+# When complete, VNC to the external IP address and there will be a browser tab loaded with the cp4d UI.
