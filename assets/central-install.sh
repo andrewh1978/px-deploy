@@ -25,7 +25,6 @@ Optional:
     --pxcentral-endpoint <Any one of the master or worker node IP of current k8s cluster>
     --cloud <For cloud deployment specify endpoint as 'loadbalance endpoint'>
     --openshift <Provide if deploying PX-Central on openshift platform>
-
 Examples:
     # Deploy PX-Central without OIDC:
     ./install.sh --license-password 'Adm1n!Ur'
@@ -45,11 +44,17 @@ Examples:
     # Deploy PX-Central with custom registry with user input kubeconfig:
     ./install.sh  --license-password 'W3lc0m3#' --custom-registry xyz.amazonaws.com --image-repo-name pxcentral-onprem --image-pull-secret docregistry-secret --kubeconfig /tmp/test.yaml
 
-    # Deploy PX-Central on openshift
-    ./install.sh  --license-password 'W3lc0m3#' --openshift
+    # Deploy PX-Central on openshift on onprem
+    ./install.sh  --license-password 'W3lc0m3#' --openshift 
 
-    # Deploy PX-Central on openshift on aws
-    ./install.sh  --license-password 'W3lc0m3#' --openshift --cloud --pxcentral-endpoint abcxyz.us-east-1.elb.amazonaws.com
+    # Deploy PX-Central on openshift on cloud
+    ./install.sh  --license-password 'W3lc0m3#' --openshift --cloud --pxcentral-endpoint X.X.X.X
+
+    # Deploy PX-Central on Cloud
+    ./install.sh  --license-password 'W3lc0m3#' --cloud --pxcentral-endpoint X.X.X.X
+
+    # Deploy PX-Central on cloud with external public IP
+    ./install.sh --license-password 'Adm1n!Ur' --pxcentral-endpoint X.X.X.X
 
     # Deploy PX-Central on air-gapped environment
     ./install.sh  --license-password 'W3lc0m3#' --air-gapped --custom-registry test.ecr.us-east-1.amazonaws.com --image-repo-name pxcentral-onprem --image-pull-secret docregistry-secret
@@ -120,6 +125,7 @@ done
 
 TIMEOUT=1800
 SLEEPINTERVAL=2
+LBSERVICETIMEOUT=300
 PXCNAMESPACE="kube-system"
 PXCDB="/tmp/db.sql"
 
@@ -127,7 +133,7 @@ UATLICENCETYPE="true"
 AIRGAPPEDLICENSETYPE="false"
 ISOPENSHIFTCLUSTER="false"
 ISCLOUDDEPLOYMENT="false"
-
+ISDOMAINENABLED="false"
 PXENDPOINT=""
 maxRetry=5
 ONPREMOPERATORIMAGE="portworx/pxcentral-onprem-operator:1.0.0"
@@ -143,6 +149,40 @@ if [ -z ${checkKubectlCLI} ]; then
 fi
 
 echo ""
+export dotCount=0
+export maxDots=10
+function showMessage() {
+	msg=$1
+	dc=$dotCount
+	if [ $dc = 0 ]; then
+		i=0
+		len=${#msg}
+		len=$[$len+$maxDots]	
+		b=""
+		while [ $i -ne $len ]
+		do
+			b="$b "
+			i=$[$i+1]
+		done
+		echo -e -n "\r$b"
+		dc=1
+	else 
+		msg="$msg"
+		i=0
+		while [ $i -ne $dc ]
+		do
+			msg="$msg."
+			i=$[$i+1]
+		done
+		dc=$[$dc+1]
+		if [ $dc = $maxDots ]; then
+			dc=0
+		fi
+	fi
+	export dotCount=$dc
+	echo -e -n "\r$msg"
+}
+
 if [ -z ${LICENSEADMINPASSWORD} ]; then
     echo "ERROR : License server admin password is required"
     echo ""
@@ -247,21 +287,48 @@ if [ ${AIRGAPPED} ]; then
   fi
 fi
 
+if [ ${OPENSHIFTCLUSTER} ]; then
+  if [ "$OPENSHIFTCLUSTER" == "true" ]; then
+    ISOPENSHIFTCLUSTER="true"
+  fi
+fi
+
+if [ ${DOMAINENABLED} ]; then
+  if [ "$DOMAINENABLED" == "true" ]; then
+    ISDOMAINENABLED="true"
+    kubectl --kubeconfig=$KC apply -f $pxc_service --namespace $PXCNAMESPACE &>/dev/null
+  fi
+fi
+
+if [ "$ISDOMAINENABLED" == "true" ]; then
+    ISCLOUDDEPLOYMENT="true"
+fi
+
 if [ ${CLOUDPLATFORM} ]; then
-  if [ "$CLOUDPLATFORM" == "true" ]; then
+  if [[ "$CLOUDPLATFORM" == "true"  && "$ISOPENSHIFTCLUSTER" == false ]]; then
     ISCLOUDDEPLOYMENT="true"
     if [ -z ${PXCINPUTENDPOINT} ]; then
-      echo "ERROR: Cloud deployment requires loadbalancer endpoint, provide '--pxcentral-endpoint <LB_ENDPOINT>'"
+      echo "ERROR: Cloud deployment needs a public Loadbalancer endpoint to ensure that the UI is accessible from anywhere. "
       echo ""
-      usage
+      echo "# Deploy PX-Central on openshift on cloud"
+      echo "./install.sh  --license-password 'W3lc0m3#' --cloud --pxcentral-endpoint X.X.X.X"
+      echo ""
       exit 1
     fi
   fi
 fi
 
 if [ ${OPENSHIFTCLUSTER} ]; then
-  if [ "$OPENSHIFTCLUSTER" == "true" ]; then
-    ISOPENSHIFTCLUSTER="true"
+  if [ "$CLOUDPLATFORM" == "true" ]; then
+    ISCLOUDDEPLOYMENT="true"
+    if [ -z ${PXCINPUTENDPOINT} ]; then
+      echo "ERROR: Cloud deployment needs a public Loadbalancer endpoint to ensure that the UI is accessible from anywhere. "
+      echo ""
+      echo "# Deploy PX-Central on openshift on cloud"
+      echo "./install.sh  --license-password 'W3lc0m3#' --openshift --cloud --pxcentral-endpoint X.X.X.X"
+      echo ""
+      exit 1
+    fi
   fi
 fi
 
@@ -1266,53 +1333,121 @@ spec:
       adminPassword: '$LICENSEADMINPASSWORD'
 ' > /tmp/pxcentralonprem_cr.yaml
 
-export dotCount=0
-export maxDots=10
-function showMessage() {
-	msg=$1
-	dc=$dotCount
-	if [ $dc = 0 ]; then
-		i=0
-		len=${#msg}
-		len=$[$len+$maxDots]	
-		b=""
-		while [ $i -ne $len ]
-		do
-			b="$b "
-			i=$[$i+1]
-		done
-		echo -e -n "\r$b"
-		dc=1
-	else 
-		msg="$msg"
-		i=0
-		while [ $i -ne $dc ]
-		do
-			msg="$msg."
-			i=$[$i+1]
-		done
-		dc=$[$dc+1]
-		if [ $dc = $maxDots ]; then
-			dc=0
-		fi
-	fi
-	export dotCount=$dc
-	echo -e -n "\r$msg"
-}
+mac_daemonset="/tmp/pxc-mac-check.yaml"
+cat > $mac_daemonset <<- "EOF"
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pxc-license-ha
+  namespace: kube-system
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: pxc-license-ha-role
+  namespace: kube-system
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["*"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: pxc-license-ha-role-binding
+  namespace: kube-system
+subjects:
+- kind: ServiceAccount
+  name: pxc-license-ha
+  namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: pxc-license-ha-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    run: pxc-mac-setup
+  name: pxc-mac-setup
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      run: pxc-mac-setup
+  minReadySeconds: 0
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        run: pxc-mac-setup
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: px/enabled
+                operator: NotIn
+                values:
+                - "false"
+              - key: node-role.kubernetes.io/master
+                operator: DoesNotExist
+      hostNetwork: true
+      hostPID: false
+      restartPolicy: Always
+      serviceAccountName: pxc-license-ha
+      containers:
+      - args:
+        - bash
+        - -c
+        - python3 /code/setup_mac_address.py
+        image: pwxbuild/pxc-macaddress-config:1.0.0
+        imagePullPolicy: Always
+        name: pxc-mac-setup
+EOF
 
 echo "PX-Central cluster deployment started:"
+echo "This process may take several minutes. Please wait for it to complete..."
+kubectl --kubeconfig=$KC apply -f $mac_daemonset &>/dev/null
+pxclicensecm="0"
+timecheck=0
+count=0
+while [ $pxclicensecm -ne "1" ]
+  do
+    pxcentral_license_cm=`kubectl --kubeconfig=$KC get cm --namespace $PXCNAMESPACE 2>&1 | grep -i "pxc-lsc-hasetup" | wc -l 2>&1`
+    if [ "$pxcentral_license_cm" -eq "$nodeCount" ]; then
+      pxclicensecm="1"
+      break
+    fi
+    showMessage "Waiting for PX-Central required components to be ready (0/7)"
+    sleep $SLEEPINTERVAL
+    timecheck=$[$timecheck+$SLEEPINTERVAL]
+    if [ $timecheck -gt $LBSERVICETIMEOUT ]; then
+      echo ""
+      echo "ERROR: PX-Central deployment is not ready, Contact: support@portworx.com"
+      exit 1
+    fi
+  done
+kubectl --kubeconfig=$KC delete -f $mac_daemonset &>/dev/null
+showMessage "Waiting for PX-Central required components to be ready (0/7)"
+
 kubectl --kubeconfig=$KC apply -f /tmp/pxcentralonprem_crd.yaml &>/dev/null
 pxcentralcrdregistered="0"
 timecheck=0
 count=0
 while [ $pxcentralcrdregistered -ne "1" ]
   do
-    pxcentral_crd=`kubectl --kubeconfig=$KC get crds 2>&1 | grep pxcentralonprems.pxcentral.com | wc -l 2>&1`
+    pxcentral_crd=`kubectl --kubeconfig=$KC get crds 2>&1 | grep -i "pxcentralonprems.pxcentral.com" | wc -l 2>&1`
     if [ "$pxcentral_crd" -eq "1" ]; then
       pxcentralcrdregistered="1"
       break
     fi
-    showMessage "Waiting for PX-Central required components to be ready (0/6)"
+    showMessage "Waiting for PX-Central required components to be ready (0/7)"
     sleep $SLEEPINTERVAL
     timecheck=$[$timecheck+$SLEEPINTERVAL]
     if [ $timecheck -gt $TIMEOUT ]; then
@@ -1323,7 +1458,7 @@ while [ $pxcentralcrdregistered -ne "1" ]
   done
 
 kubectl --kubeconfig=$KC apply -f /tmp/pxcentralonprem_cr.yaml &>/dev/null
-showMessage "Waiting for PX-Central required components to be ready (0/6)"
+showMessage "Waiting for PX-Central required components to be ready (0/7)"
 kubectl --kubeconfig=$KC get po --namespace $PXCNAMESPACE &>/dev/null
 operatordeploymentready="0"
 timecheck=0
@@ -1340,7 +1475,7 @@ while [ $operatordeploymentready -ne "1" ]
         operatordeploymentready="1"
         break
     fi
-    showMessage "Waiting for PX-Central required components to be ready (0/6)"
+    showMessage "Waiting for PX-Central required components to be ready (0/7)"
     sleep $SLEEPINTERVAL
     timecheck=$[$timecheck+$SLEEPINTERVAL]
     if [ $timecheck -gt $TIMEOUT ]; then
@@ -1352,11 +1487,12 @@ while [ $operatordeploymentready -ne "1" ]
       exit 1
     fi
   done
-showMessage "Waiting for PX-Central required components to be ready (1/6)"
+showMessage "Waiting for PX-Central required components to be ready (1/7)"
 pxready="0"
 sleep $SLEEPINTERVAL
 timecheck=0
 count=0
+license_server_cm_available="0"
 while [ $pxready -ne "1" ]
   do
     pxready=`kubectl --kubeconfig=$KC get pods --namespace $PXCNAMESPACE -lname=portworx 2>&1 | awk '{print $2}' | grep -v READY | grep "1/1" | wc -l 2>&1`
@@ -1364,7 +1500,28 @@ while [ $pxready -ne "1" ]
         pxready="1"
         break
     fi
-    showMessage "Waiting for PX-Central required components to be ready (1/6)"
+    showMessage "Waiting for PX-Central required components to be ready (1/7)"
+
+    if [ "$ISOPENSHIFTCLUSTER" == "true" ]; then
+      if [ "$license_server_cm_available" -eq "0" ]; then
+          main_node_ip=`kubectl --kubeconfig=$KC get cm --namespace $PXCNAMESPACE pxc-lsc-replicas -o jsonpath={.data.primary} 2>&1`
+          backup_node_ip=`kubectl --kubeconfig=$KC get cm --namespace $PXCNAMESPACE pxc-lsc-replicas -o jsonpath={.data.secondary} 2>&1`
+          if [[ ( ! -z "$main_node_ip" ) && ( ! -z "$backup_node_ip" ) ]]; then
+            main_node_hostname=`kubectl --kubeconfig=$KC get nodes -o wide | grep "$main_node_ip" | awk '{print $1}' 2>&1`
+            backup_node_hostname=`kubectl --kubeconfig=$KC get nodes -o wide | grep "$backup_node_ip" | awk '{print $1}' 2>&1`
+            kubectl --kubeconfig=$KC label node $main_node_hostname px/ls=true &>/dev/null
+            kubectl --kubeconfig=$KC label node $backup_node_hostname px/ls=true &>/dev/null
+            kubectl --kubeconfig=$KC label node $main_node_hostname primary/ls=true &>/dev/null
+            kubectl --kubeconfig=$KC label node $backup_node_hostname backup/ls=true &>/dev/null
+            main_node_count=`kubectl --kubeconfig=$KC get node -lprimary/ls=true | grep Ready | wc -l 2>&1`
+            backup_node_count=`kubectl --kubeconfig=$KC get node -lbackup/ls=true | grep Ready | wc -l 2>&1`
+            if [[ $main_node_count -eq 1 && $backup_node_count -eq 1 ]]; then
+              license_server_cm_available=1
+            fi
+          fi
+      fi
+    fi
+
     sleep $SLEEPINTERVAL
     timecheck=$[$timecheck+$SLEEPINTERVAL]
     if [ $timecheck -gt $TIMEOUT ]; then
@@ -1375,7 +1532,7 @@ while [ $pxready -ne "1" ]
 cassandrapxready="0"
 timecheck=0
 count=0
-showMessage "Waiting for PX-Central required components to be ready (2/6)"
+showMessage "Waiting for PX-Central required components to be ready (2/7)"
 while [ $cassandrapxready -ne "1" ]
   do
     pxcassandraready=`kubectl --kubeconfig=$KC get sts --namespace $PXCNAMESPACE pxc-cortex-cassandra 2>&1 | grep -v READY | awk '{print $2}' | grep "3/3" | wc -l 2>&1`
@@ -1383,7 +1540,7 @@ while [ $cassandrapxready -ne "1" ]
         cassandrapxready="1"
         break
     fi
-    showMessage "Waiting for PX-Central required components to be ready (2/6)"
+    showMessage "Waiting for PX-Central required components to be ready (2/7)"
     sleep $SLEEPINTERVAL
     timecheck=$[$timecheck+$SLEEPINTERVAL]
     if [ $timecheck -gt $TIMEOUT ]; then
@@ -1391,15 +1548,26 @@ while [ $cassandrapxready -ne "1" ]
     fi
   done
 
-prometheusstatus=`kubectl --kubeconfig=$KC get po --namespace $PXCNAMESPACE 2>&1 | grep "px-prometheus-operator" | grep -v NAME | awk '{print $3}' 2>&1`
-if [[ ( ${prometheusstatus} = "Error" ) || ( ${prometheusstatus} = "CrashLoopBackOff" ) ]]; then
-  if [ $CUSTOMREGISTRYENABLED = "true" ]; then
-    kubectl --kubeconfig=$KC set image deployment/px-prometheus-operator --namespace $PXCNAMESPACE px-prometheus-operator=$CUSTOMREGISTRY/$IMAGEREPONAME/prometheus-operator:v0.34.0  &>/dev/null
-  else
-    kubectl --kubeconfig=$KC set image deployment/px-prometheus-operator --namespace $PXCNAMESPACE px-prometheus-operator=quay.io/coreos/prometheus-operator:v0.34.0  &>/dev/null
-  fi
-fi
-showMessage "Waiting for PX-Central required components to be ready (3/6)"
+lscready="0"
+timecheck=0
+count=0
+showMessage "Waiting for PX-Central required components to be ready (3/7)"
+while [ $lscready -ne "1" ]
+  do
+    licenseserverready=`kubectl --kubeconfig=$KC get deployment --namespace $PXCNAMESPACE pxc-license-server 2>&1 | grep -v READY | awk '{print $2}' | grep "2/2" | wc -l 2>&1`
+    if [ "$licenseserverready" -eq "1" ]; then
+        lscready="1"
+        break
+    fi
+    showMessage "Waiting for PX-Central required components to be ready (3/7)"
+    sleep $SLEEPINTERVAL
+    timecheck=$[$timecheck+$SLEEPINTERVAL]
+    if [ $timecheck -gt $TIMEOUT ]; then
+      break
+    fi
+  done
+showMessage "Waiting for PX-Central required components to be ready (4/7)"
+
 deploymentready="0"
 timecheck=0
 count=0
@@ -1416,7 +1584,7 @@ while [ $deploymentready -ne "1" ]
         deploymentready="1"
         break
     fi
-    showMessage "Waiting for PX-Central required components to be ready (3/6)"
+    showMessage "Waiting for PX-Central required components to be ready (4/7)"
     sleep $SLEEPINTERVAL
     timecheck=$[$timecheck+$SLEEPINTERVAL]
     if [ $timecheck -gt $TIMEOUT ]; then
@@ -1428,9 +1596,9 @@ while [ $deploymentready -ne "1" ]
     fi
   done
 
-showMessage "Waiting for PX-Central required components to be ready (4/6)"
+showMessage "Waiting for PX-Central required components to be ready (5/7)"
 pxcdbready="0"
-POD=$(kubectl --kubeconfig=$KC get pod -l app=pxc-mysql --namespace $PXCNAMESPACE -o jsonpath='{.items[0].metadata.name}');
+POD=$(kubectl --kubeconfig=$KC get pod -l app=pxc-mysql --namespace $PXCNAMESPACE -o jsonpath='{.items[0].metadata.name}' 2>&1);
 mysqlRootPassword="singapore"
 timecheck=0
 count=0
@@ -1438,14 +1606,14 @@ while [ $pxcdbready -ne "1" ]
   do
     pxcdbdeploymentready=`kubectl --kubeconfig=$KC get deployment --namespace $PXCNAMESPACE pxc-mysql 2>&1 | awk '{print $2}' | grep -v READY | grep "1/1" | wc -l 2>&1`
     if [ "$pxcdbdeploymentready" -eq "1" ]; then
-        dbrunning=`kubectl --kubeconfig=$KC exec -it $POD --namespace $PXCNAMESPACE -- /etc/init.d/mysql status | grep "running" | wc -l 2>&1`
+        dbrunning=`kubectl --kubeconfig=$KC exec -it $POD --namespace $PXCNAMESPACE -- /etc/init.d/mysql status 2>&1 | grep "running" | wc -l 2>&1`
         if [ "$dbrunning" -eq "1" ]; then
           kubectl --kubeconfig=$KC exec -it $POD --namespace $PXCNAMESPACE -- mysql --host=127.0.0.1 --protocol=TCP -u root -psingapore pxcentral < $PXCDB &>/dev/null
           pxcdbready="1"
           break
         fi
     fi
-    showMessage "Waiting for PX-Central required components to be ready (4/6)"
+    showMessage "Waiting for PX-Central required components to be ready (5/7)"
     sleep $SLEEPINTERVAL
     timecheck=$[$timecheck+$SLEEPINTERVAL]
     if [ $timecheck -gt $TIMEOUT ]; then
@@ -1457,20 +1625,27 @@ while [ $pxcdbready -ne "1" ]
     fi
   done
 
-showMessage "Waiting for PX-Central required components to be ready (5/6)"
+showMessage "Waiting for PX-Central required components to be ready (6/7)"
 postsetupjob="0"
-kubectl --kubeconfig=$KC delete job pxc-post-setup --namespace $PXCNAMESPACE &>/dev/null
 timecheck=0
 count=0
 while [ $postsetupjob -ne "1" ]
   do
     pxcpostsetupjob=`kubectl --kubeconfig=$KC get jobs --namespace $PXCNAMESPACE pxc-post-setup 2>&1 | awk '{print $2}' | grep -v COMPLETIONS | grep "1/1" | wc -l 2>&1`
+    CHECKOIDCENABLE=`kubectl --kubeconfig=$KC get cm --namespace $PXCENTRALNAMESPACE pxc-admin-user -o jsonpath={.data.oidc} 2>&1`
+    if [[ "$CHECKOIDCENABLE" == "true" && "$pxcpostsetupjob" -eq 1 ]]; then
+      break
+    fi
+    count=$[$count+1]
+    if [ "$count" -eq "1" ]; then
+      kubectl --kubeconfig=$KC delete job pxc-post-setup --namespace $PXCNAMESPACE &>/dev/null
+    fi
     if [ "$pxcpostsetupjob" -eq "1" ]; then
         postsetupjob="1"
-        showMessage "Waiting for PX-Central required components to be ready (6/6)"
+        showMessage "Waiting for PX-Central required components to be ready (7/7)"
         break
     fi
-    showMessage "Waiting for PX-Central required components to be ready (5/6)"
+    showMessage "Waiting for PX-Central required components to be ready (6/7)"
     sleep $SLEEPINTERVAL
     timecheck=$[$timecheck+$SLEEPINTERVAL]
     if [ $timecheck -gt $TIMEOUT ]; then
@@ -1489,12 +1664,27 @@ echo ""
 echo "+================================================+"
 echo "SAVE THE FOLLOWING DETAILS FOR FUTURE REFERENCES"
 echo "+================================================+"
-if [ "$ISCLOUDDEPLOYMENT" == "true" ]; then
-  pxcentralLBEndpoint=`kubectl get svc -nkube-system 2>&1 | grep -i "pxc-ingress-nginx" | awk '{print $4}'`
-  echo "PX-Central User Interface Access URL : http://$pxcentralLBEndpoint/frontend"
-else
-  echo "PX-Central User Interface Access URL : http://$PXENDPOINT:31234/frontend"
-fi
+url="http://$PXENDPOINT:31234/frontend"
+echo "PX-Central User Interface Access URL : $url"
+timecheck=0
+while true
+  do
+    status_code=$(curl --write-out %{http_code} --silent --output /dev/null $url)
+    if [[ "$status_code" -eq 200 ]] ; then
+      echo -e -n ""
+      break
+    fi
+    showMessage "Validating PX-Central endpoint access."
+    sleep $SLEEPINTERVAL
+    timecheck=$[$timecheck+$SLEEPINTERVAL]
+    if [ $timecheck -gt $LBSERVICETIMEOUT ]; then
+      echo ""
+      echo "ERROR: Failed to check PX-Central endpoint accessible, Contact: support@portworx.com"
+      echo ""
+    fi
+  done
+echo ""
+echo -e -n ""
 
 if [ "$OIDCENABLED" == "false" ]; then
   if [[ ( ${ADMINEMAIL} = "pxadmin@portworx.com" ) && ( ${ADMINUSER} = "pxadmin" ) ]]; then
@@ -1503,6 +1693,14 @@ if [ "$OIDCENABLED" == "false" ]; then
     echo ""
     echo "PX-Central grafana admin user name: $ADMINEMAIL"
     echo "PX-Central grafana admin user password: $ADMINPASSWORD"
+  else if [ $ADMINUSER == "admin" ]; then
+      echo "PX-Central admin user name: $ADMINEMAIL"
+      echo "PX-Central admin user password: $ADMINPASSWORD"
+      echo ""
+      echo "PX-Central grafana admin user name: $ADMINUSER"
+      echo "PX-Central grafana admin user password: admin"
+      echo "Note: Change Grafana Admin User Password to '$ADMINPASSWORD' from Grafana"
+    fi
   fi
 else
   echo "OIDC enabled, Use OIDC user credentials to access PX-Central UI."

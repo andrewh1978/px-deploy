@@ -1,8 +1,8 @@
 description: A single K8s and Portworx cluster with PX-Central Alpha & Grafana installed
 cloud: aws
 clusters: 1
-nodes: 6
+nodes: 3
 aws_type: t3.2xlarge
 aws_ebs: "gp2:80 gp2:100"
 
-scripts: ["install-px", "install-storkctl", "central"]
+scripts: ["central", "install-storkctl"]
