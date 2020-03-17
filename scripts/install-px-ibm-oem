@@ -46,6 +46,10 @@ cat > /var/tmp/px-sc.sh.patch <<_EOF
  reclaimPolicy: Delete
 _EOF
 patch cp4d/cpd-portworx/bin/px-sc.sh < /var/tmp/px-sc.sh.patch
+while ! oc get nodes; do
+  echo waiting for openshift
+  sleep 1
+done
 ./cp4d/cpd-portworx/bin/px-sc.sh
 #--- load/install portworx resources (with a pull policy of Never) 
 ./cp4d/cpd-portworx/bin/px-install.sh -y install
@@ -66,3 +70,4 @@ echo -e "zenCoreMetaDb:\n  storageClass: portworx-metastoredb-sc" > cp4d/cp-over
 nohup su - centos -c "DISPLAY=:0 firefox -width 1920 -height 1080" &
 while [ $(ps auxw | grep 'firefox.*childI[D]' | wc -l) -lt 4 ] ; do echo waiting for firefox; sleep 1; done
 nohup su - centos -c "DISPLAY=:0 firefox --new-window https://zen-cpd-zen.apps" &
+echo $(curl -s https://ipinfo.io/ip) zen-cpd-zen.apps >>/etc/hosts
