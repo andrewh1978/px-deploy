@@ -46,10 +46,6 @@ cat > /var/tmp/px-sc.sh.patch <<_EOF
  reclaimPolicy: Delete
 _EOF
 patch cp4d/cpd-portworx/bin/px-sc.sh < /var/tmp/px-sc.sh.patch
-while ! oc get nodes; do
-  echo waiting for openshift
-  sleep 1
-done
 ./cp4d/cpd-portworx/bin/px-sc.sh
 #--- load/install portworx resources (with a pull policy of Never) 
 ./cp4d/cpd-portworx/bin/px-install.sh -y install
