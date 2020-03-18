@@ -1,3 +1,9 @@
+while : ; do
+  n=$(kubectl get nodes 2>&1 | grep -i "Ready" | awk '{print $3}' | grep -v "master" | wc -l)
+  [ $n -ge 3 ] && break
+  sleep 1
+  echo Waiting for Portworx cluster to come up
+done
 if [ $cluster = 1 ]; then
     IP=$(curl https://ipinfo.io/ip)
     (sh /assets/central-install.sh --license-password 'Adm1n!Ur' --pxcentral-endpoint $IP) >&/var/log/central
