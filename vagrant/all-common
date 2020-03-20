@@ -39,7 +39,10 @@ AcceptEnv XMODIFIERS
 Subsystem sftp  /usr/libexec/openssh/sftp-server
 EOF
 
-echo "StrictHostKeyChecking no" >/root/.ssh/config
+cat <<EOF >/root/.ssh/config
+StrictHostKeyChecking no
+LogLevel ERROR
+EOF
 
 hostnamectl set-hostname $(getent hosts $(hostname -I) | awk '{print$2}')
 systemctl stop firewalld 2>/dev/null

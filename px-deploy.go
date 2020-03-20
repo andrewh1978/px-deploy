@@ -178,13 +178,15 @@ func main() {
   }
 
   cmdConnect := &cobra.Command {
-    Use: "connect name",
+    Use: "connect name [ command ]",
     Short: "Connects to a deployment",
-    Long: "Connects to the first master node as root",
+    Long: "Connects to the first master node as root, and executes optional command",
     Run: func(cmd *cobra.Command, args []string) {
       config := parse_yaml("deployments/" + connectName + ".yml")
       ip := get_ip(connectName)
-      syscall.Exec("/usr/bin/ssh", []string{"ssh", "-oStrictHostKeyChecking=no","-i","keys/id_rsa." + config.Cloud + "." + config.Name,"root@" + ip}, os.Environ())
+      command := ""
+      if (len(args) > 0) { command = args[0] }
+      syscall.Exec("/usr/bin/ssh", []string{"ssh", "-oLoglevel=ERROR", "-oStrictHostKeyChecking=no","-i","keys/id_rsa." + config.Cloud + "." + config.Name,"root@" + ip, command}, os.Environ())
     },
   }
   

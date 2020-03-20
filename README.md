@@ -45,7 +45,12 @@ This will provision a VPC and some other objects, and deploy into it from the te
 px-deploy connect --name myDeployment
 ```
 
-7. Tear down the deployment:
+7. Execute a command:
+```
+px-deploy connect --name myDeployment "storkctl get clusterpair"
+```
+
+8. Tear down the deployment:
 ```
 px-deploy destroy --name myDeployment
 ```
