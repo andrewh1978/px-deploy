@@ -30,6 +30,7 @@ type Config struct {
   Nodes string
   K8s_Version string
   Px_Version string
+  Stop_After string
   Aws_Type string
   Aws_Ebs string
   Gcp_Type string
@@ -49,7 +50,7 @@ type Config struct {
 }
 
 func main() {
-  var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createAwsType, createAwsEbs, createGcpType, createGcpDisks, createGcpZone, createTemplate, createRegion, createCloud, createEnv, connectName, destroyName, statusName string
+  var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createGcpType, createGcpDisks, createGcpZone, createTemplate, createRegion, createCloud, createEnv, connectName, destroyName, statusName string
   var destroyAll bool
   os.Chdir("/px-deploy/.px-deploy")
   rootCmd := &cobra.Command{Use: "px-deploy"}
@@ -108,6 +109,10 @@ func main() {
       if (createPxVer != "") {
         if (!regexp.MustCompile(`^[0-9\.]+$`).MatchString(createPxVer)) { die("Invalid Portworx version '" + createPxVer + "'") }
         config.Px_Version = createPxVer
+      }
+      if (createStopAfter != "") {
+        if (!regexp.MustCompile(`^[0-9]+$`).MatchString(createStopAfter)) { die("Invalid number of hours") }
+        config.Stop_After = createStopAfter
       }
       if (createEnv != "") {
         env_cli := make(map[string]string)
@@ -270,6 +275,7 @@ func main() {
   cmdCreate.Flags().StringVarP(&createNodes, "nodes", "N", "", "number of nodes to be deployed in each cluster (default " + defaults.Nodes + ")")
   cmdCreate.Flags().StringVarP(&createK8sVer, "k8s_version", "k", "", "Kubernetes version to be deployed (default " + defaults.K8s_Version + ")")
   cmdCreate.Flags().StringVarP(&createPxVer, "px_version", "P", "", "Portworx version to be deployed (default " + defaults.Px_Version + ")")
+  cmdCreate.Flags().StringVarP(&createStopAfter, "stop_after", "s", "", "Stop instances after this many hours (default " + defaults.Stop_After + ")")
   cmdCreate.Flags().StringVarP(&createAwsType, "aws_type", "", "", "AWS type for each node (default " + defaults.Aws_Type + ")")
   cmdCreate.Flags().StringVarP(&createAwsEbs, "aws_ebs", "", "", "space-separated list of EBS volumes to be attached to worker nodes, eg \"gp2:20 standard:30\" (default " + defaults.Aws_Ebs + ")")
   cmdCreate.Flags().StringVarP(&createGcpType, "gcp_type", "", "", "GCP type for each node (default " + defaults.Gcp_Type + ")")

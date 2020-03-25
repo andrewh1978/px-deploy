@@ -1,7 +1,7 @@
 require "base64"
 require "yaml"
 yaml = YAML.load(File.read("/px-deploy/.px-deploy/deployments/#{ENV['deployment']}.yml"))
-env = ({:clusters => yaml['clusters'], :nodes => yaml['nodes'], :px_version => yaml['px_version'], :k8s_version => yaml['k8s_version']})
+env = ({:clusters => yaml['clusters'], :nodes => yaml['nodes'], :px_version => yaml['px_version'], :k8s_version => yaml['k8s_version'], :stop_after => yaml['stop_after']})
 master_scripts = ["all-common", "#{yaml['platform']}-common", "all-master", "#{yaml['platform']}-master"]
 node_scripts = ["all-common", "#{yaml['platform']}-common", "#{yaml['platform']}-node"]
 master_script = "mkdir /var/log/px-deploy\n"

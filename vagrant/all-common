@@ -49,3 +49,7 @@ systemctl stop firewalld 2>/dev/null
 systemctl disable firewall 2>/dev/null
 systemctl restart sshd
 passwd --stdin root <<<portworx
+yum install -y at
+systemctl start atd
+systemctl enable atd
+echo /usr/sbin/shutdown -h now | at now + $stop_after hours

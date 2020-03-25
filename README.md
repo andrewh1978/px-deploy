@@ -97,6 +97,7 @@ The `defaults.yml` file sets a number of deployment variables:
  * `cloud` - the cloud on which to deploy (aws or gcp)
  * `clusters` - the number of clusters to deploy
  * `k8s_version` - the version of Kubernetes to deploy
+ * `stop_after` - stop the intances after this many hours
  * `nodes` - the number of worker nodes on each cluster
  * `platform` - can be set to either k8s, ocp3 or ocp3c (OCPv3 with CRI-O)
  * `px_version` - the version of Portworx to install
