@@ -12,6 +12,8 @@ allowVolumeExpansion: true
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
+   labels:
+      app: postgres
    name: postgres-data
    annotations:
      volume.beta.kubernetes.io/storage-class: px-postgres-sc
