@@ -4,7 +4,7 @@ kbs_version: 1.16.8
 clusters: 1
 scripts: ["autopilot", "install-storkctl"]
 env:
-  #aut_license: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
+  #aut_licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
 
 # NOTE: edit env.aut_license above, or define in defaults.yml
 # Postgres and the postgres autopilot rule are already deployed

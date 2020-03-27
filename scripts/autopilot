@@ -14,7 +14,12 @@ while : ; do
   sleep 1
 done
 sleep 5
-kubectl exec -n kube-system -it $(kubectl get pods -n kube-system -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- /opt/pwx/bin/pxctl license activate --ep UAT $aut_license; do
+
+for i in $aut_licenses; do
+  while ! kubectl exec -n kube-system -it $(kubectl get pods -n kube-system -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- /opt/pwx/bin/pxctl license activate --ep UAT $i; do
+    sleep 1
+  done
+done
 
 kubectl apply -f /assets/monitoring/service-monitor.yaml
 sleep 10
