@@ -1,0 +1,32 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  namespace: kube-system
+  name: portworx-prometheus-sm
+  labels:
+    name: portworx-prometheus-sm
+spec:
+  selector:
+    matchLabels:
+      name: portworx
+  namespaceSelector:
+    any: true
+  endpoints:
+  - port: px-api
+    targetPort: 9001
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: autopilot-prometheus-sm
+  namespace: kube-system
+  labels:
+    name: portworx-prometheus-sm
+spec:
+  selector:
+    matchLabels:
+      name: autopilot-service
+  namespaceSelector:
+    any: true
+  endpoints:
+    - port: autopilot
