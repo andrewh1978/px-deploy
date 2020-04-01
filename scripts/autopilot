@@ -21,8 +21,22 @@ for i in $aut_licenses; do
   done
 done
 
+# Fix because we don't seem to support the latest prometheus operator!
+kubectl apply -f /assets/monitoring/prometheus-cluster.yaml
 kubectl apply -f /assets/monitoring/service-monitor.yaml
 sleep 10
+
+# Wait for AutoPilot to be available before we apply rules
+kubectl wait --for=condition=ready pod -l name=autopilot -n kube-system --timeout 10m
 kubectl apply -f /assets/monitoring/prometheus-rules.yaml
 kubectl apply -f /assets/postgres/postgres-autopilot-rule.yaml
 kubectl apply -f /assets/postgres/postgres.yml
+kubectl apply -f /assets/cockroach/cockroach.yml
+kubectl apply -f /assets/cockroach/cockroach-autopilot-rule.yml
+
+# chmod scripts to be executable
+chmod 775 /assets/cockroach/watch-autopilot.sh
+chmod 775 /assets/cockroach/cockroach-loadgen.sh
+
+# Patch cockroachdb-public for external access (temp sticky plaster)
+kubectl patch svc cockroachdb-public --type='json' -p '[{"op":"replace","path":"/spec/type","value":"NodePort"}]'

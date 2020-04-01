@@ -54,19 +54,10 @@ spec:
   serviceMonitorSelector:
     matchLabels:
       name: portworx-prometheus-sm
-    namespaceSelector:
-      matchNames:
-        - kube-system
-    resources:
-      requests:
-        memory: 400Mi
   ruleSelector:
     matchLabels:
       role: prometheus-portworx-rulefiles
       prometheus: portworx
-    namespaceSelector:
-      matchNames:
-        - kube-system
 ---
 apiVersion: v1
 kind: Service

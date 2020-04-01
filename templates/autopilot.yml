@@ -1,6 +1,6 @@
 description: Deploys a Kubernetes cluster and Portworx with Promethues and Autopilot pre-configured.
 cloud: aws
-kbs_version: 1.16.8
+kbs_version: 1.15.10
 clusters: 1
 scripts: ["autopilot", "install-storkctl"]
 env:
@@ -12,3 +12,10 @@ env:
 # Exec to the postgres pod and create a database psql, then create database test; then quit with \q
 # Populate the database with data - pgbench -i -s 75 test
 # Watch the volume to wait for the resize
+
+# Cockroachdb dmeo available
+# Look up external port for cockroachdb-public service and connect to UI
+# Run /assets/cockroach/watch-autopilot.sh to see AutoPilot events
+# Run /assets/cockroach/cockroach-loadgen.sh to start filling up the volumes
+# The UI will auto update with capaccity stats, AP will extend volume at 50% used
+# Full script: https://docs.google.com/document/d/1eWB-Gg8B4LpwebqPu56bZcbM0Z8oDGxEXRE5NP0_uFA/edit
