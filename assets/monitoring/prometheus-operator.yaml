@@ -37,6 +37,7 @@ rules:
       - servicemonitors
       - prometheusrules
       - podmonitors
+      - thanosrulers
     verbs: ["*"]
   - apiGroups:
       - apps
