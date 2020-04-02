@@ -5,6 +5,7 @@ nodes: 3
 k8s_version: 1.17.0
 px_version: 2.4.0
 stop_after: 6
+post_script: show-ip
 
 aws_region: eu-west-1
 aws_type: t3.large
