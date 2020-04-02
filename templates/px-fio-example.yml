@@ -1,0 +1,11 @@
+description: An example fio benchmark on a gp2 disk and a Portworx volume on a gp2 disk
+scripts: ["install-px", "px-wait", "px-fio-example"]
+clusters: 1
+nodes: 3
+cloud: aws
+aws_ebs: "gp2:150 gp2:150"
+post_script: cat
+auto_destroy: true
+env:
+  px_suffix: "s=/dev/nvme1n1"
+  cat: "/tmp/output"
