@@ -98,6 +98,8 @@ The `defaults.yml` file sets a number of deployment variables:
  * `clusters` - the number of clusters to deploy
  * `k8s_version` - the version of Kubernetes to deploy
  * `stop_after` - stop the intances after this many hours
+ * `post_script` - script to run on each master after deployment, output will go to stdout
+ * `auto_destroy` - if set to `true`, destroy deployment immediately after deploying (usually used with a `post_script` to output the results of a test or benchmark)
  * `nodes` - the number of worker nodes on each cluster
  * `platform` - can be set to either k8s, ocp3 or ocp3c (OCPv3 with CRI-O)
  * `px_version` - the version of Portworx to install
@@ -139,6 +141,8 @@ All files in `~/.px-deploy/assets` will be copied to `/assets` on the master nod
 
 In addition to these, there are some more variables available:
  * `$cluster` - cluster number
+
+`post_script` is a script that will be run on each master node after all of the scripts have completed, and the output will go to stdout. The default is to display the external IP address of master-1, but it could be used to show benchmark outputs, for example.
 
 Last, environment variables can be define in templates or defaults.yml, and these are also available to scripts:
 ```
