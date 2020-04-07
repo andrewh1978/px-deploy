@@ -16,6 +16,7 @@ metadata:
   labels:
     app: cockroachdb
 spec:
+  type: NodePort
   ports:
   # The main port, served by gRPC, serves Postgres-flavor SQL, internode
   # traffic and the cli.
@@ -25,6 +26,7 @@ spec:
   # The secondary port serves the UI as well as health and debug endpoints.
   - port: 8080
     targetPort: 8080
+    nodePort: 30111
     name: http
   selector:
     app: cockroachdb

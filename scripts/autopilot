@@ -38,5 +38,5 @@ kubectl apply -f /assets/cockroach/cockroach-autopilot-rule.yml
 chmod 775 /assets/cockroach/watch-autopilot.sh
 chmod 775 /assets/cockroach/cockroach-loadgen.sh
 
-# Patch cockroachdb-public for external access (temp sticky plaster)
-kubectl patch svc cockroachdb-public --type='json' -p '[{"op":"replace","path":"/spec/type","value":"NodePort"}]'
+# Patch grafana for external access
+kubectl patch svc grafana -n kube-system -p '{"spec": { "type": "NodePort", "ports": [ { "nodePort": 30112, "port": 3000, "protocol": "TCP", "targetPort": 3000 } ] } }'

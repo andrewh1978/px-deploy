@@ -14,7 +14,7 @@ env:
 # Watch the volume to wait for the resize
 
 # Cockroachdb dmeo available
-# Look up external port for cockroachdb-public service and connect to UI
+# Connect to CockroachDB UI at http://{MASTER_IP}:30111
 # Run /assets/cockroach/watch-autopilot.sh to see AutoPilot events
 # Run /assets/cockroach/cockroach-loadgen.sh to start filling up the volumes
 # The UI will auto update with capaccity stats, AP will extend volume at 50% used
