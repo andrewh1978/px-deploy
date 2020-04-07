@@ -31,6 +31,8 @@ type Config struct {
   K8s_Version string
   Px_Version string
   Stop_After string
+  Post_Script string
+  Auto_Destroy string
   Aws_Type string
   Aws_Ebs string
   Gcp_Type string
@@ -68,7 +70,7 @@ func main() {
         config.Template = createTemplate
         config_template := parse_yaml("templates/" + createTemplate + ".yml")
         env_template = config_template.Env
-       	mergo.MergeWithOverwrite(&config, config_template)
+        mergo.MergeWithOverwrite(&config, config_template)
         mergo.MergeWithOverwrite(&env, env_template)
       }
       if (createName != "") {
@@ -149,6 +151,12 @@ func main() {
         err := cmd.Run()
         if (err != nil) { die("Script '" + s + "' is not valid Bash") }
       }
+      if config.Post_Script != "" {
+        if _, err := os.Stat("scripts/" + config.Post_Script); os.IsNotExist(err) { die("Postscript '" + config.Post_Script + "' does not exist") }
+        cmd := exec.Command("bash", "-n", "scripts/" + config.Post_Script)
+        err := cmd.Run()
+        if (err != nil) { die("Postscript '" + config.Post_Script + "' is not valid Bash") }
+      }
       y, _ := yaml.Marshal(config)
       err := ioutil.WriteFile("deployments/" + createName + ".yml", y, 0644)
       if err != nil { die(err.Error()) }
@@ -158,10 +166,14 @@ func main() {
       }
       os.Chdir("/px-deploy/vagrant")
       os.Setenv("deployment", config.Name)
-      syscall.Exec("/usr/bin/vagrant", []string{"vagrant", "up"}, os.Environ())
+      fmt.Println("Provisioning VMs...")
+      output, err := exec.Command("vagrant", "up").CombinedOutput()
+      fmt.Println(string(output))
+      if err != nil { die(err.Error()) }
+      if config.Auto_Destroy == "true" { destroy_deployment(config.Name) }
     },
   }
-  
+
   cmdDestroy := &cobra.Command {
     Use: "destroy",
     Short: "Destroys a deployment",
@@ -194,7 +206,7 @@ func main() {
       syscall.Exec("/usr/bin/ssh", []string{"ssh", "-oLoglevel=ERROR", "-oStrictHostKeyChecking=no","-i","keys/id_rsa." + config.Cloud + "." + config.Name,"root@" + ip, command}, os.Environ())
     },
   }
-  
+
   cmdList := &cobra.Command {
     Use: "list",
     Short: "Lists available deployments",
@@ -267,7 +279,7 @@ func main() {
       rootCmd.GenBashCompletion(os.Stdout)
     },
   }
-  
+
   defaults := parse_yaml("defaults.yml")
   cmdCreate.Flags().StringVarP(&createName, "name", "n", "", "name of deployment to be created (if blank, generate UUID)")
   cmdCreate.Flags().StringVarP(&createPlatform, "platform", "p", "", "k8s | ocp3 | ocp3c (default " + defaults.Platform + ")")
@@ -302,6 +314,7 @@ func main() {
 func create_deployment(config Config) int {
   var output []byte
   var err error
+  fmt.Println("Provisioning infrastructure...")
   switch(config.Cloud) {
     case "aws": {
       output, err = exec.Command("bash", "-c", `
@@ -367,9 +380,11 @@ func create_deployment(config Config) int {
 }
 
 func destroy_deployment(name string) {
+  os.Chdir("/px-deploy/.px-deploy")
   config := parse_yaml("deployments/" + name + ".yml")
   var output []byte
   ip := get_ip(config.Name)
+  fmt.Println("Destroying deployment '" + config.Name + "'...")
   if (config.Cloud == "aws") {
     c, _ := strconv.Atoi(config.Clusters)
     n, _ := strconv.Atoi(config.Nodes)
@@ -415,6 +430,7 @@ func destroy_deployment(name string) {
   os.Remove("deployments/" + name + ".yml")
   os.Remove("keys/id_rsa." + config.Cloud + "." + name)
   os.Remove("keys/id_rsa." + config.Cloud + "." + name + ".pub")
+  fmt.Println("Destroyed.")
 }
 
 func get_ip(deployment string) string {

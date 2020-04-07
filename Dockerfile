@@ -1,6 +1,9 @@
 FROM centos:7
 RUN curl -s https://mirror.go-repo.io/centos/go-repo.repo >/etc/yum.repos.d/go-repo.repo
 RUN yum install -y gcc make openssh-clients python3-pip golang git
+RUN echo ServerAliveInterval 300 >/etc/ssh/ssh_config
+RUN echo ServerAliveCountMax 2 >>/etc/ssh/ssh_config
+RUN echo TCPKeepAlive yes >>/etc/ssh/ssh_config
 RUN curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-278.0.0-linux-x86_64.tar.gz
 RUN tar xzf google-cloud-sdk-278.0.0-linux-x86_64.tar.gz
 RUN rm google-cloud-sdk-278.0.0-linux-x86_64.tar.gz
