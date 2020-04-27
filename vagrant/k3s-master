@@ -2,4 +2,3 @@ exec &>/var/log/px-deploy/k3s-master
 curl -sfL https://get.k3s.io | sh -
 mkdir /root/.kube
 cp /etc/rancher/k3s/k3s.yaml /root/.kube/config
-#kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
