@@ -1,0 +1,13 @@
+apiVersion: stork.libopenstorage.org/v1alpha1
+kind: ApplicationBackup
+metadata:
+  name: pet-backup
+  namespace: petclinic
+spec:
+  backupLocation: pet-backup-location
+  namespaces:
+  - petclinic
+  reclaimPolicy: Retain
+  selectors:
+  preExecRule:
+  postExecRule:

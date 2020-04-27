@@ -41,6 +41,7 @@ spec:
   ports:
     - port: 9000
       targetPort: 9000
+      nodePort: 30221
       protocol: TCP
   selector:
     # Looks for labels `app:minio` in the namespace and applies the spec

@@ -1,0 +1,23 @@
+description: Deploys a Kubernetes cluster, Minio S3 storage, Petclinic Application and Backup/Restore config
+cloud: aws
+kbs_version: 1.16.8
+clusters: 1
+scripts: ["install-px", "install-storkctl", "backup-restore"]
+
+# NOTES
+# PRE-REQS:-
+# 1. Connect to the Minio UI at http://{masterip}:30221 and logon with minio/minio123
+# 2. Create a bucket called 'portworx'
+# DEMO:-
+# 1. Connect to the petclinic app at http://{masterip}:30333
+# 2. Select Find Owners > Add Owner and enter dummy information
+# 3. Go back to CLI and show /assets/backup-restore/backupLocation.yml
+# 4. Show and explain /assets/backup-restore/applicationBackup.yml
+# 5. Apply the applicationBackup manifest
+# 6. use storkctl to show application backup status
+# 7. Delete petclinic namespace, show in browser that the app no longer works
+# 8. Show namespace and pvs no longer exist
+# 9. Show /assets/backup-restore/applicationRestore.yml and explain
+# 10. Apply /assets/backup-restore/applicationRestore.yml
+# 11. Run 'watch kubectl get all -n petclinic' and see the application start back up
+# 12. Check the UI and show the dummy data has persisted

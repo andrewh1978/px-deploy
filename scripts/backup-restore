@@ -1,0 +1,10 @@
+# Apply Petclinic and Minio in separate namespaces
+kubectl apply -f /assets/minio/minio-deployment.yml
+kubectl apply -f /assets/petclinic/petclinic-with-namespace.yml
+
+# Setup Minio Endpoint
+ip=`curl -s https://ipinfo.io/ip`
+sed -i -e 's/xxxx/'"$ip"'/g' /assets/backup-restore/backupLocation.yml
+
+# Apply backupLocation
+kubectl apply -f /assets/backup-restore/backupLocation.yml
