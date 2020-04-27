@@ -5,6 +5,7 @@ This will deploy one or more clusters in the cloud, with optional post-install t
 # Supported platforms
 
 ## Container
+ * K3s
  * Kubernetes
  * Openshift 3.11
  * Openshift 3.11 with CRI-O
@@ -101,7 +102,7 @@ The `defaults.yml` file sets a number of deployment variables:
  * `post_script` - script to run on each master after deployment, output will go to stdout
  * `auto_destroy` - if set to `true`, destroy deployment immediately after deploying (usually used with a `post_script` to output the results of a test or benchmark)
  * `nodes` - the number of worker nodes on each cluster
- * `platform` - can be set to either k8s, ocp3 or ocp3c (OCPv3 with CRI-O)
+ * `platform` - can be set to either k8s, k3s, ocp3 or ocp3c (OCPv3 with CRI-O)
  * `px_version` - the version of Portworx to install
  * `gcp_disks` - similar to AWS_EBS, for example: `"pd-standard:20 pd-ssd:30"`
  * `gcp_region` - GCP region

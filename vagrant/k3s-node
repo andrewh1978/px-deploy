@@ -1,0 +1,7 @@
+exec &>/var/log/px-deploy/k3s-node
+while : ; do
+  token=$(ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no master-$cluster cat /var/lib/rancher/k3s/server/node-token)
+  [ $? -eq 0 ] && break
+  sleep 5
+done
+curl -sfL https://get.k3s.io | K3S_URL=https://master-$cluster:6443 K3S_TOKEN=$token sh -
