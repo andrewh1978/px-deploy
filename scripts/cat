@@ -1,0 +1,4 @@
+[ ! "$cat" ] && echo '$cat' not defined && exit
+[ ! -f "$cat" ] && echo File $cat does not exist && exit
+echo Contents of $cat:
+cat $cat
