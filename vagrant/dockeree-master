@@ -1,0 +1,19 @@
+exec &>/var/log/px-deploy/dockeree-master
+docker container run --rm --name ucp -v /var/run/docker.sock:/var/run/docker.sock docker/ucp:3.2.6 install --pod-cidr 10.0.0.0/16 --admin-username=admin --admin-password=portworx
+cat <<EOF > /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+EOF
+yum install -y epel-release unzip kubectl
+yum install -y jq
+AUTHTOKEN=$(curl -sk -d '{"username":"admin","password":"portworx"}' https://master-$cluster/auth/login | jq -r .auth_token)
+cd /root
+curl -sk -H "Authorization: Bearer $AUTHTOKEN" https://master-$cluster/api/clientbundle -o bundle.zip
+unzip bundle.zip
+mkdir /root/.kube
+cp kube.yml /root/.kube/config
