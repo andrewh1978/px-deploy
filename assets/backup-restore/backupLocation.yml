@@ -1,0 +1,17 @@
+apiVersion: stork.libopenstorage.org/v1alpha1
+kind: BackupLocation
+metadata:
+  name: pet-backup-location
+  namespace: petclinic
+  annotations:
+    stork.libopenstorage.org/skipresource: "false"
+location:
+  type: s3
+  sync: true
+  path: "portworx"
+  s3Config:
+    region: default
+    accessKeyID: minio
+    secretAccessKey: minio123
+    endpoint: "http://xxxx:30221"
+    disableSSL: true
