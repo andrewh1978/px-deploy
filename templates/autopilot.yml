@@ -1,6 +1,5 @@
 description: Deploys a Kubernetes cluster and Portworx with Promethues and Autopilot pre-configured.
 cloud: aws
-kbs_version: 1.15.10
 clusters: 1
 scripts: ["autopilot", "install-storkctl"]
 env:
