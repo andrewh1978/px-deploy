@@ -1,3 +1,5 @@
 exec &>/var/log/px-deploy/all-master
 [ -f /tmp/credentials ] && mkdir /root/.aws && mv /tmp/credentials /root/.aws
 mv /tmp/assets /assets
+echo 'source <(kubectl completion bash)' >>/root/.bashrc
+echo 'alias k=kubectl' >>/root/.bashrc

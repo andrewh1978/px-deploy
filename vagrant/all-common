@@ -58,5 +58,3 @@ systemctl enable atd
 echo /usr/sbin/shutdown -h now | at now + $stop_after hours
 modprobe br_netfilter
 sysctl -w net.bridge.bridge-nf-call-iptables=1 >/etc/sysctl.conf
-echo 'source <(kubectl completion bash)' >>/root/.bashrc
-echo 'alias k=kubectl' >>/root/.bashrc
