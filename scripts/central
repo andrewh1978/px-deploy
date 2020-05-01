@@ -1,19 +1,20 @@
 while : ; do
-  n=$(kubectl get nodes 2>&1 | grep -i "Ready" | awk '{print $3}' | grep -v "master" | wc -l)
+  n=$(kubectl get node  | grep -i ready | awk '{print$1}' | xargs kubectl get node  -o=jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.taints}{"\n"}{end}' | grep -iv noschedule | wc -l 2>&1)
   [ $n -ge 3 ] && break
   sleep 1
-  echo Waiting for Portworx cluster to come up
+  echo Waiting for Kubernetes cluster to come up
 done
 if [ $cluster = 1 ]; then
     IP=$(curl https://ipinfo.io/ip)
-    (sh /assets/central-install.sh --license-password 'Adm1n!Ur' --pxcentral-endpoint $IP) >&/var/log/central
+    curl -o /root/install.sh 'https://raw.githubusercontent.com/portworx/px-central-onprem/1.0.1/install.sh'
+    sh /root/install.sh --all --license-password 'Adm1n!Ur' --kubeconfig /root/.kube/config --pxcentral-endpoint $IP
 fi
 
 cat <<EOF > /etc/motd
 +================================================+
 SAVE THE FOLLOWING DETAILS FOR FUTURE REFERENCES
 +================================================+
-PX-Central User Interface Access URL : http://$IP:31234/frontend
+PX-Central User Interface Access URL : http://$IP:31234/pxcentral
 PX-Central admin user name: pxadmin@portworx.com
 PX-Central admin user password: Password1
 
