@@ -1,7 +1,7 @@
 require "base64"
 require "yaml"
 yaml = YAML.load(File.read("/px-deploy/.px-deploy/deployments/#{ENV['deployment']}.yml"))
-env = ({:clusters => yaml['clusters'], :nodes => yaml['nodes'], :px_version => yaml['px_version'], :k8s_version => yaml['k8s_version'], :stop_after => yaml['stop_after']})
+env = yaml.merge(yaml['env'])
 master_scripts = ["all-common", "#{yaml['platform']}-common", "all-master", "#{yaml['platform']}-master"]
 node_scripts = ["all-common", "#{yaml['platform']}-common", "#{yaml['platform']}-node"]
 master_script = "mkdir /var/log/px-deploy\n"
@@ -54,7 +54,6 @@ Vagrant.configure("2") do |config|
   config.ssh.config = "/etc/ssh/ssh_config"
   config.ssh.username = "centos"
   config.ssh.private_key_path = "/px-deploy/.px-deploy/keys/id_rsa.#{yaml['cloud']}.#{yaml['name']}"
-  env = env.merge(yaml['env'])
 
   (1..yaml['clusters'].to_i).each do |c|
     subnet = "192.168.#{100+c}"
