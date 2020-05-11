@@ -156,3 +156,8 @@ env:
 Enviroment variables can also be defined on the command line:
 ```
 px-deploy create -n foo -t clusterpair -e install_apps=true,foo=bar
+
+The `install-px` script looks for an environment variable called `cloud_drive`. If it exists, it will deploy Portworx using a clouddrive rather than looking for all attached devices:
+```
+px-deploy create -n foo -t px -e cloud_drive=type%3Dgp2%2Csize%3D150
+```
