@@ -53,7 +53,7 @@ type Config struct {
 }
 
 func main() {
-  var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsTypeWorker1WokerNodes, createAwsEbs, createGcpType, createGcpDisks, createGcpZone, createTemplate, createRegion, createCloud, createEnv, connectName, destroyName, statusName string
+  var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsTypeCluster1WorkerNodes, createAwsEbs, createGcpType, createGcpDisks, createGcpZone, createTemplate, createRegion, createCloud, createEnv, connectName, destroyName, statusName string
   var destroyAll bool
   os.Chdir("/px-deploy/.px-deploy")
   rootCmd := &cobra.Command{Use: "px-deploy"}
@@ -130,9 +130,9 @@ func main() {
         if (!regexp.MustCompile(`^[0-9a-z\.]+$`).MatchString(createAwsType)) { die("Invalid AWS type '" + createAwsType + "'") }
         config.Aws_Type = createAwsType
       }
-      if (createAwsTypeWorker1WokerNodes != "") {
-        if (!regexp.MustCompile(`^[0-9a-z\.]+$`).MatchString(createAwsType)) { die("Invalid AWS type '" + createAwsType + "'") }
-        config.Aws_Type_Cluster_1_Worker_Nodes = createAwsTypeWorker1WokerNodes
+      if (createAwsTypeCluster1WorkerNodes != "") {
+        if (!regexp.MustCompile(`^[0-9a-z\.]+$`).MatchString(createAwsTypeCluster1WorkerNodes)) { die("Invalid AWS type '" + createAwsTypeCluster1WorkerNodes + "'") }
+        config.Aws_Type_Cluster_1_Worker_Nodes = createAwsTypeCluster1WorkerNodes
       }
       if (createAwsEbs != "") {
         if (!regexp.MustCompile(`^[0-9a-z\ :]+$`).MatchString(createAwsEbs)) { die("Invalid AWS EBS volumes '" + createAwsEbs + "'") }
@@ -294,7 +294,7 @@ func main() {
   cmdCreate.Flags().StringVarP(&createPxVer, "px_version", "P", "", "Portworx version to be deployed (default " + defaults.Px_Version + ")")
   cmdCreate.Flags().StringVarP(&createStopAfter, "stop_after", "s", "", "Stop instances after this many hours (default " + defaults.Stop_After + ")")
   cmdCreate.Flags().StringVarP(&createAwsType, "aws_type", "", "", "AWS type for each node (default " + defaults.Aws_Type + ")")
-  cmdCreate.Flags().StringVarP(&createAwsTypeWorker1WokerNodes, "Aws_Type_Cluster_1_Worker_Nodes", "", "", "AWS type for each node of first cluster (default " + defaults.Aws_Type + ")")
+  cmdCreate.Flags().StringVarP(&createAwsTypeCluster1WorkerNodes, "Aws_Type_Cluster_1_Worker_Nodes", "", "", "AWS type for each node of first cluster (default " + defaults.Aws_Type + ")")
   cmdCreate.Flags().StringVarP(&createAwsEbs, "aws_ebs", "", "", "space-separated list of EBS volumes to be attached to worker nodes, eg \"gp2:20 standard:30\" (default " + defaults.Aws_Ebs + ")")
   cmdCreate.Flags().StringVarP(&createGcpType, "gcp_type", "", "", "GCP type for each node (default " + defaults.Gcp_Type + ")")
   cmdCreate.Flags().StringVarP(&createGcpDisks, "gcp_disks", "", "", "space-separated list of EBS volumes to be attached to worker nodes, eg \"pd-standard:20 pd-ssd:30\" (default " + defaults.Gcp_Disks + ")")
