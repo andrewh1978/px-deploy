@@ -6,6 +6,7 @@ master_scripts = ["all-common", "#{yaml['platform']}-common", "all-master", "#{y
 node_scripts = ["all-common", "#{yaml['platform']}-common", "#{yaml['platform']}-node"]
 master_script = "mkdir /var/log/px-deploy\n"
 node_script = "mkdir /var/log/px-deploy\n"
+
 master_scripts.each do |i|
   master_script << "(\n" + File.read("/px-deploy/vagrant/#{i}") + ") >&/var/log/px-deploy/#{i}\n"
 end
@@ -80,7 +81,7 @@ Vagrant.configure("2") do |config|
         node.vm.hostname = "node-#{c}-#{n}"
         if yaml['cloud'] == "aws"
           node.vm.provider :aws do |aws|
-            aws.instance_type = (c == 1 && yaml['aws_type_cluster_1_worker_nodes'] != nil) ? yaml['aws_type_cluster_1_worker_nodes'] : yaml['aws_type']
+            aws.instance_type = (c == 1 && yaml['aws_type_cluster_1_worker_nodes'] != "") ? yaml['aws_type_cluster_1_worker_nodes'] : yaml['aws_type']
             aws.private_ip_address = "#{subnet}.#{100+n}"
             aws.tags = { "Name" => "node-#{c}-#{n}", "px-deploy_name" => yaml['name'] }
             d = 97
