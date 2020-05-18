@@ -23,7 +23,7 @@ scripts: ["install-px", "install-storkctl", "backup-restore"]
 # 12. Apply the backupLocation manifest again
 # 13. Watch for backups to appear 'watch storkctl get applicationbackups -n petclinic'
 # 14. When the backup appears, copy the name, it will have a timestamp appended
-# 15. Edit /assets/backup-restore/applicationRestore and paste the backup name in the backupName field
+# 15. Edit /assets/backup-restore/applicationRestore.yml and paste the backup name in the backupName field
 # 16. Apply /assets/backup-restore/applicationRestore.yml
 # 17. Run 'watch kubectl get all -n petclinic' and see the application start back up
 # 18. Check the UI and show the dummy data has persisted
