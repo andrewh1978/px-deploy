@@ -12,5 +12,4 @@ env:
 
 # IMPORTANT: set the BACKUP_BUCKET variable to match the name 
 # of a bucket that already exists in the region you're deploying into
-#
-# use `-e install_apps=true` to install the optional apps
+
