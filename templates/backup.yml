@@ -8,7 +8,7 @@ k8s_version: 1.16.0
 px_version: 2.5.1
 scripts: ["install-awscli", "backup"]
 env:
-    BACKUP_BUCKET: "<YOUR BUCKET NAME>"
+    #BACKUP_BUCKET: "<YOUR BUCKET NAME>"
 
 # IMPORTANT: set the BACKUP_BUCKET variable to match the name 
 # of a bucket that already exists in the region you're deploying into
