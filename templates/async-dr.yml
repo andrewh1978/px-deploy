@@ -3,3 +3,6 @@ clusters: 2
 scripts: ["install-px", "install-storkctl", "clusterpair", "async-dr", "optional-apps-1"]
 
 # use `-e install_apps=true` to install the optional apps
+# deploy an application of your choice in the default namespace
+# check cluster 2 has the resources synced
+# activate a migration in cluster 2
