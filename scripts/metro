@@ -43,9 +43,6 @@ if [ $cluster = 1 ]; then
   aws elb register-instances-with-load-balancer --load-balancer-name $vpc --instances $elb_instances
 
   elb_dnsname=$(aws elb describe-load-balancers --query "LoadBalancerDescriptions[].{a:VPCId,b:DNSName}" --output text | awk /$vpc/'{print$2}')
-  su - centos -c "DISPLAY=:0 firefox -width 1920 -height 1080" &
-  while [ $(ps auxw | grep 'firefox.*childI[D]' | wc -l) -lt 4 ] ; do echo waiting for firefox; sleep 1; done
-  su - centos -c "DISPLAY=:0 firefox --new-window http://$elb_dnsname" &
   while [ "$(kubectl get crd | grep -E 'migrationschedules|schedulepolicies' | wc -l)" -lt 2 ]; do
     echo waiting for CRDs
     sleep 1
