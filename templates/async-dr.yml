@@ -1,6 +1,7 @@
 description: Deploys 2 clusters with Portworx, sets up and configures a cluster pairing, configures an async DR schedule with a loadbalcner in front of the setup.
 clusters: 2
-scripts: ["install-px", "install-storkctl", "clusterpair", "async-dr", "optional-apps-1"]
+scripts: ["install-awscli", "install-px", "install-storkctl", "clusterpair", "async-dr", "optional-apps-1"]
+px_version: 2.5.2
 
 # use `-e install_apps=true` to install the optional apps
 # deploy an application of your choice in the default namespace
