@@ -6,7 +6,9 @@ systemctl restart docker kubelet
 kubeadm config images list --kubernetes-version $k8s_version | xargs -n1 -P0 docker pull
 while : ; do
   command=$(ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no master-$cluster kubeadm token create --print-join-command)
+  echo $command | grep -qE '[0-9a-f]{64}'
   [ $? -eq 0 ] && break
   sleep 5
 done
+echo "Executing '$command'"
 eval $command
