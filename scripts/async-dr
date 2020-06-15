@@ -1,12 +1,9 @@
-kubectl apply -f /assets/async-dr.yaml
-
-
-if [ $cluster = 1 ]; then
-  for i in $dr_licenses; do
-    while ! kubectl exec -n kube-system -it $(kubectl get pods -n kube-system -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- /opt/pwx/bin/pxctl license activate --ep UAT $i; do
-      sleep 1
-    done
+for i in $dr_licenses; do
+  while ! kubectl exec -n kube-system -it $(kubectl get pods -n kube-system -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- /opt/pwx/bin/pxctl license activate --ep UAT $i; do
+    sleep 1
   done
+done
+if [ $cluster = 1 ]; then
   region=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//')
   aws configure set default.region $region
   instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
@@ -27,4 +24,5 @@ if [ $cluster = 1 ]; then
     echo waiting for CRDs
     sleep 1
   done
+  kubectl apply -f /assets/async-dr.yaml
 fi
