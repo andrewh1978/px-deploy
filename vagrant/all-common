@@ -48,10 +48,10 @@ LogLevel ERROR
 EOF
 
 hostnamectl set-hostname $(getent hosts $(hostname -I) | awk '{print$2}')
-systemctl stop firewalld 2>/dev/null
-systemctl disable firewall 2>/dev/null
 systemctl restart sshd
 passwd --stdin root <<<portworx
+systemctl stop firewalld 2>/dev/null
+systemctl disable firewalld 2>/dev/null
 yum install -y at bash-completion
 systemctl start atd
 systemctl enable atd
