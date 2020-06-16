@@ -42,6 +42,7 @@ type Config struct {
   Scripts []string
   Description string
   Env map[string]string
+  Cluster []Config_Cluster
   Aws__Vpc string `yaml:"aws__vpc,omitempty"`
   Aws__Sg string `yaml:"aws__sg,omitempty"`
   Aws__Subnet string `yaml:"aws__subnet,omitempty"`
@@ -50,6 +51,11 @@ type Config struct {
   Aws__Ami string `yaml:"aws__ami,omitempty"`
   Gcp__Project string `yaml:"gcp__project,omitempty"`
   Gcp__Key string `yaml:"gcp__key,omitempty"`
+}
+
+type Config_Cluster struct {
+  Id int
+  Scripts []string
 }
 
 func main() {
@@ -149,6 +155,14 @@ func main() {
       if (createGcpZone != "") {
         if (createGcpZone != "a" && createGcpZone != "b" && createGcpZone != "c") { die("Invalid GCP zone '" + createGcpZone + "'") }
         config.Gcp_Zone = createGcpZone
+      }
+      for _, c := range config.Cluster {
+	for _, s := range c.Scripts {
+          if _, err := os.Stat("scripts/" + s); os.IsNotExist(err) { die("Script '" + s + "' does not exist") }
+          cmd := exec.Command("bash", "-n", "scripts/" + s)
+          err := cmd.Run()
+          if (err != nil) { die("Script '" + s + "' is not valid Bash") }
+        }
       }
       for _, s := range config.Scripts {
         if _, err := os.Stat("scripts/" + s); os.IsNotExist(err) { die("Script '" + s + "' does not exist") }
