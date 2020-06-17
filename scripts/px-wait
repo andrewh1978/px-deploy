@@ -1,6 +1,6 @@
 # Wait for Portworx to be running on every node in the cluster
 while : ; do
-  n=$(kubectl exec -n kube-system -it $(kubectl get pods -n kube-system -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- /opt/pwx/bin/pxctl status status 2>/dev/null | grep "Yes.*Online.*Up" | wc -l)
+  n=$(kubectl exec -n kube-system -it $(kubectl get pods -n kube-system -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- /opt/pwx/bin/pxctl status 2>/dev/null | grep "Yes.*Online.*Up" | wc -l)
   [ $n -eq $nodes ] && break
   sleep 1
 done
