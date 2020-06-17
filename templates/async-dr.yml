@@ -6,7 +6,7 @@ cluster:
   - id: 1
     scripts: ["async-dr", "optional-apps"]
   - id: 2
-    scripts: ["clusterpair", "async-dr"]
+    scripts: ["clusterpair-dr", "async-dr"]
 
 # use `-e install_apps=true` to install the optional apps
 # deploy an application of your choice in the default namespace
