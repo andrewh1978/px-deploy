@@ -1,6 +1,6 @@
 exec &>/var/log/px-deploy/k8s-master
-yum install -y kubelet-$k8s_version-0 docker
-yum install -y kubeadm-$k8s_version-0 kubectl-$k8s_version-0
+dnf install -y kubelet-$k8s_version-0 docker
+dnf install -y kubeadm-$k8s_version-0 kubectl-$k8s_version-0
 systemctl enable docker kubelet
 systemctl restart docker kubelet
 kubeadm config images list --kubernetes-version $k8s_version | xargs -n1 -P0 docker pull
