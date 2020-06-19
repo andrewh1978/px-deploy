@@ -1,6 +1,6 @@
 # Set up training clusters, including vim, git and shellinabox
-yum install -y git epel-release vim-enhanced
-yum install -y shellinabox
+dnf install -y git epel-release vim-enhanced
+dnf install -y shellinabox
 rm -f /etc/securetty
 sed -i s/4200/443/ /etc/sysconfig/shellinaboxd
 systemctl enable shellinaboxd

@@ -1,0 +1,2 @@
+# Install petclinic
+kubectl apply -f /assets/petclinic/petclinic.yml

@@ -1,4 +1,4 @@
 # Install awscli
-yum install -y python3-pip
+dnf install -y python3-pip
 pip3 install awscli
 ln -s /usr/local/bin/aws /usr/bin/aws

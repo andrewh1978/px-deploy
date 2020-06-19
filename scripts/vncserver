@@ -1,8 +1,8 @@
 # Start a VNC server and install Firefox
-yum install -y tigervnc-server xorg-x11-fonts-Type1 dbus-x11
+dnf install -y tigervnc-server xorg-x11-fonts-Type1 dbus-x11
 sed 's/<USER>/centos/g' /lib/systemd/system/vncserver@.service >/etc/systemd/system/vncserver@:0.service
 su - centos -c "mkdir .vnc ; vncpasswd -f <<<portworx >.vnc/passwd; echo geometry=1920x1080 >.vnc/config"
 chmod 600 /home/centos/.vnc/passwd
 systemctl start vncserver@:0
 systemctl enable vncserver@:0
-yum install -y firefox-68.4.1 
+dnf install -y firefox-68.4.1 

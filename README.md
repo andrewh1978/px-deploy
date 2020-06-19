@@ -144,6 +144,15 @@ All files in `~/.px-deploy/assets` will be copied to `/assets` on the master nod
 In addition to these, there are some more variables available:
  * `$cluster` - cluster number
 
+There is also an optional cluster object. At the moment, all it can be used for is defining cluster-specific scripts. These will be executed after the scripts above. For example:
+```
+cluster:
+- id: 1
+  scripts: ["script-1", "script-2"]
+- id: 2
+  scripts: ["script-3", "script-4"]
+```
+
 `post_script` is a script that will be run on each master node after all of the scripts have completed, and the output will go to stdout. The default is to display the external IP address of master-1, but it could be used to show benchmark outputs, for example.
 
 Last, environment variables can be define in templates or defaults.yml, and these are also available to scripts:

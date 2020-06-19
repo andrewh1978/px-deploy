@@ -1,53 +1,13 @@
-while : ; do
-  n=$(kubectl get node  | grep -i ready | awk '{print$1}' | xargs kubectl get node  -o=jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.taints}{"\n"}{end}' | grep -iv noschedule | wc -l 2>&1)
-  [ $n -ge 3 ] && break
-  sleep 1
-  echo Waiting for Kubernetes cluster to come up
-done
-if [ $cluster = 1 ]; then
-    IP=$(curl https://ipinfo.io/ip)
-    curl -o /root/install.sh 'https://raw.githubusercontent.com/portworx/px-central-onprem/1.0.1/install.sh'
-    sh /root/install.sh --all --license-password 'Adm1n!Ur' --kubeconfig /root/.kube/config --pxcentral-endpoint $IP
-fi
-if [ $cluster != 1 ]; then
-    k8s_version=$(kubectl version --short | awk -Fv '/Server Version: / {print $3}')
-    url="https://install.portworx.com/$px_version?kbver=$k8s_version&b=true&c=px-deploy-$cluster&stork=true&st=k8s&lh=true"
-    curl -so /tmp/px.yml $url
-    kubectl apply -f /tmp/px.yml
-fi
-if [ $cluster = 2 ]; then
-    kubectl apply -f /assets/sock-shop/sock-shop.yaml
-    kubectl apply -f /assets/petclinic/petclinic-with-namespace.yml
-fi
-if [ $cluster = 1 ]; then
-    until : kubectl wait --for=condition=Ready pod -l app=px-backup -n portworx; do
-        sleep 1
-        echo Waiting for Portworx cluster to come up
-    done
-    cat <<EOF > /etc/motd
-+================================================+
-SAVE THE FOLLOWING DETAILS FOR FUTURE REFERENCES
-+================================================+
-PX-Central User Interface Access URL : http://$IP:31234/pxcentral
-PX-Central admin user name: pxadmin@portworx.com
-PX-Central admin user password: Password1
+aws s3api create-bucket --bucket $BACKUP_BUCKET --region $aws_region --create-bucket-configuration LocationConstraint=$aws_region >/dev/null
 
-PX-Central grafana admin user name: pxadmin@portworx.com
-PX-Central grafana admin user password: Password1
-+================================================+
-EOF
+BACKUP_POD_NAME=$(kubectl get pods -n portworx -l app=px-backup -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+kubectl cp -n portworx $BACKUP_POD_NAME:pxbackupctl/linux/pxbackupctl /usr/bin/pxbackupctl
+chmod +x /usr/bin/pxbackupctl
 
-    aws s3api create-bucket --bucket $BACKUP_BUCKET --region $aws_region --create-bucket-configuration LocationConstraint=$aws_region >/dev/null
-
-    BACKUP_POD_NAME=$(kubectl get pods -n portworx -l app=px-backup -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-    kubectl cp -n portworx $BACKUP_POD_NAME:pxbackupctl/linux/pxbackupctl /usr/bin/pxbackupctl
-    chmod +x /usr/bin/pxbackupctl
-
-    BACKUP_POD_IP=$(kubectl get pods -n portworx -l app=px-backup -o jsonpath='{.items[*].status.podIP}' 2>/dev/null)
-    AWS_ACCESS_KEY=$(sed -n 's/aws_access_key_id=//p' /root/.aws/credentials 2>/dev/null)
-    AWS_SECRET_KEY=$(sed -n 's/aws_secret_access_key=//p' /root/.aws/credentials 2>/dev/null)
-    pxbackupctl create cloudcredential --aws-access-key $AWS_ACCESS_KEY --aws-secret-key $AWS_SECRET_KEY -e $BACKUP_POD_IP:10002 --orgID portworx -n s3 -p aws
-    sleep 5
-    pxbackupctl create backuplocation -c s3 -n aws -p s3 --s3-endpoint https://s3.$aws_region.amazonaws.com --path $BACKUP_BUCKET --s3-region $aws_region -e $BACKUP_POD_IP:10002 --orgID portworx
-    pxbackupctl create schedulepolicy --interval-minutes 15 --interval-retain 12 --name example-schedule -e $BACKUP_POD_IP:10002 --orgID portworx
-fi
+BACKUP_POD_IP=$(kubectl get pods -n portworx -l app=px-backup -o jsonpath='{.items[*].status.podIP}' 2>/dev/null)
+AWS_ACCESS_KEY=$(sed -n 's/aws_access_key_id[ =]*//p' /root/.aws/credentials 2>/dev/null)
+AWS_SECRET_KEY=$(sed -n 's/aws_secret_access_key[ =]*//p' /root/.aws/credentials 2>/dev/null)
+pxbackupctl create cloudcredential --aws-access-key $AWS_ACCESS_KEY --aws-secret-key $AWS_SECRET_KEY -e $BACKUP_POD_IP:10002 --orgID portworx -n s3 -p aws
+sleep 5
+pxbackupctl create backuplocation -c s3 -n aws -p s3 --s3-endpoint https://s3.$aws_region.amazonaws.com --path $BACKUP_BUCKET --s3-region $aws_region -e $BACKUP_POD_IP:10002 --orgID portworx
+pxbackupctl create schedulepolicy --interval-minutes 15 --interval-retain 12 --name example-schedule -e $BACKUP_POD_IP:10002 --orgID portworx
