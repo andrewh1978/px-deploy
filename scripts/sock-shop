@@ -1,0 +1,2 @@
+# Install sock-shop
+kubectl apply -f /assets/sock-shop/sock-shop.yaml
