@@ -17,3 +17,8 @@ gcp_zone: b
 gcp_type: n1-standard-2
 gcp_disks: "pd-standard:20"
 #gcp_disks: "pd-standard:20 pd-ssd:30"
+
+azure_region: uksouth
+azure_type: Standard_B2ms
+azure_disks: "20"
+#azure_disks: "100 200"

@@ -25,6 +25,7 @@ type Config struct {
   Cloud string
   Aws_Region string
   Gcp_Region string
+  Azure_Region string
   Platform string
   Clusters string
   Nodes string
@@ -39,6 +40,8 @@ type Config struct {
   Gcp_Type string
   Gcp_Disks string
   Gcp_Zone string
+  Azure_Type string
+  Azure_Disks string
   Scripts []string
   Description string
   Env map[string]string
@@ -51,6 +54,7 @@ type Config struct {
   Aws__Ami string `yaml:"aws__ami,omitempty"`
   Gcp__Project string `yaml:"gcp__project,omitempty"`
   Gcp__Key string `yaml:"gcp__key,omitempty"`
+  Azure__Group string `yaml:"azure__group,omitempty"`
 }
 
 type Config_Cluster struct {
@@ -59,7 +63,7 @@ type Config_Cluster struct {
 }
 
 func main() {
-  var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsTypeCluster1WorkerNodes, createAwsEbs, createGcpType, createGcpDisks, createGcpZone, createTemplate, createRegion, createCloud, createEnv, connectName, destroyName, statusName string
+  var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsTypeCluster1WorkerNodes, createAwsEbs, createGcpType, createGcpDisks, createGcpZone, createAzureType, createAzureDisks, createTemplate, createRegion, createCloud, createEnv, connectName, destroyName, statusName string
   var destroyAll bool
   os.Chdir("/px-deploy/.px-deploy")
   rootCmd := &cobra.Command{Use: "px-deploy"}
@@ -88,7 +92,7 @@ func main() {
       }
       config.Name = createName
       if (createCloud != "") {
-        if (createCloud != "aws" && createCloud != "gcp") { die("Cloud must be 'aws' or 'gcp' (not '" + createCloud + "')") }
+        if (createCloud != "aws" && createCloud != "gcp" && createCloud != "azure") { die("Cloud must be 'aws', 'gcp' or 'azure' (not '" + createCloud + "')") }
         config.Cloud = createCloud
       }
       if (createRegion != "") {
@@ -96,6 +100,7 @@ func main() {
         switch(config.Cloud) {
           case "aws": config.Aws_Region = createRegion
           case "gcp": config.Gcp_Region = createRegion
+          case "azure": config.Azure_Region = createRegion
           default: die("Bad cloud")
         }
       }
@@ -155,6 +160,14 @@ func main() {
       if (createGcpZone != "") {
         if (createGcpZone != "a" && createGcpZone != "b" && createGcpZone != "c") { die("Invalid GCP zone '" + createGcpZone + "'") }
         config.Gcp_Zone = createGcpZone
+      }
+      if (createAzureType != "") {
+        if (!regexp.MustCompile(`^[0-9a-z\-]+$`).MatchString(createAzureType)) { die("Invalid Azure type '" + createAzureType + "'") }
+        config.Azure_Type = createAzureType
+      }
+      if (createAzureDisks != "") {
+        if (!regexp.MustCompile(`^[0-9 ]+$`).MatchString(createAzureDisks)) { die("Invalid Azure disks '" + createAzureDisks + "'") }
+        config.Azure_Disks = createAzureDisks
       }
       for _, c := range config.Cluster {
 	for _, s := range c.Scripts {
@@ -239,6 +252,7 @@ func main() {
         switch(config.Cloud) {
           case "aws": region = config.Aws_Region
           case "gcp": region = config.Gcp_Region
+          case "azure": region = config.Azure_Region
           default: die("Bad cloud")
         }
         template := config.Template
@@ -313,9 +327,11 @@ func main() {
   cmdCreate.Flags().StringVarP(&createGcpType, "gcp_type", "", "", "GCP type for each node (default " + defaults.Gcp_Type + ")")
   cmdCreate.Flags().StringVarP(&createGcpDisks, "gcp_disks", "", "", "space-separated list of EBS volumes to be attached to worker nodes, eg \"pd-standard:20 pd-ssd:30\" (default " + defaults.Gcp_Disks + ")")
   cmdCreate.Flags().StringVarP(&createGcpZone, "gcp_zone", "", defaults.Gcp_Zone, "GCP zone (a, b or c)")
+  cmdCreate.Flags().StringVarP(&createAzureType, "azure_type", "", "", "Azure type for each node (default " + defaults.Azure_Type + ")")
+  cmdCreate.Flags().StringVarP(&createAzureDisks, "azure_disks", "", "", "space-separated list of Azure disks to be attached to worker nodes, eg \"20 30\" (default " + defaults.Azure_Disks + ")")
   cmdCreate.Flags().StringVarP(&createTemplate, "template", "t", "", "name of template to be deployed")
-  cmdCreate.Flags().StringVarP(&createRegion, "region", "r", "", "AWS or GCP region (default " + defaults.Aws_Region + " or " + defaults.Gcp_Region + ")")
-  cmdCreate.Flags().StringVarP(&createCloud, "cloud", "C", "", "aws or gcp (default " + defaults.Cloud + ")")
+  cmdCreate.Flags().StringVarP(&createRegion, "region", "r", "", "AWS, GCP or Azure region (default " + defaults.Aws_Region + ", " + defaults.Gcp_Region + " or " + defaults.Azure_Region + ")")
+  cmdCreate.Flags().StringVarP(&createCloud, "cloud", "C", "", "aws, gcp or azure (default " + defaults.Cloud + ")")
   cmdCreate.Flags().StringVarP(&createEnv, "env", "e", "", "Comma-separated list of environment variables to be passed, for example foo=bar,abc=123")
 
   cmdDestroy.Flags().BoolVarP(&destroyAll, "all", "a", false, "destroy all deployments")
@@ -394,6 +410,25 @@ func create_deployment(config Config) int {
         echo gcp__key: $_GCP_key >>deployments/` + config.Name + `.yml
       `).CombinedOutput()
     }
+    case "azure": {
+      output, _ = exec.Command("bash", "-c", `
+        az configure --defaults location=` + config.Azure_Region + `
+        yes | ssh-keygen -q -t rsa -b 2048 -f keys/id_rsa.azure.` + config.Name + ` -N ''
+	_AZURE_group=pxd-$(uuidgen)
+	az group create -g $_AZURE_group --output none
+	az network vnet create --name $_AZURE_group --resource-group $_AZURE_group --address-prefix 192.168.0.0/16 --subnet-name $_AZURE_group --subnet-prefixes 192.168.0.0/16 --output none
+	az network private-dns zone create -g $_AZURE_group -n $_AZURE_group.pxd --output none
+	az network private-dns link vnet create -g $_AZURE_group -n $_AZURE_group -z $_AZURE_group.pxd -v $_AZURE_group -e true --output none
+	_AZURE_subscription=$(az account show --query id --output tsv)
+	echo $(az ad sp create-for-rbac -n $_AZURE_group --query "[appId,password,tenant]" --output tsv 2>/dev/null) | while read _AZURE_client _AZURE_secret _AZURE_tenant ; do
+	  echo azure__client: $_AZURE_client
+	  echo azure__secret: $_AZURE_secret
+	  echo azure__tenant: $_AZURE_tenant
+	  echo azure__subscription: $_AZURE_subscription
+	done >>deployments/` + config.Name + `.yml
+        echo azure__group: $_AZURE_group >>deployments/` + config.Name + `.yml
+      `).CombinedOutput()
+    }
     default: die("Invalid cloud '"+ config.Cloud + "'")
   }
   fmt.Print(string(output))
@@ -447,6 +482,11 @@ func destroy_deployment(name string) {
   } else if (config.Cloud == "gcp") {
     output, _ = exec.Command("bash", "-c", "gcloud projects delete " + config.Gcp__Project + " --quiet").CombinedOutput()
     os.Remove("keys/px-deploy_gcp_" + config.Gcp__Project + ".json")
+  } else if (config.Cloud == "azure") {
+    output, _ = exec.Command("bash", "-c", `
+      az group delete -y -g ` + config.Azure__Group + ` --only-show-errors
+      az ad sp delete --id http://` + config.Azure__Group + ` --only-show-errors
+    `).CombinedOutput()
   } else { die ("Bad cloud") }
   fmt.Print(string(output))
   os.Remove("deployments/" + name + ".yml")
@@ -462,6 +502,8 @@ func get_ip(deployment string) string {
     output, _ = exec.Command("bash", "-c", `aws ec2 describe-instances --region ` + config.Aws_Region + ` --filters "Name=network-interface.vpc-id,Values=` + config.Aws__Vpc + `" "Name=tag:Name,Values=master-1" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PublicIpAddress" --output text`).Output()
   } else if (config.Cloud == "gcp") {
     output, _ = exec.Command("bash", "-c", `gcloud compute instances list --project ` + config.Gcp__Project + ` --filter="name=('master-1')" --format 'flattened(networkInterfaces[0].accessConfigs[0].natIP)' | tail -1 | cut -f 2 -d " "`).Output()
+  } else if (config.Cloud == "azure") {
+    output, _ = exec.Command("bash", "-c", `az vm show -g ` + config.Azure__Group + ` -n master-1 -d --query publicIps --output tsv`).Output()
   }
   return strings.TrimSuffix(string(output), "\n")
 }
