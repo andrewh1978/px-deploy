@@ -5,7 +5,7 @@ while : ; do
   echo Waiting for Kubernetes cluster to come up
 done
 IP=$(curl https://ipinfo.io/ip)
-curl -o /root/install.sh 'https://raw.githubusercontent.com/portworx/px-central-onprem/1.0.2/install.sh'
+curl -o /root/install.sh 'https://raw.githubusercontent.com/portworx/px-central-onprem/1.0.3/install.sh'
 sh /root/install.sh --all --license-password 'Adm1n!Ur' --kubeconfig /root/.kube/config --pxcentral-endpoint $IP
 
 cat <<EOF > /etc/motd

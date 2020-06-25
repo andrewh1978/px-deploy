@@ -14,10 +14,12 @@ This will deploy one or more clusters in the cloud, with optional post-install t
 ## Cloud
  * AWS
  * GCP
+ * Azure
 
 1. Install the CLI for your choice of cloud provider and ensure it is configured:
  * AWS: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html
  * GCP: https://cloud.google.com/sdk/docs/quickstarts
+ * Azure: https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest
 
 2. Install and enable Docker.
 
@@ -105,10 +107,12 @@ The `defaults.yml` file sets a number of deployment variables:
  * `nodes` - the number of worker nodes on each cluster
  * `platform` - can be set to either k8s, k3s, ocp3 or ocp3c (OCPv3 with CRI-O)
  * `px_version` - the version of Portworx to install
- * `gcp_disks` - similar to AWS_EBS, for example: `"pd-standard:20 pd-ssd:30"`
+ * `gcp_disks` - similar to aws_ebs, for example: `"pd-standard:20 pd-ssd:30"`
  * `gcp_region` - GCP region
  * `gcp_type` - the GCP machine type for each node
  * `gcp_zone` - GCP zone
+ * `azure_disks` - similar to aws_ebs, for example: `"20 30"`
+ * `azure_type` - the Azure machine type for each node
 
 There are two ways to override these variables. The first is to specify a template with the `--template=...` parameter. For example:
 ```
@@ -170,3 +174,8 @@ The `install-px` script looks for an environment variable called `cloud_drive`. 
 ```
 px-deploy create -n foo -t px -e cloud_drive=type%3Dgp2%2Csize%3D150
 ```
+
+# Bugs
+
+ * The Azure Vagrant plugin will [fail when provisioning VMs in parallel](https://github.com/Azure/vagrant-azure/issues/229), so px-deploy disables parallel provisioning. This is really slow, and if a template uses a script that will not terminate until another VM is up, then it will never finish provisioning.
+ * Provisioning multiple deployments in an Azure region at the same time gives DNS errors and fails.

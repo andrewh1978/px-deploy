@@ -8,11 +8,11 @@ k8s_version: 1.16.0
 px_version: 2.5.1
 cluster:
   - id: 1
-    scripts: ["install-awscli", "central", "backup"]
+    scripts: ["install-awscli", "central", "backup", "install-storkctl"]
   - id: 2
-    scripts: ["install-px", "sock-shop", "petclinic-with-namespace"]
+    scripts: ["install-px", "sock-shop", "petclinic-with-namespace", "install-storkctl"]
   - id: 3
-    scripts: ["install-px"]
+    scripts: ["install-px", "install-storkctl"]
 env:
     #BACKUP_BUCKET: "<YOUR BUCKET NAME>"
 

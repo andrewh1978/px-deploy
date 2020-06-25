@@ -21,7 +21,7 @@ for i in scripts templates assets defaults.yml; do
 done
 echo
 echo -e ${YELLOW}Append this to your .bash_profile or .zshrc:
-echo -e "${WHITE}alias px-deploy='docker run -it --rm --name px-deploy.\$\$ -v \$HOME/.px-deploy:/px-deploy/.px-deploy -v \$HOME/.aws/credentials:/root/.aws/credentials -v \$HOME/.config/gcloud:/root/.config/gcloud px-deploy /root/go/bin/px-deploy'"
+echo -e "${WHITE}alias px-deploy='docker run -it --rm --name px-deploy.\$\$ -v \$HOME/.px-deploy:/px-deploy/.px-deploy -v \$HOME/.aws/credentials:/root/.aws/credentials -v \$HOME/.config/gcloud:/root/.config/gcloud -v \$HOME/.azure:/root/.azure px-deploy /root/go/bin/px-deploy'"
 echo
 echo -e ${GREEN}When your alias is set, create a deployment with:
 echo -e "${WHITE}px-deploy create --name myDeployment --template px$NC"
