@@ -1,6 +1,8 @@
 # Install Portworx
 # If you want to use clouddrives, set environment variable cloud_drive="type%3Dgp2%2Csize%3D150"
 # otherwise existing drives will be used
+# If you want to deploy using the operator, set the environment variable operator=true
+# otherwise the DaemonSet will be used
 k8s_version=$(kubectl version --short | awk -Fv '/Server Version: / {print $3}')
 url="https://install.portworx.com/$px_version?kbver=$k8s_version&b=true&c=px-deploy-$cluster&stork=true&st=k8s&lh=true"
 [ -e /usr/bin/oc ] && url="$url&osft=true"
@@ -13,5 +15,15 @@ if [ "$cloud_drive" ]; then
   fi
 fi
 [ "$px_suffix" ] && url="$url&$px_suffix"
+
+if [ "$operator" = true ]; then
+  curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/0.15.1/install.sh | bash -s 0.15.1
+  kubectl create -f https://operatorhub.io/install/portworx.yaml
+  while ! kubectl get csv -n operators | grep -q Succeeded ; do
+    sleep 2
+  done
+  url="$url&operator=true"
+fi
+
 curl -so /tmp/px.yml $url
 kubectl apply -f /tmp/px.yml
