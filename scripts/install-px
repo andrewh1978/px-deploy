@@ -17,12 +17,14 @@ fi
 [ "$px_suffix" ] && url="$url&$px_suffix"
 
 if [ "$operator" = true ]; then
+  [ -e /sbin/azure-repo-svc ] && kubectl taint node --all node-role.kubernetes.io/master-
   curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/0.15.1/install.sh | bash -s 0.15.1
   kubectl create -f https://operatorhub.io/install/portworx.yaml
   while ! kubectl get csv -n operators | grep -q Succeeded ; do
     sleep 2
   done
   url="$url&operator=true"
+  [ -e /sbin/azure-repo-svc ] && kubectl taint node --all node-role.kubernetes.io/master=:NoSchedule
 fi
 
 curl -so /tmp/px.yml $url
