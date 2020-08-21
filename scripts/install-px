@@ -1,6 +1,7 @@
 # Install Portworx
-# If you want to use clouddrives, set environment variable cloud_drive="type%3Dgp2%2Csize%3D150"
+# If you want to use clouddrives, set the environment variable cloud_drive="type%3Dgp2%2Csize%3D150"
 # otherwise existing drives will be used
+# To use a journal, set the environment variable journal=auto or journal=/dev/sdb
 # If you want to deploy using the operator, set the environment variable operator=true
 # otherwise the DaemonSet will be used
 k8s_version=$(kubectl version --short | awk -Fv '/Server Version: / {print $3}')
@@ -13,6 +14,9 @@ if [ "$cloud_drive" ]; then
     url="$url&e=AWS_ACCESS_KEY_ID%3D$key%2CAWS_SECRET_ACCESS_KEY%3D$secret"
     url="$url&s=%22$cloud_drive%22&kd=$cloud_drive"
   fi
+fi
+if [ "$journal" ]; then
+  url="$url&j=$journal"
 fi
 [ "$px_suffix" ] && url="$url&$px_suffix"
 
