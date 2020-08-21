@@ -469,15 +469,18 @@ func destroy_deployment(name string) {
       done
       instances=$(aws ec2 describe-instances --filters "Name=network-interface.vpc-id,Values=` + config.Aws__Vpc + `" --query "Reservations[*].Instances[*].InstanceId" --output text)
       [[ "$instances" ]] && {
+        volumes=$(for i in $instances; do aws ec2 describe-volumes --filters "Name=attachment.instance-id,Values=$i" --query "Volumes[*].{a:VolumeId,b:Tags}" --output text; done | awk '/PX-DO-NOT-DELETE/{print$1}')
         aws ec2 terminate-instances --instance-ids $instances >/dev/null
         aws ec2 wait instance-terminated --instance-ids $instances
       }
+      for i in $volumes; do aws ec2 delete-volume --volume-id $i & done
       aws ec2 delete-subnet --subnet-id ` + config.Aws__Subnet + ` &&
       aws ec2 delete-security-group --group-id ` + config.Aws__Sg + ` &&
       aws ec2 detach-internet-gateway --internet-gateway-id ` + config.Aws__Gw + ` --vpc-id ` + config.Aws__Vpc + ` &&
       aws ec2 delete-internet-gateway --internet-gateway-id ` + config.Aws__Gw + ` &&
       aws ec2 delete-route-table --route-table-id ` +config.Aws__Routetable + ` &&
       aws ec2 delete-vpc --vpc-id ` + config.Aws__Vpc + `
+      wait
     `).CombinedOutput()
   } else if (config.Cloud == "gcp") {
     output, _ = exec.Command("bash", "-c", "gcloud projects delete " + config.Gcp__Project + " --quiet").CombinedOutput()
