@@ -7,9 +7,9 @@ env:
   #dr_licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
 cluster:
   - id: 1
-    scripts: ["etcd", "metro", "install-storkctl", "petclinic"]
+    scripts: ["etcd", "metro", "petclinic"]
   - id: 2
-    scripts: ["metro", "install-storkctl", "clusterpair-metro"]
+    scripts: ["metro", "clusterpair-metro"]
 
 # NOTE: edit env.dr_licenses above, or define in defaults.yml
 # Verify all is working with `storkctl get clusterdomainsstatus` (take around 7 minutes)
