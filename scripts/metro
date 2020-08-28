@@ -34,11 +34,6 @@ while : ; do
 done
 
 if [ $cluster = 1 ]; then
-  for i in $dr_licenses; do
-    while ! kubectl exec -n kube-system -it $(kubectl get pods -n kube-system -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- /opt/pwx/bin/pxctl license activate --ep UAT $i; do
-      sleep 1
-    done
-  done
   region=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//')
   aws configure set default.region $region
   instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)

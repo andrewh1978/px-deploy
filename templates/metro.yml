@@ -7,7 +7,7 @@ env:
   #dr_licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
 cluster:
   - id: 1
-    scripts: ["etcd", "metro", "petclinic"]
+    scripts: ["etcd", "metro", "licenses", "petclinic"]
   - id: 2
     scripts: ["metro", "clusterpair-metro"]
 
