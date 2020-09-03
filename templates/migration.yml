@@ -7,4 +7,4 @@ cluster:
   - id: 2
     scripts: ["clusterpair"]
 
-# use `-e install_apps=true` to install the optional apps
+# use `-e install_apps=true` to install the optional apps
