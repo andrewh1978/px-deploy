@@ -12,6 +12,7 @@ import (
   "path/filepath"
   "io/ioutil"
   "strings"
+  "unicode/utf8"
   "github.com/olekukonko/tablewriter"
   "github.com/imdario/mergo"
   "github.com/go-yaml/yaml"
@@ -519,6 +520,7 @@ func die(msg string) {
 func parse_yaml(filename string) Config {
   b, err := ioutil.ReadFile(filename)
   if err != nil { die(err.Error()) }
+  if len(b) != utf8.RuneCount(b) { die("Non-ASCII values found in " + filename) }
   var d Config
   yaml.Unmarshal(b, &d)
   return d
