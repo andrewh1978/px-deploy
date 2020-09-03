@@ -14,9 +14,9 @@ RUN rpm -i https://releases.hashicorp.com/vagrant/2.2.9/vagrant_2.2.9_x86_64.rpm
 RUN vagrant plugin install vagrant-google --plugin-version 2.5.0
 RUN vagrant plugin install vagrant-aws
 RUN vagrant plugin install vagrant-azure
-RUN vagrant box add dummy https://github.com/mitchellh/vagrant-aws/raw/master/dummy.box
-RUN vagrant box add google/gce https://vagrantcloud.com/google/boxes/gce/versions/0.1.0/providers/google.box
-RUN vagrant box add azure https://github.com/azure/vagrant-azure/raw/v2.0/dummy.box --provider azure
+RUN vagrant box add dummy https://github.com/mitchellh/vagrant-aws/raw/master/dummy.box --provider aws
+RUN vagrant box add google/gce https://vagrantcloud.com/google/boxes/gce/versions/0.1.0/providers/google.box --provider google
+RUN vagrant box add azure https://github.com/azure/vagrant-azure/raw/v2.0/dummy.box --provider azure --provider azure
 RUN pip3 install awscli
 RUN go get -u github.com/olekukonko/tablewriter
 RUN go get -u github.com/spf13/cobra/cobra

@@ -198,6 +198,7 @@ func main() {
         die("Aborted")
       }
       os.Chdir("/px-deploy/vagrant")
+      os.Setenv("VAGRANT_DEFAULT_PROVIDER", "aws")
       os.Setenv("deployment", config.Name)
       fmt.Println("Provisioning VMs...")
       output, err := exec.Command("vagrant", "up").CombinedOutput()
