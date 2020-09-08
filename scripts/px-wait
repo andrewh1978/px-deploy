@@ -4,3 +4,4 @@ while : ; do
   [ $n -eq $nodes ] && break
   sleep 1
 done
+kubectl rollout status deployment stork -n kube-system
