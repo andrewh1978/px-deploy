@@ -33,6 +33,9 @@ while : ; do
   echo waiting for stork
 done
 
+curl -L https://github.com/portworx/pxc/releases/download/v0.30.0/pxc-v0.30.0.linux.amd64.tar.gz | tar xvz -C /tmp/.
+mv /tmp/pxc/kubectl-pxc /usr/bin/.
+
 if [ $cluster = 1 ]; then
   while [ "$(kubectl get crd | grep -E 'migrationschedules|schedulepolicies' | wc -l)" -lt 2 ]; do
     echo waiting for CRDs

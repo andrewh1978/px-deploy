@@ -34,7 +34,7 @@ fi
 curl -so /tmp/px.yml $url
 kubectl apply -f /tmp/px.yml
 
-curl -L https://github.com/portworx/pxc/releases/download/v0.28.0/pxc-v0.28.0.linux.amd64.tar.gz | tar xvz -C /tmp/.
+curl -L https://github.com/portworx/pxc/releases/download/v0.30.0/pxc-v0.30.0.linux.amd64.tar.gz | tar xvz -C /tmp/.
 mv /tmp/pxc/kubectl-pxc /usr/bin/.
 
 # Install storkctl
