@@ -1,0 +1,25 @@
+for i in 1 2 3; do
+  ssh node-1-$i 'mkfs.ext4 /dev/nvme2n1 ; mkfs.ext4 /dev/nvme3n1 ; mount /dev/nvme2n1 /var/lib/storageos/data/dev1'
+done
+. /root/.bashrc
+storageos create volume --replicas 2 --size 20GiB testvolsos
+storageos attach testvolsos node-1-1
+
+cat <<EOF | ssh node-1-1
+pxctl volume create testVol --repl 3 --size 20
+pxctl host attach testVol
+mount /dev/nvme3n1 /mnt
+docker pull antonipx/fio
+EOF
+cat <<EOF | ssh node-1-1 >&/tmp/output
+echo Disk test:
+docker run --rm -v /mnt:/mnt antonipx/fio  --blocksize=64k --filename=/mnt/fio.dat --ioengine=libaio --readwrite=write --size=10G --name=test --direct=1 --iodepth=128 --end_fsync=1
+umount /mnt
+mount /dev/pxd/pxd[0-9]* /mnt
+echo Portworx test:
+docker run --rm -v /mnt:/mnt antonipx/fio  --blocksize=64k --filename=/mnt/fio.dat --ioengine=libaio --readwrite=write --size=10G --name=test --direct=1 --iodepth=128 --end_fsync=1
+umount /mnt
+mount /dev/sda /mnt
+echo StorageOS test:
+docker run --rm -v /mnt:/mnt antonipx/fio  --blocksize=64k --filename=/mnt/fio.dat --ioengine=libaio --readwrite=write --size=10G --name=test --direct=1 --iodepth=128 --end_fsync=1
+EOF

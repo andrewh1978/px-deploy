@@ -1,0 +1,6 @@
+description: A single Kubernetes cluster with Portworx and PX-Backup via Helm installed
+scripts: ["install-px", "helm-backup"]
+
+# Brings up px-backup stand-alone via helm on a single 
+# px cluster where you can login and connect the cluster.
+# Login details are printed when you connect.

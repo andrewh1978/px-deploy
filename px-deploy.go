@@ -12,6 +12,7 @@ import (
   "path/filepath"
   "io/ioutil"
   "strings"
+  "unicode/utf8"
   "github.com/olekukonko/tablewriter"
   "github.com/imdario/mergo"
   "github.com/go-yaml/yaml"
@@ -198,8 +199,14 @@ func main() {
       }
       os.Chdir("/px-deploy/vagrant")
       os.Setenv("deployment", config.Name)
+      var provider string
+      switch(config.Cloud) {
+        case "aws": provider = "aws"
+        case "gcp": provider = "google"
+        case "azure": provider = "azure"
+      }
       fmt.Println("Provisioning VMs...")
-      output, err := exec.Command("vagrant", "up").CombinedOutput()
+      output, err := exec.Command("vagrant", "up", "--provider", provider).CombinedOutput()
       fmt.Println(string(output))
       if err != nil { die(err.Error()) }
       if config.Auto_Destroy == "true" { destroy_deployment(config.Name) }
@@ -519,8 +526,10 @@ func die(msg string) {
 func parse_yaml(filename string) Config {
   b, err := ioutil.ReadFile(filename)
   if err != nil { die(err.Error()) }
+  if len(b) != utf8.RuneCount(b) { die("Non-ASCII values found in " + filename) }
   var d Config
-  yaml.Unmarshal(b, &d)
+  err = yaml.Unmarshal(b, &d)
+  if err != nil { die("Broken YAML in " + filename + ": " + err.Error()) }
   return d
 }
 
