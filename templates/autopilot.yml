@@ -6,7 +6,7 @@ env:
   #licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
   px_suffix: "mon=true"
 
-# NOTE: edit env.aut_license above, or define in defaults.yml
+# NOTE: edit env.licenses above, or define in defaults.yml
 # Postgres and the postgres autopilot rule are already deployed
 # Start a watch on pxctl volume inspect <postgres volume>
 # Exec to the postgres pod and create a database psql, then create database test; then quit with \q
