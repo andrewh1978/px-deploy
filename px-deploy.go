@@ -528,7 +528,8 @@ func parse_yaml(filename string) Config {
   if err != nil { die(err.Error()) }
   if len(b) != utf8.RuneCount(b) { die("Non-ASCII values found in " + filename) }
   var d Config
-  yaml.Unmarshal(b, &d)
+  err = yaml.Unmarshal(b, &d)
+  if err != nil { die("Broken YAML in " + filename + ": " + err.Error()) }
   return d
 }
 
