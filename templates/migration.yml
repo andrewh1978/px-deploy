@@ -7,6 +7,8 @@ cluster:
   - id: 2
     scripts: ["clusterpair"]
 
+# use `-e install_apps=true` to install the optional apps
+
 # Verify all is installed correctly with `storkctl get clusterpair` You should see Ready for storage and scheduler
 # Deploy your choice of application(s) from the /assets directory
 # Add some sample data either using a CLI or web interface
