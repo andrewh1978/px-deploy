@@ -3,7 +3,7 @@ cloud: aws
 clusters: 1
 scripts: ["autopilot", "licenses"]
 env:
-  #aut_licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
+  #licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
 
 # NOTE: edit env.aut_license above, or define in defaults.yml
 # Postgres and the postgres autopilot rule are already deployed
