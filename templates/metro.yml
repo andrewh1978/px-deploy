@@ -2,17 +2,18 @@ description: Deploys 2 K8s clusters in AWS with a stretched Portworx cluster. It
 cloud: aws
 clusters: 2
 nodes: 3
-scripts: ["install-awscli"]
+scripts: ["install-awscli", "install-px"]
 env:
-  #dr_licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
+  #licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
+  px_suffix: "k=etcd:http://master-1:2382"
 cluster:
   - id: 1
-    scripts: ["etcd", "metro", "install-storkctl", "petclinic"]
+    scripts: ["etcd", "metro", "aws-elb", "licenses", "petclinic"]
   - id: 2
-    scripts: ["metro", "install-storkctl", "clusterpair-metro"]
+    scripts: ["metro", "clusterpair-metro"]
 
 # NOTE: edit env.dr_licenses above, or define in defaults.yml
 # Verify all is working with `storkctl get clusterdomainsstatus` (take around 7 minutes)
 # Stop the nodes on cluster 1
-# Mark cluster 1 as down with `kubectl apply -f /assets/metro-c1-down.yml` on master-2
+# Mark cluster 1 as down with `storkctl deactivate clusterdomain cluster_1` on master-2
 # Scale up on cluster 2 with `storkctl activate migration` on master-2

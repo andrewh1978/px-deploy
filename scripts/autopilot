@@ -1,25 +1,12 @@
 kubectl apply -f /assets/monitoring/prometheus-operator.yaml
 kubectl wait --for=condition=ready pod -l app=prometheus-operator -n kube-system --timeout 5m
 
-# Install Portworx
-k8s_version=$(kubectl version --short | awk -Fv '/Server Version: / {print $3}')
-url="https://install.portworx.com/$px_version?kbver=$k8s_version&b=true&c=px-deploy-$cluster&stork=true&st=k8s&lh=true&mon=true"
-[ -e /usr/bin/oc ] && url="$url&osft=true"
-curl -so /tmp/px.yml $url
-kubectl apply -f /tmp/px.yml
-
 while : ; do
   n=$(kubectl exec -n kube-system -it $(kubectl get pods -n kube-system -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- /opt/pwx/bin/pxctl status 2>/dev/null | grep "Yes.*Online.*Up" | wc -l)
   [ $n -eq $nodes ] && break
   sleep 1
 done
 sleep 5
-
-for i in $aut_licenses; do
-  while ! kubectl exec -n kube-system -it $(kubectl get pods -n kube-system -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- /opt/pwx/bin/pxctl license activate --ep UAT $i; do
-    sleep 1
-  done
-done
 
 # Fix because we don't seem to support the latest prometheus operator!
 kubectl apply -f /assets/monitoring/prometheus-cluster.yaml

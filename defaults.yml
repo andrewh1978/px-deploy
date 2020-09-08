@@ -22,3 +22,6 @@ azure_region: uksouth
 azure_type: Standard_B2ms
 azure_disks: "20"
 #azure_disks: "100 200"
+
+#env:
+#    licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"

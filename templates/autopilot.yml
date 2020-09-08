@@ -1,11 +1,12 @@
 description: Deploys a Kubernetes cluster and Portworx with Promethues and Autopilot pre-configured.
 cloud: aws
 clusters: 1
-scripts: ["autopilot", "install-storkctl"]
+scripts: ["install-px", "autopilot", "licenses"]
 env:
-  #aut_licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
+  #licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
+  px_suffix: "mon=true"
 
-# NOTE: edit env.aut_license above, or define in defaults.yml
+# NOTE: edit env.licenses above, or define in defaults.yml
 # Postgres and the postgres autopilot rule are already deployed
 # Start a watch on pxctl volume inspect <postgres volume>
 # Exec to the postgres pod and create a database psql, then create database test; then quit with \q

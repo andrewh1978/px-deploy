@@ -9,6 +9,6 @@ k8s_version: 1.16.0
 
 cluster:
   - id: 1
-    scripts: ["central", "install-storkctl"]
+    scripts: ["central"]
   - id: 2
-    scripts: ["install-px", "install-storkctl"]
+    scripts: ["install-px"]

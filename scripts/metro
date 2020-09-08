@@ -2,12 +2,6 @@
 
 JQ="docker run -i --rm --name jq endeveit/docker-jq jq"
 
-k8s_version=$(kubectl version --short | awk -Fv '/Server Version: / {print $3}')
-url="https://install.portworx.com/$px_version?kbver=$k8s_version&c=px-cluster&stork=true&st=k8s&lh=true&k=etcd%3Ahttp%3A%2F%2Fmaster-1%3A2382"
-[ -e /usr/bin/oc ] && url="$url&osft=true"
-curl -so /tmp/px.yml $url
-kubectl apply -f /tmp/px.yml
-
 PWX_POD=$(kubectl get pods -n kube-system -l name=portworx -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
 x=$(kubectl get ds/portworx -n kube-system -o json | $JQ -c '.spec.template.spec.containers[0].args')
 x="${x%]},-cluster_domain, cluster-$cluster]"
@@ -21,27 +15,6 @@ while : ; do
 done
 
 if [ $cluster = 1 ]; then
-  for i in $dr_licenses; do
-    while ! kubectl exec -n kube-system -it $(kubectl get pods -n kube-system -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- /opt/pwx/bin/pxctl license activate --ep UAT $i; do
-      sleep 1
-    done
-  done
-  region=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//')
-  aws configure set default.region $region
-  instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
-  vpc=$(aws ec2 describe-instances --instance-ids $instance_id --query Reservations[0].Instances[0].VpcId --output text)
-  subnet=$(aws ec2 describe-instances --instance-ids $instance_id --query Reservations[0].Instances[0].SubnetId --output text)
-  sg=$(aws ec2 describe-security-groups --filters Name=group-name,Values=px-deploy Name=vpc-id,Values=$vpc --query SecurityGroups[].GroupId --output text)
-  instances=$(aws ec2 describe-instances --filters "Name=network-interface.vpc-id,Values=$vpc" --query "Reservations[*].Instances[*].InstanceId" --output text)
-  for i in $instances; do
-    aws ec2 describe-instances --instance-id $i --query Reservations[].Instances[].Tags --output text | grep -q Name.*node
-   [ $? -eq 0 ] && elb_instances="$elb_instances $i"
-  done
-  aws elb create-load-balancer --load-balancer-name $vpc --listeners Protocol=http,LoadBalancerPort=80,InstanceProtocol=http,InstancePort=30333 --security-groups $sg --subnets $subnet
-  aws elb configure-health-check --load-balancer-name $vpc --health-check Target=HTTP:30333/,Interval=10,UnhealthyThreshold=2,HealthyThreshold=2,Timeout=5
-  aws elb register-instances-with-load-balancer --load-balancer-name $vpc --instances $elb_instances
-
-  elb_dnsname=$(aws elb describe-load-balancers --query "LoadBalancerDescriptions[].{a:VPCId,b:DNSName}" --output text | awk /$vpc/'{print$2}')
   while [ "$(kubectl get crd | grep -E 'migrationschedules|schedulepolicies' | wc -l)" -lt 2 ]; do
     echo waiting for CRDs
     sleep 1

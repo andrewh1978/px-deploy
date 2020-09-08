@@ -164,7 +164,7 @@ Last, environment variables can be define in templates or defaults.yml, and thes
 $ cat templates/metro.yml
 ...
 env:
-  dr_licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
+  licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
 ```
 Enviroment variables can also be defined on the command line:
 ```
