@@ -2,9 +2,10 @@ description: Deploys 2 K8s clusters in AWS with a stretched Portworx cluster. It
 cloud: aws
 clusters: 2
 nodes: 3
-scripts: ["install-awscli"]
+scripts: ["install-awscli", "install-px"]
 env:
   #licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
+  px_suffix: "k=etcd:http://master-1:2382"
 cluster:
   - id: 1
     scripts: ["etcd", "metro", "aws-elb", "licenses", "petclinic"]
