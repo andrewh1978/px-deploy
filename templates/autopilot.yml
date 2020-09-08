@@ -1,9 +1,10 @@
 description: Deploys a Kubernetes cluster and Portworx with Promethues and Autopilot pre-configured.
 cloud: aws
 clusters: 1
-scripts: ["autopilot", "licenses"]
+scripts: ["install-px", "autopilot", "licenses"]
 env:
   #licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
+  px_suffix: "mon=true"
 
 # NOTE: edit env.aut_license above, or define in defaults.yml
 # Postgres and the postgres autopilot rule are already deployed
