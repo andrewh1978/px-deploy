@@ -38,4 +38,8 @@ curl -L https://github.com/portworx/pxc/releases/download/v0.30.0/pxc-v0.30.0.li
 mv /tmp/pxc/kubectl-pxc /usr/bin/.
 
 # Install storkctl
-curl -o /usr/bin/storkctl http://openstorage-stork.s3-website-us-east-1.amazonaws.com/storkctl/latest/linux/storkctl && chmod +x /usr/bin/storkctl
+until (kubectl get po -n kube-system -l name=stork  | awk '{print $3}' | grep Running); do echo "Waiting for stork pod";sleep 1; done
+storkpods=($(kubectl get po -n kube-system -l name=stork  | grep "Running" | awk '{print $1}' ))
+kubectl cp -n kube-system ${storkpods[0]}:/storkctl/linux/storkctl ./storkctl
+sudo mv storkctl /usr/local/bin &&
+sudo chmod +x /usr/local/bin/storkctl
