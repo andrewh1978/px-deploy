@@ -5,14 +5,14 @@ nodes: 3
 scripts: ["install-awscli", "install-px"]
 env:
   #licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
-  px_suffix: "k=etcd:http://master-1:2382"
+  px_suffix: "k=etcd:http://master-1:2382&c=metro-cluster&b=false"
 cluster:
   - id: 1
     scripts: ["etcd", "metro", "aws-elb", "licenses", "petclinic"]
   - id: 2
     scripts: ["metro", "clusterpair-metro"]
 
-# NOTE: edit env.dr_licenses above, or define in defaults.yml
+# NOTE: edit env.licenses above, or define in defaults.yml
 # Verify all is working with `storkctl get clusterdomainsstatus` (take around 7 minutes)
 # Stop the nodes on cluster 1
 # Mark cluster 1 as down with `storkctl deactivate clusterdomain cluster_1` on master-2
