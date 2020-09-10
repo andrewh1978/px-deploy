@@ -20,6 +20,13 @@ node_scripts.each do |i|
   node_script << "(\n" + File.read("/px-deploy/vagrant/#{i}") + ") >&/var/log/px-deploy/#{i}\n"
 end
 
+cluster = Array.new
+if !yaml['cluster'].empty?
+  yaml['cluster'].each do |i|
+    cluster[i['id']] = i
+  end
+end
+
 Vagrant.configure("2") do |config|
   config.vm.synced_folder ".", "/vagrant", disabled: true
   config.vm.provision "file", source: "/px-deploy/.px-deploy/keys/id_rsa.#{yaml['cloud']}.#{yaml['name']}", destination: "/tmp/id_rsa"
@@ -123,7 +130,11 @@ Vagrant.configure("2") do |config|
         node.vm.hostname = "node-#{c}-#{n}"
         if yaml['cloud'] == "aws"
           node.vm.provider :aws do |aws|
-            aws.instance_type = (c == 1 && yaml['aws_type_cluster_1_worker_nodes'] != "") ? yaml['aws_type_cluster_1_worker_nodes'] : yaml['aws_type']
+            if !cluster.empty? && !cluster[c].empty? && cluster[c]['aws_type'].length > 0
+              aws.instance_type = cluster[c]['aws_type']
+            else
+              aws.instance_type = yaml['aws_type']
+            end
             aws.private_ip_address = "#{subnet}.#{100+n}"
             aws.tags = { "Name" => "node-#{c}-#{n}", "px-deploy_name" => yaml['name'] }
             d = 97

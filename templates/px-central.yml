@@ -3,12 +3,12 @@ cloud: aws
 clusters: 2
 nodes: 3
 aws_type: t3.medium
-aws_type_cluster_1_worker_nodes: t3.xlarge
 aws_ebs: "gp2:100"
 k8s_version: 1.16.0
 
 cluster:
   - id: 1
     scripts: ["central"]
+    aws_type: t3.xlarge
   - id: 2
     scripts: ["install-px"]

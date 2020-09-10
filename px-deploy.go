@@ -36,7 +36,6 @@ type Config struct {
   Post_Script string
   Auto_Destroy string
   Aws_Type string
-  Aws_Type_Cluster_1_Worker_Nodes string
   Aws_Ebs string
   Gcp_Type string
   Gcp_Disks string
@@ -61,10 +60,11 @@ type Config struct {
 type Config_Cluster struct {
   Id int
   Scripts []string
+  Aws_Type string
 }
 
 func main() {
-  var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsTypeCluster1WorkerNodes, createAwsEbs, createGcpType, createGcpDisks, createGcpZone, createAzureType, createAzureDisks, createTemplate, createRegion, createCloud, createEnv, connectName, destroyName, statusName string
+  var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createGcpType, createGcpDisks, createGcpZone, createAzureType, createAzureDisks, createTemplate, createRegion, createCloud, createEnv, connectName, destroyName, statusName string
   var destroyAll bool
   os.Chdir("/px-deploy/.px-deploy")
   rootCmd := &cobra.Command{Use: "px-deploy"}
@@ -141,10 +141,6 @@ func main() {
       if (createAwsType != "") {
         if (!regexp.MustCompile(`^[0-9a-z\.]+$`).MatchString(createAwsType)) { die("Invalid AWS type '" + createAwsType + "'") }
         config.Aws_Type = createAwsType
-      }
-      if (createAwsTypeCluster1WorkerNodes != "") {
-        if (!regexp.MustCompile(`^[0-9a-z\.]+$`).MatchString(createAwsTypeCluster1WorkerNodes)) { die("Invalid AWS type '" + createAwsTypeCluster1WorkerNodes + "'") }
-        config.Aws_Type_Cluster_1_Worker_Nodes = createAwsTypeCluster1WorkerNodes
       }
       if (createAwsEbs != "") {
         if (!regexp.MustCompile(`^[0-9a-z\ :]+$`).MatchString(createAwsEbs)) { die("Invalid AWS EBS volumes '" + createAwsEbs + "'") }
@@ -329,7 +325,6 @@ func main() {
   cmdCreate.Flags().StringVarP(&createPxVer, "px_version", "P", "", "Portworx version to be deployed (default " + defaults.Px_Version + ")")
   cmdCreate.Flags().StringVarP(&createStopAfter, "stop_after", "s", "", "Stop instances after this many hours (default " + defaults.Stop_After + ")")
   cmdCreate.Flags().StringVarP(&createAwsType, "aws_type", "", "", "AWS type for each node (default " + defaults.Aws_Type + ")")
-  cmdCreate.Flags().StringVarP(&createAwsTypeCluster1WorkerNodes, "Aws_Type_Cluster_1_Worker_Nodes", "", "", "AWS type for each node of first cluster (default " + defaults.Aws_Type + ")")
   cmdCreate.Flags().StringVarP(&createAwsEbs, "aws_ebs", "", "", "space-separated list of EBS volumes to be attached to worker nodes, eg \"gp2:20 standard:30\" (default " + defaults.Aws_Ebs + ")")
   cmdCreate.Flags().StringVarP(&createGcpType, "gcp_type", "", "", "GCP type for each node (default " + defaults.Gcp_Type + ")")
   cmdCreate.Flags().StringVarP(&createGcpDisks, "gcp_disks", "", "", "space-separated list of EBS volumes to be attached to worker nodes, eg \"pd-standard:20 pd-ssd:30\" (default " + defaults.Gcp_Disks + ")")
@@ -365,8 +360,6 @@ func create_deployment(config Config) int {
         yes | ssh-keygen -q -t rsa -b 2048 -f keys/id_rsa.aws.` + config.Name + ` -N ''
         aws ec2 describe-instance-types --instance-types ` + config.Aws_Type + `>&/dev/null
         [ $? -ne 0 ] && echo "Invalid AWS type '` + config.Aws_Type + `' for region '` + config.Aws_Region + `'" && exit 1
-        aws ec2 describe-instance-types --instance-types ` + config.Aws_Type_Cluster_1_Worker_Nodes + `>&/dev/null
-        [ $? -ne 0 ] && echo "Invalid AWS type '` + config.Aws_Type_Cluster_1_Worker_Nodes + `' for region '` + config.Aws_Region + `'" && exit 1
         aws ec2 delete-key-pair --key-name px-deploy.` + config.Name + ` >&/dev/null
         aws ec2 import-key-pair --key-name px-deploy.` + config.Name + ` --public-key-material file://keys/id_rsa.aws.` + config.Name + `.pub >&/dev/null
         _AWS_vpc=$(aws --output text ec2 create-vpc --cidr-block 192.168.0.0/16 --query Vpc.VpcId)
