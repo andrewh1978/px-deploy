@@ -17,7 +17,7 @@ master_scripts = ["all-common", "#{yaml['platform']}-common", "all-master", "#{y
 node_scripts = ["all-common", "#{yaml['platform']}-common", "#{yaml['platform']}-node"]
 node_script = "mkdir /var/log/px-deploy\n"
 node_scripts.each do |i|
-  node_script << "(\n" + File.read("/px-deploy/vagrant/#{i}") + ") >&/var/log/px-deploy/#{i}\n"
+  if File.exist?("/px-deploy/vagrant/#{i}") then node_script << "(\n" + File.read("/px-deploy/vagrant/#{i}") + ") >&/var/log/px-deploy/#{i}\n" end
 end
 
 cluster = Array.new
@@ -79,7 +79,7 @@ Vagrant.configure("2") do |config|
   (1..yaml['clusters'].to_i).each do |c|
     master_script = "mkdir /var/log/px-deploy\n"
     master_scripts.each do |i|
-      master_script << "(\n" + File.read("/px-deploy/vagrant/#{i}") + ") >&/var/log/px-deploy/#{i}\n"
+      if File.exist?("/px-deploy/vagrant/#{i}") then master_script << "(\n" + File.read("/px-deploy/vagrant/#{i}") + ") >&/var/log/px-deploy/#{i}\n" end
     end
     if !yaml['scripts'].empty?
       yaml['scripts'].each do |i|
