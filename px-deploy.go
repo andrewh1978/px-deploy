@@ -273,17 +273,7 @@ func main() {
     Short: "Lists available templates",
     Long: "Lists available templates",
     Run: func(cmd *cobra.Command, args []string) {
-      var data [][]string
-      filepath.Walk("templates", func(file string, info os.FileInfo, err error) error {
-        if (info.Mode() & os.ModeDir != 0) { return nil }
-        if (path.Ext(file) != ".yml") { return nil }
-        config := parse_yaml(file)
-        file = path.Base(file)
-        file = strings.TrimSuffix(file, ".yml")
-        data = append(data, []string{file, config.Description})
-        return nil
-      })
-      print_table([]string{"Name", "Description"}, data)
+      list_templates()
     },
   }
 
@@ -509,6 +499,27 @@ func get_ip(deployment string) string {
     output, _ = exec.Command("bash", "-c", `az vm show -g ` + config.Azure__Group + ` -n master-1 -d --query publicIps --output tsv`).Output()
   }
   return strings.TrimSuffix(string(output), "\n")
+}
+
+func list_templates() {
+  var data [][]string
+  os.Chdir("templates")
+  var foo = _list_templates(".")
+  data = append(data, foo...)
+  print_table([]string{"Name", "Description"}, data)
+}
+
+func _list_templates(dir string) [][]string {
+  var temp [][]string
+  filepath.Walk(dir, func(file string, info os.FileInfo, err error) error {
+    if (info.Mode() & os.ModeDir != 0 && dir != file) { _list_templates(file) }
+    if (path.Ext(file) != ".yml") { return nil }
+    config := parse_yaml(file)
+    file = strings.TrimSuffix(file, ".yml")
+    temp = append(temp, []string{file, config.Description})
+    return nil
+  })
+  return temp
 }
 
 func die(msg string) {
