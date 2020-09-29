@@ -1,0 +1,66 @@
+#https://www.openshift.com/blog/openshift-4-bare-metal-install-quickstart
+
+curl -s https://mirror.go-repo.io/centos/go-repo.repo >/etc/yum.repos.d/go-repo.repo
+dnf install -y bind git golang
+
+cat <<EOF >/var/named/db.ocp4
+\$TTL 3D
+@       IN      SOA     ocp4. root.ocp4. (
+                        202009290       ; serial, todays date + todays serial #
+                        8H              ; refresh, seconds
+                        2H              ; retry, seconds
+                        4W              ; expire, seconds
+                        1D )            ; minimum, seconds
+                NS      master-$c.ocp4.
+
+localhost       A       127.0.0.1
+api		A	192.168.10$c.90
+api-int		A	192.168.10$c.90
+*.apps		A	192.168.10$c.90
+bootstrap	A	192.168.10$c.90
+master-$c	A	192.168.10$c.90
+EOF
+
+cat <<EOF >/var/named/db.192.168.10$c
+\$TTL 3D
+10$c.168.192.in-addr.arpa.       IN      SOA     ocp4. root.ocp4. (
+                        202009290       ; serial, todays date + todays serial #
+                        8H              ; refresh, seconds
+                        2H              ; retry, seconds
+                        4W              ; expire, seconds
+                        1D )            ; minimum, seconds
+                NS      master-$c.ocp4.
+
+90	IN	PTR	master-$c.ocp4.
+EOF
+
+for i in $(seq 1 $nodes); do
+  echo "node-$c-$i		A	192.168.1$(printf %.2d $c).1$(printf %.2d $i)" >>/var/named/db.ocp4
+  echo "10$i		PTR	node-$c-$i.ocp4." >>/var/named/db.192.168.10$c
+done
+
+cat <<EOF >>/etc/named.conf
+zone "ocp4" {
+type master;
+   file "/var/named/db.ocp4";
+};
+
+zone "1$(printf %.2d $c).168.192.in-addr.arpa" {
+type master;
+   file "/var/named/db.192.168.1$(printf %.2d $c)";
+};
+EOF
+
+systemctl enable bind
+systemctl start bind
+
+cd /root
+git clone https://github.com/openshift/installer
+cd installer
+./hack/build.sh
+#./bin/openshift-install create install-config
+#curl -sLO https://github.com/openshift/okd/releases/download/4.5.0-0.okd-2020-09-04-180756/openshift-install-linux-4.5.0-0.okd-2020-09-04-180756.tar.gz
+#tar -C /usr/bin -xzf openshift-install-linux-4.5.0-0.okd-2020-09-04-180756.tar.gz openshift-install
+#curl -sLO https://github.com/openshift/okd/releases/download/4.5.0-0.okd-2020-09-04-180756/openshift-client-linux-4.5.0-0.okd-2020-09-04-180756.tar.gz
+#tar -C /usr/bin -xzf openshift-client-linux-4.5.0-0.okd-2020-09-04-180756.tar.gz oc
+#ln -s /usr/bin/oc /usr/bin/kubectl
