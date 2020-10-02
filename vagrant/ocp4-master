@@ -1,7 +1,10 @@
 #https://www.openshift.com/blog/openshift-4-bare-metal-install-quickstart
 
 curl -s https://mirror.go-repo.io/centos/go-repo.repo >/etc/yum.repos.d/go-repo.repo
-dnf install -y bind git golang
+dnf install -y bind git golang python3 python34-pip python36-PyYAML
+pip3 install python-magic
+curl -o /usr/bin/filetranspile https://raw.githubusercontent.com/ashcrow/filetranspiler/master/filetranspile
+chmod 755 /usr/bin/filetranspile
 
 cat <<EOF >/var/named/db.ocp4
 \$TTL 3D
@@ -13,12 +16,12 @@ cat <<EOF >/var/named/db.ocp4
                         1D )            ; minimum, seconds
                 NS      master-$c.ocp4.
 
-localhost       A       127.0.0.1
-api		A	192.168.10$c.90
-api-int		A	192.168.10$c.90
-*.apps		A	192.168.10$c.90
-bootstrap	A	192.168.10$c.90
-master-$c	A	192.168.10$c.90
+localhost.ocp4       A       127.0.0.1
+api.ocp4		A	192.168.10$c.90
+api-int.ocp4		A	192.168.10$c.90
+*.apps.ocp4		A	192.168.10$c.90
+bootstrap.ocp4	A	192.168.10$c.90
+master-$c.ocp4	A	192.168.10$c.90
 EOF
 
 cat <<EOF >/var/named/db.192.168.10$c
@@ -31,11 +34,11 @@ cat <<EOF >/var/named/db.192.168.10$c
                         1D )            ; minimum, seconds
                 NS      master-$c.ocp4.
 
-90	IN	PTR	master-$c.ocp4.
+90	IN	PTR	master-$c.ocp4.ocp4.
 EOF
 
 for i in $(seq 1 $nodes); do
-  echo "node-$c-$i		A	192.168.1$(printf %.2d $c).1$(printf %.2d $i)" >>/var/named/db.ocp4
+  echo "node-$c-$i.ocp4		A	192.168.1$(printf %.2d $c).1$(printf %.2d $i)" >>/var/named/db.ocp4
   echo "10$i		PTR	node-$c-$i.ocp4." >>/var/named/db.192.168.10$c
 done
 
@@ -51,16 +54,50 @@ type master;
 };
 EOF
 
-systemctl enable bind
-systemctl start bind
+systemctl enable named
+systemctl start named
 
 cd /root
+mkdir ocp4
 git clone https://github.com/openshift/installer
 cd installer
 ./hack/build.sh
-#./bin/openshift-install create install-config
+
+cat <<EOF >/root/ocp4/install-config.yaml
+apiVersion: v1
+baseDomain: ocp4
+compute:
+- hyperthreading: Enabled
+  name: worker
+  replicas: 0
+controlPlane:
+  hyperthreading: Enabled
+  name: master
+  replicas: 1
+metadata:
+  name: ocp4
+networking:
+  clusterNetworks:
+  - cidr: 10.254.0.0/16
+    hostPrefix: 24
+  networkType: OpenShiftSDN
+  serviceNetwork:
+  - 172.30.0.0/16
+platform:
+  none: {}
+pullSecret: 'CHANGEME'
+sshKey: 'CHANGEME'
+EOF
+
+cd /root/ocp4
+/root/installer/bin/openshift-install create ignition-configs
+
+
 #curl -sLO https://github.com/openshift/okd/releases/download/4.5.0-0.okd-2020-09-04-180756/openshift-install-linux-4.5.0-0.okd-2020-09-04-180756.tar.gz
 #tar -C /usr/bin -xzf openshift-install-linux-4.5.0-0.okd-2020-09-04-180756.tar.gz openshift-install
 #curl -sLO https://github.com/openshift/okd/releases/download/4.5.0-0.okd-2020-09-04-180756/openshift-client-linux-4.5.0-0.okd-2020-09-04-180756.tar.gz
 #tar -C /usr/bin -xzf openshift-client-linux-4.5.0-0.okd-2020-09-04-180756.tar.gz oc
 #ln -s /usr/bin/oc /usr/bin/kubectl
+
+
+
