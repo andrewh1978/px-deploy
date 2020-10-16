@@ -1,7 +1,7 @@
 #https://www.openshift.com/blog/openshift-4-bare-metal-install-quickstart
 
 curl -s https://mirror.go-repo.io/centos/go-repo.repo >/etc/yum.repos.d/go-repo.repo
-dnf install -y bind git golang python3 python34-pip python36-PyYAML
+dnf install -y bind git golang python3 python3-pip PyYAML
 pip3 install python-magic
 curl -o /usr/bin/filetranspile https://raw.githubusercontent.com/ashcrow/filetranspiler/master/filetranspile
 chmod 755 /usr/bin/filetranspile
@@ -14,7 +14,7 @@ cat <<EOF >/var/named/db.ocp4
                         2H              ; retry, seconds
                         4W              ; expire, seconds
                         1D )            ; minimum, seconds
-                NS      master-$c.ocp4.
+                NS      master-$c.ocp4.ocp4.
 
 localhost.ocp4       A       127.0.0.1
 api.ocp4		A	192.168.10$c.90
@@ -85,8 +85,8 @@ networking:
   - 172.30.0.0/16
 platform:
   none: {}
-pullSecret: 'CHANGEME'
-sshKey: 'CHANGEME'
+pullSecret: '$ocp4_pull_secret'
+sshKey: '$(cat /root/.ssh/authorized_keys)'
 EOF
 
 cd /root/ocp4
