@@ -1,10 +1,16 @@
 description: Deploys 2 clusters with Portworx, sets up and configures a cluster pairing, and deploys a set of apps and a migration template.
 clusters: 2
-scripts: ["install-px", "install-storkctl"]
+scripts: ["install-px", "px-wait"]
 cluster:
   - id: 1
     scripts: ["optional-apps"]
   - id: 2
     scripts: ["clusterpair"]
 
-# use `-e install_apps=true` to install the optional apps
+# use `-e install_apps=true` to install the optional apps
+
+# Verify all is installed correctly with `storkctl get clusterpair` You should see Ready for storage and scheduler
+# Deploy your choice of application(s) from the /assets directory
+# Add some sample data either using a CLI or web interface
+# Apply the migration template `/assets/app-migration.yml`
+# Verify resources including the data you added are cloned to the second cluster

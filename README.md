@@ -105,7 +105,7 @@ The `defaults.yml` file sets a number of deployment variables:
  * `post_script` - script to run on each master after deployment, output will go to stdout
  * `auto_destroy` - if set to `true`, destroy deployment immediately after deploying (usually used with a `post_script` to output the results of a test or benchmark)
  * `nodes` - the number of worker nodes on each cluster
- * `platform` - can be set to either k8s, k3s, ocp3 or ocp3c (OCPv3 with CRI-O)
+ * `platform` - can be set to either k8s, k3s, none, dockeree, ocp3 or ocp3c (OCPv3 with CRI-O)
  * `px_version` - the version of Portworx to install
  * `gcp_disks` - similar to aws_ebs, for example: `"pd-standard:20 pd-ssd:30"`
  * `gcp_region` - GCP region
@@ -164,7 +164,7 @@ Last, environment variables can be define in templates or defaults.yml, and thes
 $ cat templates/metro.yml
 ...
 env:
-  dr_licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
+  licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
 ```
 Enviroment variables can also be defined on the command line:
 ```

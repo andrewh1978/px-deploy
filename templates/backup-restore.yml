@@ -2,7 +2,7 @@ description: Deploys a Kubernetes cluster, Minio S3 storage, Petclinic Applicati
 cloud: aws
 kbs_version: 1.16.8
 clusters: 1
-scripts: ["install-px", "install-storkctl", "backup-restore"]
+scripts: ["install-px", "backup-restore"]
 
 # NOTES
 # PRE-REQS:-

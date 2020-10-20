@@ -3,7 +3,7 @@ platform: k8s
 clusters: 1
 nodes: 3
 k8s_version: 1.17.0
-px_version: 2.4.0
+px_version: 2.6.0
 stop_after: 6
 post_script: show-ip
 
@@ -22,3 +22,7 @@ azure_region: uksouth
 azure_type: Standard_B2ms
 azure_disks: "20"
 #azure_disks: "100 200"
+
+#env:
+#    aut_licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
+#    dr_licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"

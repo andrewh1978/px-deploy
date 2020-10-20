@@ -12,6 +12,7 @@ import (
   "path/filepath"
   "io/ioutil"
   "strings"
+  "unicode/utf8"
   "github.com/olekukonko/tablewriter"
   "github.com/imdario/mergo"
   "github.com/go-yaml/yaml"
@@ -35,7 +36,6 @@ type Config struct {
   Post_Script string
   Auto_Destroy string
   Aws_Type string
-  Aws_Type_Cluster_1_Worker_Nodes string
   Aws_Ebs string
   Gcp_Type string
   Gcp_Disks string
@@ -60,10 +60,11 @@ type Config struct {
 type Config_Cluster struct {
   Id int
   Scripts []string
+  Aws_Type string
 }
 
 func main() {
-  var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsTypeCluster1WorkerNodes, createAwsEbs, createGcpType, createGcpDisks, createGcpZone, createAzureType, createAzureDisks, createTemplate, createRegion, createCloud, createEnv, connectName, destroyName, statusName string
+  var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createGcpType, createGcpDisks, createGcpZone, createAzureType, createAzureDisks, createTemplate, createRegion, createCloud, createEnv, connectName, destroyName, statusName string
   var destroyAll bool
   os.Chdir("/px-deploy/.px-deploy")
   rootCmd := &cobra.Command{Use: "px-deploy"}
@@ -105,7 +106,7 @@ func main() {
         }
       }
       if (createPlatform != "") {
-        if (createPlatform != "k8s" && createPlatform != "k3s" && createPlatform != "dockeree" && createPlatform != "ocp3" && createPlatform != "ocp3c") { die("Invalid platform '" + createPlatform + "'") }
+        if (createPlatform != "k8s" && createPlatform != "k3s" && createPlatform != "none" && createPlatform != "dockeree" && createPlatform != "ocp3" && createPlatform != "ocp3c") { die("Invalid platform '" + createPlatform + "'") }
         config.Platform = createPlatform
       }
       if (createClusters != "") {
@@ -140,10 +141,6 @@ func main() {
       if (createAwsType != "") {
         if (!regexp.MustCompile(`^[0-9a-z\.]+$`).MatchString(createAwsType)) { die("Invalid AWS type '" + createAwsType + "'") }
         config.Aws_Type = createAwsType
-      }
-      if (createAwsTypeCluster1WorkerNodes != "") {
-        if (!regexp.MustCompile(`^[0-9a-z\.]+$`).MatchString(createAwsTypeCluster1WorkerNodes)) { die("Invalid AWS type '" + createAwsTypeCluster1WorkerNodes + "'") }
-        config.Aws_Type_Cluster_1_Worker_Nodes = createAwsTypeCluster1WorkerNodes
       }
       if (createAwsEbs != "") {
         if (!regexp.MustCompile(`^[0-9a-z\ :]+$`).MatchString(createAwsEbs)) { die("Invalid AWS EBS volumes '" + createAwsEbs + "'") }
@@ -198,8 +195,14 @@ func main() {
       }
       os.Chdir("/px-deploy/vagrant")
       os.Setenv("deployment", config.Name)
+      var provider string
+      switch(config.Cloud) {
+        case "aws": provider = "aws"
+        case "gcp": provider = "google"
+        case "azure": provider = "azure"
+      }
       fmt.Println("Provisioning VMs...")
-      output, err := exec.Command("vagrant", "up").CombinedOutput()
+      output, err := exec.Command("vagrant", "up", "--provider", provider).CombinedOutput()
       fmt.Println(string(output))
       if err != nil { die(err.Error()) }
       if config.Auto_Destroy == "true" { destroy_deployment(config.Name) }
@@ -270,17 +273,7 @@ func main() {
     Short: "Lists available templates",
     Long: "Lists available templates",
     Run: func(cmd *cobra.Command, args []string) {
-      var data [][]string
-      filepath.Walk("templates", func(file string, info os.FileInfo, err error) error {
-        if (info.Mode() & os.ModeDir != 0) { return nil }
-        if (path.Ext(file) != ".yml") { return nil }
-        config := parse_yaml(file)
-        file = path.Base(file)
-        file = strings.TrimSuffix(file, ".yml")
-        data = append(data, []string{file, config.Description})
-        return nil
-      })
-      print_table([]string{"Name", "Description"}, data)
+      list_templates()
     },
   }
 
@@ -315,14 +308,13 @@ func main() {
 
   defaults := parse_yaml("defaults.yml")
   cmdCreate.Flags().StringVarP(&createName, "name", "n", "", "name of deployment to be created (if blank, generate UUID)")
-  cmdCreate.Flags().StringVarP(&createPlatform, "platform", "p", "", "k8s | dockeree | k3s | ocp3 | ocp3c (default " + defaults.Platform + ")")
+  cmdCreate.Flags().StringVarP(&createPlatform, "platform", "p", "", "k8s | dockeree | none | k3s | ocp3 | ocp3c (default " + defaults.Platform + ")")
   cmdCreate.Flags().StringVarP(&createClusters, "clusters", "c", "", "number of clusters to be deployed (default " + defaults.Clusters + ")")
   cmdCreate.Flags().StringVarP(&createNodes, "nodes", "N", "", "number of nodes to be deployed in each cluster (default " + defaults.Nodes + ")")
   cmdCreate.Flags().StringVarP(&createK8sVer, "k8s_version", "k", "", "Kubernetes version to be deployed (default " + defaults.K8s_Version + ")")
   cmdCreate.Flags().StringVarP(&createPxVer, "px_version", "P", "", "Portworx version to be deployed (default " + defaults.Px_Version + ")")
   cmdCreate.Flags().StringVarP(&createStopAfter, "stop_after", "s", "", "Stop instances after this many hours (default " + defaults.Stop_After + ")")
   cmdCreate.Flags().StringVarP(&createAwsType, "aws_type", "", "", "AWS type for each node (default " + defaults.Aws_Type + ")")
-  cmdCreate.Flags().StringVarP(&createAwsTypeCluster1WorkerNodes, "Aws_Type_Cluster_1_Worker_Nodes", "", "", "AWS type for each node of first cluster (default " + defaults.Aws_Type + ")")
   cmdCreate.Flags().StringVarP(&createAwsEbs, "aws_ebs", "", "", "space-separated list of EBS volumes to be attached to worker nodes, eg \"gp2:20 standard:30\" (default " + defaults.Aws_Ebs + ")")
   cmdCreate.Flags().StringVarP(&createGcpType, "gcp_type", "", "", "GCP type for each node (default " + defaults.Gcp_Type + ")")
   cmdCreate.Flags().StringVarP(&createGcpDisks, "gcp_disks", "", "", "space-separated list of EBS volumes to be attached to worker nodes, eg \"pd-standard:20 pd-ssd:30\" (default " + defaults.Gcp_Disks + ")")
@@ -358,8 +350,6 @@ func create_deployment(config Config) int {
         yes | ssh-keygen -q -t rsa -b 2048 -f keys/id_rsa.aws.` + config.Name + ` -N ''
         aws ec2 describe-instance-types --instance-types ` + config.Aws_Type + `>&/dev/null
         [ $? -ne 0 ] && echo "Invalid AWS type '` + config.Aws_Type + `' for region '` + config.Aws_Region + `'" && exit 1
-        aws ec2 describe-instance-types --instance-types ` + config.Aws_Type_Cluster_1_Worker_Nodes + `>&/dev/null
-        [ $? -ne 0 ] && echo "Invalid AWS type '` + config.Aws_Type_Cluster_1_Worker_Nodes + `' for region '` + config.Aws_Region + `'" && exit 1
         aws ec2 delete-key-pair --key-name px-deploy.` + config.Name + ` >&/dev/null
         aws ec2 import-key-pair --key-name px-deploy.` + config.Name + ` --public-key-material file://keys/id_rsa.aws.` + config.Name + `.pub >&/dev/null
         _AWS_vpc=$(aws --output text ec2 create-vpc --cidr-block 192.168.0.0/16 --query Vpc.VpcId)
@@ -511,6 +501,27 @@ func get_ip(deployment string) string {
   return strings.TrimSuffix(string(output), "\n")
 }
 
+func list_templates() {
+  var data [][]string
+  os.Chdir("templates")
+  var foo = _list_templates(".")
+  data = append(data, foo...)
+  print_table([]string{"Name", "Description"}, data)
+}
+
+func _list_templates(dir string) [][]string {
+  var temp [][]string
+  filepath.Walk(dir, func(file string, info os.FileInfo, err error) error {
+    if (info.Mode() & os.ModeDir != 0 && dir != file) { _list_templates(file) }
+    if (path.Ext(file) != ".yml") { return nil }
+    config := parse_yaml(file)
+    file = strings.TrimSuffix(file, ".yml")
+    temp = append(temp, []string{file, config.Description})
+    return nil
+  })
+  return temp
+}
+
 func die(msg string) {
   fmt.Println(msg)
   os.Exit(1)
@@ -519,8 +530,10 @@ func die(msg string) {
 func parse_yaml(filename string) Config {
   b, err := ioutil.ReadFile(filename)
   if err != nil { die(err.Error()) }
+  if len(b) != utf8.RuneCount(b) { die("Non-ASCII values found in " + filename) }
   var d Config
-  yaml.Unmarshal(b, &d)
+  err = yaml.Unmarshal(b, &d)
+  if err != nil { die("Broken YAML in " + filename + ": " + err.Error()) }
   return d
 }
 
