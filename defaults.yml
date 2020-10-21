@@ -23,6 +23,13 @@ azure_type: Standard_B2ms
 azure_disks: "20"
 #azure_disks: "100 200"
 
+vsphere_host: XXX
+vsphere_compute_resource:  XXX
+vsphere_user: XXX
+vsphere_password: XXX
+vsphere_template: XXX
+vsphere_datastore: z-portworx
+
 #env:
 #    aut_licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
 #    dr_licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"

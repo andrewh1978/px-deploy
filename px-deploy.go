@@ -42,6 +42,11 @@ type Config struct {
   Gcp_Zone string
   Azure_Type string
   Azure_Disks string
+  Vsphere_Host string
+  Vsphere_Compute_Resource string
+  Vsphere_User string
+  Vsphere_Password string
+  Vsphere_Template string
   Scripts []string
   Description string
   Env map[string]string
@@ -55,6 +60,7 @@ type Config struct {
   Gcp__Project string `yaml:"gcp__project,omitempty"`
   Gcp__Key string `yaml:"gcp__key,omitempty"`
   Azure__Group string `yaml:"azure__group,omitempty"`
+  Vsphere__Userdata string `yaml:"vsphere__userdata,omitempty`
 }
 
 type Config_Cluster struct {
@@ -93,7 +99,7 @@ func main() {
       }
       config.Name = createName
       if (createCloud != "") {
-        if (createCloud != "aws" && createCloud != "gcp" && createCloud != "azure") { die("Cloud must be 'aws', 'gcp' or 'azure' (not '" + createCloud + "')") }
+        if (createCloud != "aws" && createCloud != "gcp" && createCloud != "azure" && createCloud != "vsphere") { die("Cloud must be 'aws', 'gcp', 'azure' or 'vsphere' (not '" + createCloud + "')") }
         config.Cloud = createCloud
       }
       if (createRegion != "") {
@@ -200,6 +206,7 @@ func main() {
         case "aws": provider = "aws"
         case "gcp": provider = "google"
         case "azure": provider = "azure"
+        case "vsphere": provider = "vsphere"
       }
       fmt.Println("Provisioning VMs...")
       output, err := exec.Command("vagrant", "up", "--provider", provider).CombinedOutput()
@@ -323,7 +330,7 @@ func main() {
   cmdCreate.Flags().StringVarP(&createAzureDisks, "azure_disks", "", "", "space-separated list of Azure disks to be attached to worker nodes, eg \"20 30\" (default " + defaults.Azure_Disks + ")")
   cmdCreate.Flags().StringVarP(&createTemplate, "template", "t", "", "name of template to be deployed")
   cmdCreate.Flags().StringVarP(&createRegion, "region", "r", "", "AWS, GCP or Azure region (default " + defaults.Aws_Region + ", " + defaults.Gcp_Region + " or " + defaults.Azure_Region + ")")
-  cmdCreate.Flags().StringVarP(&createCloud, "cloud", "C", "", "aws, gcp or azure (default " + defaults.Cloud + ")")
+  cmdCreate.Flags().StringVarP(&createCloud, "cloud", "C", "", "aws | gcp | azure | vsphere (default " + defaults.Cloud + ")")
   cmdCreate.Flags().StringVarP(&createEnv, "env", "e", "", "Comma-separated list of environment variables to be passed, for example foo=bar,abc=123")
 
   cmdDestroy.Flags().BoolVarP(&destroyAll, "all", "a", false, "destroy all deployments")
@@ -417,6 +424,13 @@ func create_deployment(config Config) int {
 	  echo azure__subscription: $_AZURE_subscription
 	done >>deployments/` + config.Name + `.yml
         echo azure__group: $_AZURE_group >>deployments/` + config.Name + `.yml
+      `).CombinedOutput()
+    }
+    case "vsphere": {
+      output, _ = exec.Command("bash", "-c", `
+        yes | ssh-keygen -q -t rsa -b 2048 -f keys/id_rsa.vsphere.` + config.Name + ` -N ''
+	_Vsphere_userdata=$(echo -e '#cloud-config\nusers:\n  - default\n  - name: centos\n    primary_group: centos\n    sudo: ALL=(ALL) NOPASSWD:ALL\n    groups: sudo, wheel\n    ssh_import_id: None\n    lock_passwd: true\n    ssh_authorized_keys:\n    - '$(cat keys/id_rsa.vsphere.` + config.Name + `.pub) | base64 -w0)
+	echo vsphere__userdata: $_Vsphere_userdata >>deployments/` + config.Name + `.yml
       `).CombinedOutput()
     }
     default: die("Invalid cloud '"+ config.Cloud + "'")
