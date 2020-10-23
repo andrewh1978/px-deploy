@@ -80,7 +80,6 @@ Vagrant.configure("2") do |config|
       vsphere.password = yaml['vsphere_password']
       vsphere.insecure = true
       vsphere.template_name = yaml['vsphere_template']
-      vsphere.extra_config = { "guestinfo.userdata" => yaml['vsphere__userdata'], "guestinfo.userdata.encoding" => "base64" }
     end
   end
 
@@ -132,6 +131,10 @@ Vagrant.configure("2") do |config|
           azure.dns_name = "master-#{c}"
           azure.vm_name = "master-#{c}"
         end
+      elsif yaml['cloud'] == "vsphere"
+        master.vm.provider :vsphere do |vsphere|
+        vsphere.extra_config = { "guestinfo.userdata" => yaml['vsphere__userdata'], "guestinfo.userdata.encoding" => "base64", "pxd.deployment" => ENV['deployment'], "pxd.hostname" => "master-#{c}" }
+        end
       end
       master.vm.provision "file", source: "/px-deploy/.px-deploy/assets", destination: "/tmp/assets"
       master.vm.provision "shell", inline: master_script, env: (env.merge({ :cluster => c }))
@@ -174,6 +177,10 @@ Vagrant.configure("2") do |config|
             yaml['azure_disks'].split(' ').each do |i|
               azure.data_disks.push({ :name => "disk-#{c}-#{n}-#{d+=1}", :size_gb => i})
             end
+          end
+        elsif yaml['cloud'] == "vsphere"
+          node.vm.provider :vsphere do |vsphere|
+            vsphere.extra_config = { "guestinfo.userdata" => yaml['vsphere__userdata'], "guestinfo.userdata.encoding" => "base64", "pxd.deployment" => ENV['deployment'], "pxd.hostname" => "node-#{c}-#{n}" }
           end
         end
         node.vm.provision "shell", inline: node_script, env: (env.merge({ :cluster => c }))
