@@ -60,7 +60,7 @@ type Config struct {
   Gcp__Project string `yaml:"gcp__project,omitempty"`
   Gcp__Key string `yaml:"gcp__key,omitempty"`
   Azure__Group string `yaml:"azure__group,omitempty"`
-  Vsphere__Userdata string `yaml:"vsphere__userdata,omitempty`
+  Vsphere__Userdata string `yaml:"vsphere__userdata,omitempty"`
 }
 
 type Config_Cluster struct {
