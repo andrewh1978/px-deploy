@@ -1,3 +1,4 @@
+sed -i '/^127.0.0.1.*\(master\|node\)/d' /etc/hosts
 while ! yum install -y dnf; do sleep 1; done
 if [ -f /etc/selinux/config ]; then
   setenforce 0
@@ -53,14 +54,15 @@ elif [ $cloud = "vsphere" ]; then
   dnf install -y jq
   curl -Ls https://github.com/vmware/govmomi/releases/download/v0.23.0/govc_linux_amd64.gz | zcat >/usr/bin/govc
   chmod 755 /usr/bin/govc
-  export GOVC_URL=administrator:Osmium76@z-vcsa.uklab.purestorage.com
+  export GOVC_URL=$vsphere_user:$vsphere_password@$vsphere_host
   export GOVC_INSECURE=1
   while :; do
+    sleep 1
+    rm -f /tmp/hosts
     for i in $(govc find / -type m -runtime.powerState poweredOn | egrep "$name-(master|node)"); do
-      rm -f /tmp/hosts
       govc vm.info -json "$i" | jq -r '.VirtualMachines[0].Config.ExtraConfig[] | select(.Key==("pxd.deployment","guestinfo.local-ipv4","pxd.hostname")).Value' 2>/dev/null | paste -d " " - - - | grep "^$name " | awk '{print $3,$2}' >>/tmp/hosts
     done
-    [ $(wc -l /tmp/hosts) -eq $[($nodes+1)*$clusters] ] && break
+    [ $(wc -l /tmp/hosts | cut -f 1 -d " ") -eq $[($nodes+1)*$clusters] ] && break
   done
   cat /tmp/hosts >>/etc/hosts
 fi
