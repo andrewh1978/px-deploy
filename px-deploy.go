@@ -494,6 +494,13 @@ func destroy_deployment(name string) {
       az group delete -y -g ` + config.Azure__Group + ` --only-show-errors
       az ad sp delete --id http://` + config.Azure__Group + ` --only-show-errors
     `).CombinedOutput()
+  } else if (config.Cloud == "vsphere") {
+    var url = config.Vsphere_User + `:` + config.Vsphere_Password + `@` + config.Vsphere_Host
+    output, _ = exec.Command("bash", "-c", `
+      for i in $(govc find -u ` + url + ` -k / -type m -runtime.powerState poweredOn | egrep "` + config.Name + `-(master|node)"); do
+        [ $(govc vm.info -u ` + url + ` -k -json $i | jq -r '.VirtualMachines[0].Config.ExtraConfig[] | select(.Key==("pxd.deployment")).Value') = ` + config.Name + ` ] && govc vm.destroy -u ` + url + ` -k $i
+      done
+    `).CombinedOutput()
   } else { die ("Bad cloud") }
   fmt.Print(string(output))
   os.Remove("deployments/" + name + ".yml")
@@ -511,6 +518,9 @@ func get_ip(deployment string) string {
     output, _ = exec.Command("bash", "-c", `gcloud compute instances list --project ` + config.Gcp__Project + ` --filter="name=('master-1')" --format 'flattened(networkInterfaces[0].accessConfigs[0].natIP)' | tail -1 | cut -f 2 -d " "`).Output()
   } else if (config.Cloud == "azure") {
     output, _ = exec.Command("bash", "-c", `az vm show -g ` + config.Azure__Group + ` -n master-1 -d --query publicIps --output tsv`).Output()
+  } else if (config.Cloud == "vsphere") {
+    var url = config.Vsphere_User + `:` + config.Vsphere_Password + `@` + config.Vsphere_Host
+    output, _ = exec.Command("bash", "-c", `govc vm.info -u ` + url + ` -k -json $(govc find -u ` + url + ` -k / -type m -runtime.powerState poweredOn | grep ` + deployment + `-master) | jq -r '.VirtualMachines[0].Config.ExtraConfig[] | select(.Key==("guestinfo.local-ipv4")).Value' 2>/dev/null`).Output()
   }
   return strings.TrimSuffix(string(output), "\n")
 }
