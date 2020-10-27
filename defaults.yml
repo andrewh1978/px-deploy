@@ -28,7 +28,8 @@ vsphere_compute_resource:  XXX
 vsphere_user: XXX
 vsphere_password: XXX
 vsphere_template: XXX
-vsphere_datastore: z-portworx
+vsphere_datastore: XXX
+vsphere_disks: "150"
 
 #env:
 #    aut_licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"

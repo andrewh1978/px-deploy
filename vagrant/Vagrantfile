@@ -79,6 +79,7 @@ Vagrant.configure("2") do |config|
       vsphere.user = yaml['vsphere_user']
       vsphere.password = yaml['vsphere_password']
       vsphere.insecure = true
+      vsphere.data_store_name = yaml['vsphere_datastore']
       vsphere.template_name = yaml['vsphere_template']
     end
   end

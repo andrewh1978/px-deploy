@@ -47,6 +47,8 @@ type Config struct {
   Vsphere_User string
   Vsphere_Password string
   Vsphere_Template string
+  Vsphere_Datastore string
+  Vsphere_Disks string
   Scripts []string
   Description string
   Env map[string]string
