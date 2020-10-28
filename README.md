@@ -15,6 +15,7 @@ This will deploy one or more clusters in the cloud, with optional post-install t
  * AWS
  * GCP
  * Azure
+ * Vsphere
 
 1. Install the CLI for your choice of cloud provider and ensure it is configured:
  * AWS: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html
@@ -113,6 +114,13 @@ The `defaults.yml` file sets a number of deployment variables:
  * `gcp_zone` - GCP zone
  * `azure_disks` - similar to aws_ebs, for example: `"20 30"`
  * `azure_type` - the Azure machine type for each node
+ * `vsphere_host` - endpoint
+ * `vsphere_compute_resource` - compute resource
+ * `vsphere_user` - user with which to provision VMs
+ * `vsphere_password` - password
+ * `vsphere_template` - CentOS 7 template (TODO: automate building template)
+ * `vsphere_datastore` - datastore prefix
+ * `vsphere_disks` - similar to aws_ebs, for example: `"20 30"` (NOTE: these are not provisioned as static block devices, but they are used as clouddrives)
 
 There are two ways to override these variables. The first is to specify a template with the `--template=...` parameter. For example:
 ```
