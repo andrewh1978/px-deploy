@@ -500,7 +500,13 @@ func destroy_deployment(name string) {
     var url = config.Vsphere_User + `:` + config.Vsphere_Password + `@` + config.Vsphere_Host
     output, _ = exec.Command("bash", "-c", `
       for i in $(govc find -u ` + url + ` -k / -type m -runtime.powerState poweredOn | egrep "` + config.Name + `-(master|node)"); do
-        [ $(govc vm.info -u ` + url + ` -k -json $i | jq -r '.VirtualMachines[0].Config.ExtraConfig[] | select(.Key==("pxd.deployment")).Value') = ` + config.Name + ` ] && govc vm.destroy -u ` + url + ` -k $i
+        if [ $(govc vm.info -u ` + url + ` -k -json $i | jq -r '.VirtualMachines[0].Config.ExtraConfig[] | select(.Key==("pxd.deployment")).Value') = ` + config.Name + ` ] ; then
+          disks="$disks $(govc vm.info -json -k -u ` + url + ` -k -json $i | jq -r ".VirtualMachines[].Layout.Disk[].DiskFile[0]" | grep -v vagrant | cut -f 2 -d ' ')"
+          govc vm.destroy -u ` + url + ` -k $i
+        fi
+      done
+      for i in $disks; do
+        govc datastore.rm -k -u ` + url + ` -ds ` + config.Vsphere_Datastore + ` "[` + config.Vsphere_Datastore + `] $i"
       done
     `).CombinedOutput()
   } else { die ("Bad cloud") }
