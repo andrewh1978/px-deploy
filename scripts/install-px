@@ -26,7 +26,7 @@ data:
 EOF
   vsphere_suffix="vsp=true&ds=$vsphere_datastore&vc=$vsphere_host"
   for i in $vsphere_disks; do
-    vsphere_suffix="$vsphere_suffix&s=%22type=zeroedthick,size=$i%22"
+    vsphere_suffix="$vsphere_suffix&s=%22type=thin,size=$i%22"
   done
 fi
 
