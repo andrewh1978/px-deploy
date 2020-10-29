@@ -30,6 +30,7 @@ vsphere_password: XXX
 vsphere_template: XXX
 vsphere_datastore: XXX
 vsphere_disks: "150"
+vsphere_network: XXX
 
 #env:
 #    aut_licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
