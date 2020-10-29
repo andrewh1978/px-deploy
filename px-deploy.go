@@ -265,6 +265,7 @@ func main() {
           case "aws": region = config.Aws_Region
           case "gcp": region = config.Gcp_Region
           case "azure": region = config.Azure_Region
+          case "vsphere": region = config.Vsphere_Compute_Resource
           default: die("Bad cloud")
         }
         template := config.Template
