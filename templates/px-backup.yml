@@ -1,6 +1,21 @@
 description: A single Kubernetes cluster with Portworx and PX-Backup via Helm installed
-scripts: ["install-px", "helm-backup"]
+clusters: 3
+cluster:
+  - id: 1
+    scripts: ["install-px", "helm-backup"]
+    aws_type: t3.2xlarge
+  - id: 2
+    scripts: ["install-px", "sock-shop", "petclinic-with-namespace"]
+  - id: 3
+    scripts: ["install-px"]
+aws_ebs: "gp2:80 gp2:100"
 
 # Brings up px-backup stand-alone via helm on a single 
 # px cluster where you can login and connect the cluster.
 # Login details are printed when you connect.
+
+env:
+    #BACKUP_BUCKET: "<YOUR BUCKET NAME>"
+
+# IMPORTANT: set the BACKUP_BUCKET variable to match the name 
+# of a bucket that already exists in the region you're deploying into
