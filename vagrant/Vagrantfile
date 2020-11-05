@@ -81,8 +81,7 @@ Vagrant.configure("2") do |config|
       vsphere.insecure = true
       vsphere.data_store_name = yaml['vsphere_datastore']
       vsphere.template_name = yaml['vsphere_template']
-      vsphere.virtual_network_name = yaml ['vsphere_network']
-        end
+    end
   end
 
   config.ssh.config = "/etc/ssh/ssh_config"

@@ -121,7 +121,6 @@ The `defaults.yml` file sets a number of deployment variables:
  * `vsphere_template` - CentOS 7 template (TODO: automate building template)
  * `vsphere_datastore` - datastore prefix
  * `vsphere_disks` - similar to aws_ebs, for example: `"20 30"` (NOTE: these are not provisioned as static block devices, but they are used as clouddrives)
- * `vsphere_network` - VM Network on which to place the cluster hosts
 
 
 There are two ways to override these variables. The first is to specify a template with the `--template=...` parameter. For example:
