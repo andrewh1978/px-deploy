@@ -7,13 +7,13 @@ WHITE='\033[0;37m'
 NC='\033[0m'
 
 echo -e ${BLUE}Setting up installation container
-yum install -y git docker >&/dev/null
+yum install -y git docker
 echo Cloning repo
-git clone https://github.com/andrewh1978/px-deploy >&/dev/null
+git clone https://github.com/cjkennedy1972/px-deploy 
 cd px-deploy
-git checkout 2.1.1
+git checkout 2.2
 echo Building container
-docker build -t px-deploy . >&/dev/null
+docker build -t px-deploy . 
 mkdir -p /.px-deploy/{keys,deployments}
 time=$(date +%s)
 for i in scripts templates assets defaults.yml; do
