@@ -71,8 +71,8 @@ Vagrant.configure("2") do |config|
       azure.vm_size = yaml['azure_type']
     end
   elsif yaml['cloud'] == "vsphere"
-    config.vm.box = "dummy"
-    config.vm.box_url = "vsphere.box"
+    config.vm.box = "vsphere"
+    config.vm.box_url = 'https://vagrantcloud.com/ssx/boxes/vsphere-dummy/versions/0.0.1/providers/vsphere.box'
     config.vm.provider :vsphere do |vsphere, override|
       vsphere.host = yaml['vsphere_host']
       vsphere.compute_resource_name = yaml['vsphere_compute_resource']
@@ -80,10 +80,9 @@ Vagrant.configure("2") do |config|
       vsphere.password = yaml['vsphere_password']
       vsphere.insecure = true
       vsphere.data_store_name = yaml['vsphere_datastore']
+      vsphere.vm_base_path = yaml ['vsphere_folder']
       vsphere.template_name = yaml['vsphere_template']
       vsphere.vlan = yaml['vsphere_network']
-      vsphere.vm_base_path = yaml ['vsphere_folder']
-      
     end
   end
 
