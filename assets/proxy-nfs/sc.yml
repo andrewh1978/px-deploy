@@ -1,0 +1,9 @@
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: portworx-proxy-volume-volume
+provisioner: kubernetes.io/portworx-volume
+parameters:
+  proxy_endpoint: "nfs://master-1"
+  proxy_nfs_exportpath: "/var/nfs"
+allowVolumeExpansion: true
