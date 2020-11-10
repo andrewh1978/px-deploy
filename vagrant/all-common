@@ -73,7 +73,7 @@ passwd --stdin root <<<portworx
 systemctl stop firewalld 2>/dev/null
 systemctl disable firewalld 2>/dev/null
 yum update -y glib2
-dnf install -y at bash-completion
+dnf install -y at bash-completion nfs-utils
 systemctl start atd
 systemctl enable atd
 echo /usr/sbin/shutdown -h now | at now + $stop_after hours
