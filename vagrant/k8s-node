@@ -1,8 +1,4 @@
 exec &>/var/log/px-deploy/k8s-node
-dnf install -y kubelet-$k8s_version-0 docker
-dnf install -y kubeadm-$k8s_version-0 kubectl-$k8s_version-0
-systemctl enable docker kubelet
-systemctl restart docker kubelet
 (echo portworx/{px-enterprise,oci-monitor}:$px_version ; curl -s "https://install.portworx.com/$px_version?kb_ver=$k8s_version&comp=stork" | awk '/image:/{print$2}' ; kubeadm config images list --kubernetes-version $k8s_version 2>/dev/null) | xargs -n1 -P0 docker pull
 while : ; do
   command=$(ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no master-$cluster kubeadm token create --print-join-command)
