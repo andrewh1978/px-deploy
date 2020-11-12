@@ -5,4 +5,4 @@ su - centos -c "mkdir .vnc ; vncpasswd -f <<<portworx >.vnc/passwd; echo geometr
 chmod 600 /home/centos/.vnc/passwd
 systemctl start vncserver@:0
 systemctl enable vncserver@:0
-dnf install -y firefox-68.4.1 
+dnf install -y firefox
