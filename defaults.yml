@@ -24,11 +24,12 @@ azure_disks: "20"
 #azure_disks: "100 200"
 
 vsphere_host: XXX
-vsphere_compute_resource:  XXX
+vsphere_compute_resource: XXX
 vsphere_user: XXX
 vsphere_password: XXX
 vsphere_template: XXX
 vsphere_datastore: XXX
+vsphere_folder: XXX
 vsphere_disks: "64"
 vsphere_network: XXX
 vsphere_folder: XXX

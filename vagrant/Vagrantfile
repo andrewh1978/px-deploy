@@ -83,6 +83,7 @@ Vagrant.configure("2") do |config|
       vsphere.vm_base_path = yaml ['vsphere_folder']
       vsphere.template_name = yaml['vsphere_template']
       vsphere.vlan = yaml['vsphere_network']
+      vsphere.vm_base_path = yaml['vsphere_folder']
     end
   end
 

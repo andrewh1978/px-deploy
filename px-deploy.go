@@ -49,6 +49,7 @@ type Config struct {
 	Vsphere_Password         string
 	Vsphere_Template         string
 	Vsphere_Datastore        string
+	Vsphere_Folder           string
 	Vsphere_Disks            string
 	Vsphere_Network          string
 	Vsphere_Folder           string
@@ -398,6 +399,15 @@ func main() {
 		},
 	}
 
+	cmdVsphereInit := &cobra.Command{
+		Use:   "vsphere-init",
+		Short: "Creates vSphere template",
+		Long:  "Creates vSphere template",
+		Run: func(cmd *cobra.Command, args []string) {
+			vsphere_init()
+		},
+	}
+
 	defaults := parse_yaml("defaults.yml")
 	cmdCreate.Flags().StringVarP(&createName, "name", "n", "", "name of deployment to be created (if blank, generate UUID)")
 	cmdCreate.Flags().StringVarP(&createPlatform, "platform", "p", "", "k8s | dockeree | none | k3s | ocp3 | ocp3c (default "+defaults.Platform+")")
@@ -427,7 +437,7 @@ func main() {
 	cmdStatus.Flags().StringVarP(&statusName, "name", "n", "", "name of deployment")
 	cmdStatus.MarkFlagRequired("name")
 
-	rootCmd.AddCommand(cmdCreate, cmdDestroy, cmdConnect, cmdList, cmdTemplates, cmdStatus, cmdCompletion)
+	rootCmd.AddCommand(cmdCreate, cmdDestroy, cmdConnect, cmdList, cmdTemplates, cmdStatus, cmdCompletion, cmdVsphereInit)
 	rootCmd.Execute()
 }
 
@@ -623,6 +633,33 @@ func get_ip(deployment string) string {
 		output, _ = exec.Command("bash", "-c", `govc vm.info -u `+url+` -k -json $(govc find -u `+url+` -k / -type m -runtime.powerState poweredOn | grep `+deployment+`-master) | jq -r '.VirtualMachines[0].Config.ExtraConfig[] | select(.Key==("guestinfo.local-ipv4")).Value' 2>/dev/null`).Output()
 	}
 	return strings.TrimSuffix(string(output), "\n")
+}
+
+func vsphere_init() {
+	config := parse_yaml("defaults.yml")
+	if config.Vsphere_Host == "" {
+		die("Must define Vsphere_Host")
+	} else if config.Vsphere_Compute_Resource == "" {
+		die("Must define Vsphere_Compute_Resource")
+	} else if config.Vsphere_User == "" {
+		die("Must define Vsphere_User")
+	} else if config.Vsphere_Password == "" {
+		die("Must define Vsphere_Password")
+	} else if config.Vsphere_Template == "" {
+		die("Must define Vsphere_Template")
+	} else if config.Vsphere_Datastore == "" {
+		die("Must define Vsphere_Datastore")
+	}
+	vsphere_template_dir := path.Dir(config.Vsphere_Template)
+	vsphere_template_base := path.Base(config.Vsphere_Template)
+	os.Setenv("vsphere_host", config.Vsphere_Host)
+	os.Setenv("vsphere_compute_resource", config.Vsphere_Compute_Resource)
+	os.Setenv("vsphere_user", config.Vsphere_User)
+	os.Setenv("vsphere_password", config.Vsphere_Password)
+	os.Setenv("vsphere_template_dir", vsphere_template_dir)
+	os.Setenv("vsphere_template_base", vsphere_template_base)
+	os.Setenv("vsphere_datastore", config.Vsphere_Datastore)
+	syscall.Exec("/vsphere-init.sh", []string{}, os.Environ())
 }
 
 func list_templates() {

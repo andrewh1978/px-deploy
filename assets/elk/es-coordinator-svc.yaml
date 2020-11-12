@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch
+  labels:
+    component: elasticsearch
+    role: coordinator
+spec:
+  selector:
+    component: elasticsearch
+    role: coordinator
+  ports:
+  - name: http
+    port: 9200
+    protocol: TCP

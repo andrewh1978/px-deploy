@@ -9,3 +9,7 @@ repo_gpgcheck=1
 gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg
         https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
 EOF
+while ! dnf install -y kubelet-$k8s_version-0 docker; do sleep 1; done
+while ! dnf install -y kubeadm-$k8s_version-0 kubectl-$k8s_version-0; do sleep 1; done
+systemctl enable docker kubelet
+systemctl restart docker kubelet

@@ -1,0 +1,4 @@
+description: Deploys an ELK stack of 3 master nodes, 3 data nodes and 2 coordinator nodes, as per https://docs.portworx.com/portworx-install-with-kubernetes/application-install-with-kubernetes/elastic-search-and-kibana/
+clusters: 1
+nodes: 3
+scripts: ["install-px", "elk"]

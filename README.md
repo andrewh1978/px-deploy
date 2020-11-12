@@ -17,6 +17,8 @@ This will deploy one or more clusters in the cloud, with optional post-install t
  * Azure
  * Vsphere
 
+## Getting started
+
 1. Install the CLI for your choice of cloud provider and ensure it is configured:
  * AWS: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html
  * GCP: https://cloud.google.com/sdk/docs/quickstarts
@@ -118,8 +120,9 @@ The `defaults.yml` file sets a number of deployment variables:
  * `vsphere_compute_resource` - compute resource
  * `vsphere_user` - user with which to provision VMs
  * `vsphere_password` - password
- * `vsphere_template` - CentOS 7 template (TODO: automate building template)
+ * `vsphere_template` - full path to CentOS 7 template
  * `vsphere_datastore` - datastore prefix
+ * `vsphere_folder` - folder for vSphere VMs
  * `vsphere_disks` - similar to aws_ebs, for example: `"20 30"` (NOTE: these are not provisioned as static block devices, but they are used as clouddrives)
  * `vsphere_network` - vSwitch or dvPortGroup for cluster ex: Team-SE-120
  * `vsphere_folder` - vSphere Folder for cluster VMs - Will be created if it doesn't exist.
@@ -180,11 +183,20 @@ env:
 Enviroment variables can also be defined on the command line:
 ```
 px-deploy create -n foo -t clusterpair -e install_apps=true,foo=bar
+```
 
 The `install-px` script looks for an environment variable called `cloud_drive`. If it exists, it will deploy Portworx using a clouddrive rather than looking for all attached devices:
 ```
 px-deploy create -n foo -t px -e cloud_drive=type%3Dgp2%2Csize%3D150
 ```
+
+# Notes for vSphere
+
+Before you can start deploying in vSphere, a template must be built. The command
+```
+$ px-deploy vsphere-init
+```
+will read the vsphere variables from `defaults.yml` and provision a template at the path defined in `vsphere_template`.
 
 # Bugs
 
