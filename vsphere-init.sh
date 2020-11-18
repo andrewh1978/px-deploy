@@ -23,7 +23,7 @@ cat <<EOF >/vsphere-centos.json
     "vm-cpu-num": "4",
     "vm-mem-size": "8192",
     "vm-disk-size": "52000",
-    "iso_url": "http://mirrors.melbourne.co.uk/centos/7.8.2003/isos/x86_64/CentOS-7-x86_64-Minimal-2003.iso",
+    "iso_url": "http://www.mirrorservice.org/sites/mirror.centos.org/7.9.2009/isos/x86_64/CentOS-7-x86_64-Minimal-2009.iso",
     "kickstart_file": "/vsphere-ks.cfg"
   },
   "builders": [
