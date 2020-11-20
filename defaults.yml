@@ -25,6 +25,7 @@ azure_disks: "20"
 
 vsphere_host: XXX
 vsphere_compute_resource: XXX
+vsphere_resource_pool: XXX
 vsphere_user: XXX
 vsphere_password: XXX
 vsphere_template: XXX

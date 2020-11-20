@@ -45,6 +45,7 @@ type Config struct {
 	Azure_Disks              string
 	Vsphere_Host             string
 	Vsphere_Compute_Resource string
+	Vsphere_Resource_Pool    string
 	Vsphere_User             string
 	Vsphere_Password         string
 	Vsphere_Template         string
@@ -640,6 +641,8 @@ func vsphere_init() {
 		die("Must define Vsphere_Host")
 	} else if config.Vsphere_Compute_Resource == "" {
 		die("Must define Vsphere_Compute_Resource")
+	} else if config.Vsphere_Resource_Pool == "" {
+		die("Must define Vsphere_Resource_Pool")
 	} else if config.Vsphere_User == "" {
 		die("Must define Vsphere_User")
 	} else if config.Vsphere_Password == "" {
@@ -653,6 +656,7 @@ func vsphere_init() {
 	vsphere_template_base := path.Base(config.Vsphere_Template)
 	os.Setenv("vsphere_host", config.Vsphere_Host)
 	os.Setenv("vsphere_compute_resource", config.Vsphere_Compute_Resource)
+	os.Setenv("vsphere_resource_pool", config.Vsphere_Resource_Pool)
 	os.Setenv("vsphere_user", config.Vsphere_User)
 	os.Setenv("vsphere_password", config.Vsphere_Password)
 	os.Setenv("vsphere_template_dir", vsphere_template_dir)
