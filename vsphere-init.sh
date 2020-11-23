@@ -16,8 +16,12 @@ cat <<EOF >/vsphere-centos.json
     "vsphere-user": "$vsphere_user",
     "vsphere-password": "$vsphere_password",
     "vsphere-cluster": "$vsphere_compute_resource",
+<<<<<<< HEAD
     "vsphere-resource-pool": "$vsphere_resource_pool",
     "vsphere-network": "VM Network",
+=======
+    "vsphere-network": "$vsphere_network"
+>>>>>>> master
     "vsphere-datastore": "$vsphere_datastore",
     "vsphere-folder": "$vsphere_template_dir",
     "vm-name": "$vsphere_template_base",
