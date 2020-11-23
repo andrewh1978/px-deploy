@@ -651,7 +651,7 @@ func vsphere_init() {
 		die("Must define Vsphere_Template")
 	} else if config.Vsphere_Datastore == "" {
 		die("Must define Vsphere_Datastore")
-	} else if config.Vsphere_Network == "") {
+	} else if config.Vsphere_Network == "" {
 		die("Must define Vsphere_Network")
 	}
 	vsphere_template_dir := path.Dir(config.Vsphere_Template)
