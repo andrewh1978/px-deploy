@@ -648,6 +648,8 @@ func vsphere_init() {
 		die("Must define Vsphere_Template")
 	} else if config.Vsphere_Datastore == "" {
 		die("Must define Vsphere_Datastore")
+	} else if config.Vsphere_Network == "") {
+		die("Must define Vsphere_Network")
 	}
 	vsphere_template_dir := path.Dir(config.Vsphere_Template)
 	vsphere_template_base := path.Base(config.Vsphere_Template)
@@ -658,6 +660,7 @@ func vsphere_init() {
 	os.Setenv("vsphere_template_dir", vsphere_template_dir)
 	os.Setenv("vsphere_template_base", vsphere_template_base)
 	os.Setenv("vsphere_datastore", config.Vsphere_Datastore)
+	os.Setenv("vsphere_network", config.Vsphere_Network)
 	syscall.Exec("/vsphere-init.sh", []string{}, os.Environ())
 }
 
