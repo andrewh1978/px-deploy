@@ -141,4 +141,4 @@ reboot --eject
 EOF
 
 cd /
-/usr/bin/packer build /vsphere-centos.json
+/usr/bin/packer build /vsphere-centos.json -debug
