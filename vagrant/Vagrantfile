@@ -76,6 +76,7 @@ Vagrant.configure("2") do |config|
     config.vm.provider :vsphere do |vsphere, override|
       vsphere.host = yaml['vsphere_host']
       vsphere.compute_resource_name = yaml['vsphere_compute_resource']
+      vsphere.resource_pool_name = yaml['vsphere_resource_pool']
       vsphere.user = yaml['vsphere_user']
       vsphere.password = yaml['vsphere_password']
       vsphere.insecure = true
