@@ -599,7 +599,7 @@ func destroy_deployment(name string) {
 	} else if config.Cloud == "vsphere" {
 		var url = config.Vsphere_User + `:` + config.Vsphere_Password + `@` + config.Vsphere_Host
 		output, _ = exec.Command("bash", "-c", `
-      for i in $(govc find -u `+url+` -k / -type m -runtime.powerState poweredOn | egrep "`+config.Name+`-(master|node)"); do
+      for i in $(govc find -u `+url+` -k / -type m | egrep "vagrant_`+config.Name+`-(master|node)"); do
         if [ $(govc vm.info -u `+url+` -k -json $i | jq -r '.VirtualMachines[0].Config.ExtraConfig[] | select(.Key==("pxd.deployment")).Value') = `+config.Name+` ] ; then
           disks="$disks $(govc vm.info -json -k -u `+url+` -k -json $i | jq -r ".VirtualMachines[].Layout.Disk[].DiskFile[0]" | grep -v vagrant | cut -f 2 -d ' ')"
           govc vm.destroy -u `+url+` -k $i
