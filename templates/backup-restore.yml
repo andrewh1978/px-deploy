@@ -1,6 +1,4 @@
 description: Deploys a Kubernetes cluster, Minio S3 storage, Petclinic Application and Backup/Restore config
-cloud: aws
-kbs_version: 1.16.8
 clusters: 1
 scripts: ["install-px", "backup-restore"]
 
