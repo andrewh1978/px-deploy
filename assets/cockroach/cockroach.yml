@@ -90,7 +90,7 @@ spec:
   selector:
     matchLabels:
       app: cockroachdb
-  replicas: 1
+  replicas: 3
   template:
     metadata:
       labels:
