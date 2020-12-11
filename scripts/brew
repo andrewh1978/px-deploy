@@ -1,0 +1,13 @@
+dnf remove git -y && dnf install https://packages.endpoint.com/rhel/7/os/x86_64/endpoint-repo-1.7-1.x86_64.rpm -y && dnf install git -y
+rpm -Uvh http://www.city-fan.org/ftp/contrib/yum-repo/rhel7/x86_64/city-fan.org-release-2-1.rhel7.noarch.rpm && yum --enablerepo=city-fan.org install libcurl libcurl-devel -y
+adduser portworx
+passwd --stdin portworx <<<portworx
+usermod -aG wheel portworx
+echo 'source <(kubectl completion bash)' >> /home/portworx/.bashrc
+echo 'alias k=kubectl' >> /home/portworx/.bashrc
+mkdir /home/portworx/.kube
+cp -r /root/.kube/config /home/portworx/.kube/config
+su - portworx
+echo portworx | /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+echo 'eval $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)' >> /home/portworx/.bash_profile
+eval $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)

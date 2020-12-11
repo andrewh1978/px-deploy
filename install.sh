@@ -11,7 +11,7 @@ yum install -y git docker >&/dev/null
 echo Cloning repo
 git clone https://github.com/andrewh1978/px-deploy >&/dev/null
 cd px-deploy
-git checkout 2.2.1
+git checkout master
 echo Building container
 docker build -t px-deploy . >&/dev/null
 mkdir -p /.px-deploy/{keys,deployments}

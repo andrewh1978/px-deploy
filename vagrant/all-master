@@ -10,13 +10,3 @@ cat <<EOF >/etc/exports
 EOF
 systemctl start nfs-server
 systemctl enable nfs-server
-yum groupinstall 'Development Tools' -y
-rpm -Uvh http://www.city-fan.org/ftp/contrib/yum-repo/rhel6/x86_64/city-fan.org-release-2-1.rhel6.noarch.rpm && yum --enablerepo=city-fan.org install libcurl libcurl-devel -y
-adduser portworx
-passwd --stdin portworx <<<portworx
-usermod -aG wheel portworx
-rpm -U http://opensource.wandisco.com/centos/7/git/x86_64/wandisco-git-release-7-2.noarch.rpm && yum install -y git
-echo 'source <(kubectl completion bash)' >> /home/portworx/.bashrc
-echo 'alias k=kubectl' >> /home/portworx/.bashrc
-mkdir /home/portworx/.kube
-cp -r /root/.kube/config /home/portworx/.kube/config
