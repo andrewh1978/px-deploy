@@ -1,5 +1,5 @@
-dnf remove git -y && dnf install https://packages.endpoint.com/rhel/7/os/x86_64/endpoint-repo-1.7-1.x86_64.rpm -y && dnf install git -y
-rpm -Uvh http://www.city-fan.org/ftp/contrib/yum-repo/rhel7/x86_64/city-fan.org-release-2-1.rhel7.noarch.rpm && yum --enablerepo=city-fan.org install libcurl libcurl-devel -y
+dnf remove git -y ; dnf install https://packages.endpoint.com/rhel/7/os/x86_64/endpoint-repo-1.7-1.x86_64.rpm -y && dnf install git -y
+rpm -Uvh http://www.city-fan.org/ftp/contrib/yum-repo/rhel7/x86_64/city-fan.org-release-2-1.rhel7.noarch.rpm && dnf --enablerepo=city-fan.org install libcurl libcurl-devel -y
 adduser portworx
 passwd --stdin portworx <<<portworx
 usermod -aG wheel portworx
