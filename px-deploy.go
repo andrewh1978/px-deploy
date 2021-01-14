@@ -36,6 +36,7 @@ type Config struct {
 	Stop_After               string
 	Post_Script              string
 	Auto_Destroy             string
+	Quiet                    string
 	Aws_Type                 string
 	Aws_Ebs                  string
 	Gcp_Type                 string
@@ -77,7 +78,7 @@ type Config_Cluster struct {
 
 func main() {
 	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createGcpType, createGcpDisks, createGcpZone, createAzureType, createAzureDisks, createTemplate, createRegion, createCloud, createEnv, connectName, destroyName, statusName string
-	var destroyAll bool
+	var createQuiet, destroyAll bool
 	os.Chdir("/px-deploy/.px-deploy")
 	rootCmd := &cobra.Command{Use: "px-deploy"}
 
@@ -176,6 +177,9 @@ func main() {
 				mergo.MergeWithOverwrite(&env, env_cli)
 			}
 			config.Env = env
+			if createQuiet {
+				config.Quiet = "true"
+			}
 			if createAwsType != "" {
 				if !regexp.MustCompile(`^[0-9a-z\.]+$`).MatchString(createAwsType) {
 					die("Invalid AWS type '" + createAwsType + "'")
@@ -274,7 +278,9 @@ func main() {
 			}
 			fmt.Println("Provisioning VMs...")
 			output, err := exec.Command("vagrant", "up", "--provider", provider).CombinedOutput()
-			fmt.Println(string(output))
+			if (config.Quiet != "true") {
+				fmt.Println(string(output))
+			}
 			if err != nil {
 				die(err.Error())
 			}
@@ -427,6 +433,7 @@ func main() {
 	cmdCreate.Flags().StringVarP(&createRegion, "region", "r", "", "AWS, GCP or Azure region (default "+defaults.Aws_Region+", "+defaults.Gcp_Region+" or "+defaults.Azure_Region+")")
 	cmdCreate.Flags().StringVarP(&createCloud, "cloud", "C", "", "aws | gcp | azure | vsphere (default "+defaults.Cloud+")")
 	cmdCreate.Flags().StringVarP(&createEnv, "env", "e", "", "Comma-separated list of environment variables to be passed, for example foo=bar,abc=123")
+	cmdCreate.Flags().BoolVarP(&createQuiet, "quiet", "q", false, "hide provisioning output")
 
 	cmdDestroy.Flags().BoolVarP(&destroyAll, "all", "a", false, "destroy all deployments")
 	cmdDestroy.Flags().StringVarP(&destroyName, "name", "n", "", "name of deployment to be destroyed")

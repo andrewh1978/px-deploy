@@ -106,6 +106,7 @@ The `defaults.yml` file sets a number of deployment variables:
  * `k8s_version` - the version of Kubernetes to deploy
  * `stop_after` - stop the intances after this many hours
  * `post_script` - script to run on each master after deployment, output will go to stdout
+ * `quiet` - if "true", hide provisioning output
  * `auto_destroy` - if set to `true`, destroy deployment immediately after deploying (usually used with a `post_script` to output the results of a test or benchmark)
  * `nodes` - the number of worker nodes on each cluster
  * `platform` - can be set to either k8s, k3s, none, dockeree, ocp3 or ocp3c (OCPv3 with CRI-O)
