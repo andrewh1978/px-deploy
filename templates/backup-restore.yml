@@ -2,10 +2,6 @@ description: Deploys a Kubernetes cluster, Minio S3 storage, Petclinic Applicati
 clusters: 1
 scripts: ["install-px", "backup-restore"]
 
-# NOTES
-# PRE-REQS:-
-# 1. Connect to the Minio UI at http://{masterip}:30221 and logon with minio/minio123 (Takes 4 mins to start)
-# 2. Create a bucket called 'portworx'
 # DEMO:-
 # 1. Connect to the petclinic app at http://{masterip}:30333
 # 2. Select Find Owners > Add Owner and enter dummy information
