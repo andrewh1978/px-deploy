@@ -10,3 +10,8 @@ cat <<EOF >/etc/exports
 EOF
 systemctl start nfs-server
 systemctl enable nfs-server
+
+ETCD_VER=v3.4.14
+curl -L https://storage.googleapis.com/etcd/${ETCD_VER}/etcd-${ETCD_VER}-linux-amd64.tar.gz -o /tmp/etcd-${ETCD_VER}-linux-amd64.tar.gz
+cd /usr/bin
+tar xzvf /tmp/etcd-${ETCD_VER}-linux-amd64.tar.gz etcd-v3.4.14-linux-amd64/etcdctl --strip-components=1
