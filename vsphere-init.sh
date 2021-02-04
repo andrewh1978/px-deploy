@@ -87,7 +87,6 @@ cat <<EOF >/vsphere-centos.json
         "sudo yum install -y cloud-init",
         "sudo yum install -y epel-release",
         "sudo yum install -y python-pip",
-        "sudo pip install --upgrade pip",
         "sudo curl -sSL https://raw.githubusercontent.com/vmware/cloud-init-vmware-guestinfo/master/install.sh | sudo sh -"
       ],
       "type": "shell"
@@ -135,7 +134,8 @@ pwpolicy luks --minlen=6 --minquality=1 --notstrict --nochanges --notempty
 yum -y install open-vm-tools
 systemctl enable vmtoolsd
 systemctl start vmtoolsd
-yum -y install python-pip kernel-headers nfs-utils
+yum -y install kernel-headers nfs-utils dnf jq bash-completion nfs-utils chrony docker vim-enhanced git
+yum update -y glib2
 %end
 
 reboot --eject
