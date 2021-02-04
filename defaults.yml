@@ -34,6 +34,8 @@ vsphere_datastore: XXX
 vsphere_folder: XXX
 vsphere_disks: "64"
 vsphere_network: XXX
+vsphere_memory: 8
+vsphere_cpu: 2
 
 #env:
 #    licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX ..."

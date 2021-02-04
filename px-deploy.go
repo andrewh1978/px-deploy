@@ -54,6 +54,8 @@ type Config struct {
 	Vsphere_Folder           string
 	Vsphere_Disks            string
 	Vsphere_Network          string
+	Vsphere_Memory           string
+	Vsphere_Cpu              string
 	Scripts                  []string
 	Description              string
 	Env                      map[string]string

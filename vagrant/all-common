@@ -60,8 +60,8 @@ elif [ $cloud = "vsphere" ]; then
   while :; do
     sleep 1
     rm -f /tmp/hosts
-    for i in $(govc find / -type m -runtime.powerState poweredOn | egrep "$name-(master|node)"); do
-      govc vm.info -json "$i" | jq -r '.VirtualMachines[0].Config.ExtraConfig[] | select(.Key==("pxd.deployment","guestinfo.local-ipv4","pxd.hostname")).Value' 2>/dev/null | paste -d " " - - - | grep "^$name " | awk '{print $3,$2}' >>/tmp/hosts
+    for i in $(govc find / -type m -runtime.powerState poweredOn | egrep "vagrant_$name-(master|node)"); do
+      govc vm.info -json "$i" | jq -r '.VirtualMachines[0].Config.ExtraConfig[] | select(.Key==("guestinfo.local-ipv4","pxd.hostname")).Value' 2>/dev/null | paste -d " " - - | awk '{print $2,$1}' >>/tmp/hosts
     done
     [ $(wc -l /tmp/hosts | cut -f 1 -d " ") -eq $[($nodes+1)*$clusters] ] && break
   done
