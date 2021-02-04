@@ -26,7 +26,7 @@ ChallengeResponseAuthentication no
 GSSAPIAuthentication yes
 GSSAPICleanupCredentials no
 UsePAM yes
-UseDNS yes
+UseDNS no
 X11Forwarding yes
 TCPKeepAlive yes
 ClientAliveInterval 30
