@@ -60,6 +60,9 @@ type Config struct {
 	Description              string
 	Env                      map[string]string
 	Cluster                  []Config_Cluster
+	Ocp4_Version             string
+	Ocp4_Pull_Secret         string
+	Ocp4_Domain              string
 	Aws__Vpc                 string `yaml:"aws__vpc,omitempty"`
 	Aws__Sg                  string `yaml:"aws__sg,omitempty"`
 	Aws__Subnet              string `yaml:"aws__subnet,omitempty"`
@@ -135,7 +138,7 @@ func main() {
 				}
 			}
 			if createPlatform != "" {
-				if createPlatform != "k8s" && createPlatform != "k3s" && createPlatform != "none" && createPlatform != "dockeree" && createPlatform != "ocp3" && createPlatform != "ocp3c" {
+				if createPlatform != "k8s" && createPlatform != "k3s" && createPlatform != "none" && createPlatform != "dockeree" && createPlatform != "ocp3" && createPlatform != "ocp3c" && createPlatform != "ocp4" {
 					die("Invalid platform '" + createPlatform + "'")
 				}
 				config.Platform = createPlatform
@@ -265,6 +268,7 @@ func main() {
 				destroy_deployment(config.Name)
 				die("Aborted")
 			}
+			if config.Platform == "ocp4" && config.Cloud != "aws" { die("Openshift 4 only supported on AWS (not " + createCloud + ")") }
 			os.Chdir("/px-deploy/vagrant")
 			os.Setenv("deployment", config.Name)
 			var provider string
@@ -319,7 +323,7 @@ func main() {
 	}
 
 	cmdConnect := &cobra.Command{
-		Use:   "connect name [ command ]",
+		Use:   "connect -n name [ command ]",
 		Short: "Connects to a deployment",
 		Long:  "Connects to the first master node as root, and executes optional command",
 		Run: func(cmd *cobra.Command, args []string) {
@@ -365,7 +369,7 @@ func main() {
 
 				return nil
 			})
-			print_table([]string{"Deployment", "Cloud", "Region", "Platform", "Template", "Clusters", "Nodes", "Created"}, data)
+			print_table([]string{"Deployment", "Cloud", "Region", "Platform", "Template", "Clusters", "Nodes/Cl", "Created"}, data)
 		},
 	}
 
@@ -418,7 +422,7 @@ func main() {
 
 	defaults := parse_yaml("defaults.yml")
 	cmdCreate.Flags().StringVarP(&createName, "name", "n", "", "name of deployment to be created (if blank, generate UUID)")
-	cmdCreate.Flags().StringVarP(&createPlatform, "platform", "p", "", "k8s | dockeree | none | k3s | ocp3 | ocp3c (default "+defaults.Platform+")")
+	cmdCreate.Flags().StringVarP(&createPlatform, "platform", "p", "", "k8s | dockeree | none | k3s | ocp3 | ocp3c | ocp4 (default "+defaults.Platform+")")
 	cmdCreate.Flags().StringVarP(&createClusters, "clusters", "c", "", "number of clusters to be deployed (default "+defaults.Clusters+")")
 	cmdCreate.Flags().StringVarP(&createNodes, "nodes", "N", "", "number of nodes to be deployed in each cluster (default "+defaults.Nodes+")")
 	cmdCreate.Flags().StringVarP(&createK8sVer, "k8s_version", "k", "", "Kubernetes version to be deployed (default "+defaults.K8s_Version+")")
@@ -558,6 +562,15 @@ func destroy_deployment(name string) {
 	ip := get_ip(config.Name)
 	fmt.Println("Destroying deployment '" + config.Name + "'...")
 	if config.Cloud == "aws" {
+		if config.Platform == "ocp4" {
+			fmt.Println("Destroying OCP4, wait about 5 minutes (per cluster)...")
+			err := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, `
+				for i in $(seq 1 ` + config.Clusters + `); do
+				  ssh master-$i "cd /root/ocp4 ; openshift-install destroy cluster --log-level=debug"
+				done
+			`).Run()
+			if (err != nil) { die("Failed to destroy OCP4: " + err.Error()) }
+		}
 		c, _ := strconv.Atoi(config.Clusters)
 		n, _ := strconv.Atoi(config.Nodes)
 		if c < 3 && n < 5 {
@@ -568,7 +581,7 @@ func destroy_deployment(name string) {
         wait
         poweroff --force --force
         done
-      `).Start()
+			`).Start()
 			time.Sleep(5 * time.Second)
 		}
 		output, _ = exec.Command("bash", "-c", `

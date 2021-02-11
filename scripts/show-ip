@@ -1,3 +1,3 @@
 # post_script
 # Output external IP on master-1
-[ $cluster -eq 1 ] && echo IP is $(curl -s https://ipinfo.io/ip) || true
+[ $cluster -eq 1 ] && echo SUCCESS - IP is $(curl -s https://ipinfo.io/ip) || true

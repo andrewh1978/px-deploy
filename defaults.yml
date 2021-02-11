@@ -37,5 +37,9 @@ vsphere_network: XXX
 vsphere_memory: 8
 vsphere_cpu: 2
 
+ocp4_domain: openshift.portworx.com
+ocp4_version: 4.3.0
+ocp4_pull_secret: XXX
+
 #env:
 #    licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX ..."

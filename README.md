@@ -10,6 +10,7 @@ This will deploy one or more clusters in the cloud, with optional post-install t
  * Docker EE
  * Openshift 3.11
  * Openshift 3.11 with CRI-O
+ * Openshift 4 (only on AWS at this time)
 
 ## Cloud
  * AWS
@@ -121,7 +122,7 @@ The `defaults.yml` file sets a number of deployment variables:
  * `quiet` - if "true", hide provisioning output
  * `auto_destroy` - if set to `true`, destroy deployment immediately after deploying (usually used with a `post_script` to output the results of a test or benchmark)
  * `nodes` - the number of worker nodes on each cluster
- * `platform` - can be set to either k8s, k3s, none, dockeree, ocp3 or ocp3c (OCPv3 with CRI-O)
+ * `platform` - can be set to either k8s, k3s, none, dockeree, ocp3, ocp3c (OCPv3 with CRI-O) or ocp4
  * `px_version` - the version of Portworx to install
  * `gcp_disks` - similar to aws_ebs, for example: `"pd-standard:20 pd-ssd:30"`
  * `gcp_region` - GCP region
@@ -140,6 +141,9 @@ The `defaults.yml` file sets a number of deployment variables:
  * `vsphere_network` - vSwitch or dvPortGroup for cluster ex: Team-SE-120
  * `vsphere_memory` - RAM in GB
  * `vsphere_cpu` - number of vCPUs
+ * `ocp4_domain` - domain that has been delegated to route53
+ * `ocp4_version` - eg `4.3.0`
+ * `ocp4_pull_secret` - the pull secret `'{"auths" ... }'`
 
 There are two ways to override these variables. The first is to specify a template with the `--template=...` parameter. For example:
 ```
@@ -210,6 +214,19 @@ Before you can start deploying in vSphere, a template must be built. The command
 $ px-deploy vsphere-init
 ```
 will read the vsphere variables from `defaults.yml` and provision a template at the path defined in `vsphere_template`.
+
+# Notes for OCP4 + AWS
+
+A "master" node will be provisioned for each cluster. This is not really a master node - it is just where `openshift-install` is run. The root user will have a kubeconfig, so it can be treated as a master node for the purposes of the scripts used in the templates.
+
+A subdomain must be delegated to Route53 on the same AWS account. There should be 4 NS records for the domain, for example:
+```
+$ host -t ns openshift.example.com
+openshift.example.com name server ns-1386.awsdns-45.org.
+openshift.example.com name server ns-1845.awsdns-38.co.uk.
+openshift.example.com name server ns-282.awsdns-35.com.
+openshift.example.com name server ns-730.awsdns-27.net.
+```
 
 # Bugs
 

@@ -19,6 +19,7 @@ node_script = "mkdir /var/log/px-deploy\n"
 node_scripts.each do |i|
   if File.exist?("/px-deploy/vagrant/#{i}") then node_script << "(\n" + File.read("/px-deploy/vagrant/#{i}") + ") >&/var/log/px-deploy/#{i}\n" end
 end
+if yaml['platform'] == "ocp4" then yaml['nodes'] = 0 end
 
 cluster = Array.new
 if !yaml['cluster'].empty?
