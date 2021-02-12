@@ -23,7 +23,8 @@ RUN vagrant box add azure https://github.com/azure/vagrant-azure/raw/v2.0/dummy.
 RUN pip3 install awscli
 RUN curl -Ls https://github.com/vmware/govmomi/releases/download/v0.23.0/govc_linux_amd64.gz | zcat >/usr/bin/govc
 RUN go get -u github.com/olekukonko/tablewriter
-RUN go get -u github.com/spf13/cobra/cobra
+RUN go get -u github.com/spf13/pflag
+RUN mkdir -p /root/go/src/github.com/spf13 ; cd /root/go/src/github.com/spf13 ; git clone https://github.com/spf13/cobra ; cd cobra ; git checkout v1.1.1
 RUN go get -u github.com/google/uuid
 RUN go get -u github.com/go-yaml/yaml
 RUN go get -u github.com/imdario/mergo
