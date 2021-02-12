@@ -35,8 +35,8 @@ url="https://install.portworx.com/$px_version?kbver=$k8s_version&b=true&c=px-dep
 [ -e /usr/bin/oc ] && url="$url&osft=true"
 if [ "$cloud_drive" ]; then
   if [ "$cloud" = "aws" ]; then
-    key=$(grep aws_access_key_id /root/.aws/credentials | cut -f 3 -d " " | sed 's/+/%2B/g')
-    secret=$(grep aws_secret_access_key /root/.aws/credentials | cut -f 3 -d " " | sed 's/+/%2B/g')
+    key=$(grep ^aws_access_key_id /root/.aws/credentials | cut -f 3 -d " " | sed 's/+/%2B/g')
+    secret=$(grep ^aws_secret_access_key /root/.aws/credentials | cut -f 3 -d " " | sed 's/+/%2B/g')
     url="$url&e=AWS_ACCESS_KEY_ID%3D$key%2CAWS_SECRET_ACCESS_KEY%3D$secret"
     url="$url&s=%22$cloud_drive%22&kd=$cloud_drive"
   fi
@@ -46,6 +46,7 @@ if [ "$journal" ]; then
 fi
 [ "$px_suffix" ] && url="$url&$px_suffix"
 [ "$vsphere_suffix" ] && url="$url&$vsphere_suffix"
+[ "$platform" = ocp4 ] && url="$url&r=17001"
 
 if [ "$operator" = true ]; then
   [ -e /sbin/azure-repo-svc ] && kubectl taint node --all node-role.kubernetes.io/master-
