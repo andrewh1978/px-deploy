@@ -1,3 +1,4 @@
 # post_script
 # Output external IP on master-1
-[ $cluster -eq 1 ] && echo SUCCESS - IP is $(curl -s https://ipinfo.io/ip) || true
+[ $cluster -eq 1 ] && echo SUCCESS - IP is $(curl -s https://ipinfo.io/ip)
+[ $platform = ocp4 -a -s /root/ocp4/auth/kubeadmin-password ] && echo OCP4 console on https://$(oc get routes console -n openshift-console -o json | jq -r .status.ingress[0].host), username kubeadmin, password $(cat /root/ocp4/auth/kubeadmin-password) || true
