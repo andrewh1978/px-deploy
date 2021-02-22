@@ -466,6 +466,7 @@ func create_deployment(config Config) int {
         yes | ssh-keygen -q -t rsa -b 2048 -f keys/id_rsa.aws.`+config.Name+` -N ''
         aws ec2 describe-instance-types --instance-types `+config.Aws_Type+`>&/dev/null
         [ $? -ne 0 ] && echo "Invalid AWS type '`+config.Aws_Type+`' for region '`+config.Aws_Region+`'" && exit 1
+	echo "Provisioning as user $(aws --output text iam get-user --query User.[UserName,UserId] --output text | sed 's/	/(/;s/$/)/')"
         aws ec2 delete-key-pair --key-name px-deploy.`+config.Name+` >&/dev/null
         aws ec2 import-key-pair --key-name px-deploy.`+config.Name+` --public-key-material file://keys/id_rsa.aws.`+config.Name+`.pub >&/dev/null
         _AWS_vpc=$(aws --output text ec2 create-vpc --cidr-block 192.168.0.0/16 --query Vpc.VpcId)
