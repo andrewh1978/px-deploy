@@ -50,6 +50,10 @@ EOF
 echo -n "  " >>install-config.yaml
 ssh-keygen -y -f /root/.ssh/id_rsa >>install-config.yaml
 openshift-install create cluster --log-level=debug
+if [ $? -ne 0 ]; then
+  echo Failed to deploy Openshift
+  exit 1
+fi
 mkdir /root/.kube
 cp /root/ocp4/auth/kubeconfig /root/.kube/config
 sg=$(cat terraform.tfstate | jq -r '.resources[] | select(.name==("worker") and .type==("aws_security_group")).instances[0].attributes.id')
