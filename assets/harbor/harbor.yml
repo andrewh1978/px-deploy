@@ -62,7 +62,17 @@ spec:
       schedulerName: stork
       containers:
       - name: postgres
-        image: postgres:9.5
+        image: postgres:13.2
+        readinessProbe:
+          exec:
+            command: ["psql", "-w", "-U", "postgres", "-c", "SELECT 1"]
+          initialDelaySeconds: 15
+          timeoutSeconds: 2
+        livenessProbe:
+          exec:
+            command: ["psql", "-w", "-U", "postgres", "-c", "SELECT 1"]
+          initialDelaySeconds: 45
+          timeoutSeconds: 2
         ports:
         - containerPort: 5432
           name: postgres
