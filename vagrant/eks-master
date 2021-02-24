@@ -1,0 +1,40 @@
+EKS_CLUSTER_NAME=px-deploy-$name-$cluster
+curl -sL https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_Linux_amd64.tar.gz | tar xz -C /usr/bin
+curl -sL -o /usr/bin/kubectl "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+chmod 755 /usr/bin/kubectl
+dnf install -y python3-pip
+pip3 install awscli
+ln -s /usr/local/bin/aws /usr/bin/aws
+eksctl create cluster --region $aws_region --nodes $nodes --node-type $aws_type --name $EKS_CLUSTER_NAME
+vpc=$(eksctl utils describe-stacks --region $aws_region --cluster $EKS_CLUSTER_NAME | grep vpc- | cut -f 2 -d \")
+profile=$(aws ec2 describe-instances --filters "Name=vpc-id,Values=$vpc" --region $aws_region --query Reservations[0].Instances[0].IamInstanceProfile.Arn --output text | cut -f 2 -d /)
+role=$(aws iam get-instance-profile --instance-profile-name $profile --region $aws_region --query InstanceProfile.Roles[0].RoleName --output text)
+cat <<EOF >/tmp/role.json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "autoscaling:DescribeAutoScalingGroups",
+                "ec2:AttachVolume",
+                "ec2:DetachVolume",
+                "ec2:CreateTags",
+                "ec2:CreateVolume",
+                "ec2:DeleteTags",
+                "ec2:DeleteVolume",
+                "ec2:DescribeTags",
+                "ec2:DescribeVolumeAttribute",
+                "ec2:DescribeVolumesModifications",
+                "ec2:DescribeVolumeStatus",
+                "ec2:DescribeVolumes",
+                "ec2:DescribeInstances"
+            ],
+            "Resource": [
+                "*"
+            ]
+        }
+    ]
+}
+EOF
+aws iam put-role-policy --role-name $role --policy-name px-eks-policy --policy-document file:///tmp/role.json --region $aws_region

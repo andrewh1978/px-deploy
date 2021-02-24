@@ -138,7 +138,7 @@ func main() {
 				}
 			}
 			if createPlatform != "" {
-				if createPlatform != "k8s" && createPlatform != "k3s" && createPlatform != "none" && createPlatform != "dockeree" && createPlatform != "ocp3" && createPlatform != "ocp3c" && createPlatform != "ocp4" {
+				if createPlatform != "k8s" && createPlatform != "k3s" && createPlatform != "none" && createPlatform != "dockeree" && createPlatform != "ocp3" && createPlatform != "ocp3c" && createPlatform != "ocp4" && createPlatform != "eks" {
 					die("Invalid platform '" + createPlatform + "'")
 				}
 				config.Platform = createPlatform
@@ -269,6 +269,7 @@ func main() {
 				die("Aborted")
 			}
 			if config.Platform == "ocp4" && config.Cloud != "aws" { die("Openshift 4 only supported on AWS (not " + createCloud + ")") }
+			if config.Platform == "eks" && config.Cloud != "aws" { die("EKS only makes sense with AWS (not " + createCloud + ")") }
 			os.Chdir("/px-deploy/vagrant")
 			os.Setenv("deployment", config.Name)
 			var provider string
@@ -422,7 +423,7 @@ func main() {
 
 	defaults := parse_yaml("defaults.yml")
 	cmdCreate.Flags().StringVarP(&createName, "name", "n", "", "name of deployment to be created (if blank, generate UUID)")
-	cmdCreate.Flags().StringVarP(&createPlatform, "platform", "p", "", "k8s | dockeree | none | k3s | ocp3 | ocp3c | ocp4 (default "+defaults.Platform+")")
+	cmdCreate.Flags().StringVarP(&createPlatform, "platform", "p", "", "k8s | dockeree | none | k3s | ocp3 | ocp3c | ocp4 | eks (default "+defaults.Platform+")")
 	cmdCreate.Flags().StringVarP(&createClusters, "clusters", "c", "", "number of clusters to be deployed (default "+defaults.Clusters+")")
 	cmdCreate.Flags().StringVarP(&createNodes, "nodes", "N", "", "number of nodes to be deployed in each cluster (default "+defaults.Nodes+")")
 	cmdCreate.Flags().StringVarP(&createK8sVer, "k8s_version", "k", "", "Kubernetes version to be deployed (default "+defaults.K8s_Version+")")
@@ -568,6 +569,25 @@ func destroy_deployment(name string) {
 			err := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, `
 				for i in $(seq 1 ` + config.Clusters + `); do
 				  ssh master-$i "cd /root/ocp4 ; openshift-install destroy cluster --log-level=debug"
+				done
+			`).Run()
+			if (err != nil) { die("Failed to destroy OCP4: " + err.Error()) }
+		} else if config.Platform == "eks" {
+			fmt.Println("Destroying EKS, wait about 5 minutes (per cluster)...")
+			err := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, `
+				for i in $(seq 1 ` + config.Clusters + `); do
+				  ssh master-$i <<\EOF
+				    vpc=$(eksctl utils describe-stacks --region ` + config.Aws_Region + ` --cluster px-deploy-` + config.Name + `-$(hostname | cut -f 2 -d -) | grep vpc- | cut -f 2 -d \")
+				    profile=$(aws ec2 describe-instances --filters "Name=vpc-id,Values=$vpc" --region ` + config.Aws_Region + ` --query Reservations[0].Instances[0].IamInstanceProfile.Arn --output text | cut -f 2 -d /)
+				    instances=$(aws ec2 describe-instances --filters "Name=vpc-id,Values=$vpc" --region ` + config.Aws_Region + ` --query Reservations[].Instances[].InstanceId --output text)
+				    #volumes=$(for j in $instances; do aws ec2 describe-volumes --region ` + config.Aws_Region + ` --filters "Name=attachment.instance-id,Values=$j" "Name=tag:PWX_CLUSTER_ID,Values=$PX_CLUSTER_NAME" --query Volumes[].Attachments[].VolumeId --output text; done)
+				    role=$(aws iam get-instance-profile --instance-profile-name $profile --region ` + config.Aws_Region + ` --query InstanceProfile.Roles[0].RoleName --output text)
+				    aws iam delete-role-policy --role-name $role --policy-name px-eks-policy --region ` + config.Aws_Region + `
+				    eksctl delete cluster --region ` + config.Aws_Region + ` --name px-deploy-` + config.Name + `-$(hostname | cut -f 2 -d -) --wait >&/tmp/delete
+				    #for j in $volumes; do
+				      #aws ec2 delete-volume --region ` + config.Aws_Region + ` --volume-id $j
+				    #done
+EOF
 				done
 			`).Run()
 			if (err != nil) { die("Failed to destroy OCP4: " + err.Error()) }
