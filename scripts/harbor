@@ -1,5 +1,6 @@
 # Deploy Helm, Harbor, along with PostgreSQL and Redis prerequisites
 NAMESPACE=harbor
+IP=$(curl -s https://ipinfo.io/ip)
 curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
 chmod 700 get_helm.sh
 HELM_INSTALL_DIR=/usr/bin ./get_helm.sh
@@ -23,4 +24,7 @@ helm install myharbor harbor/harbor \
   --set persistence.persistentVolumeClaim.chartmuseum.storageClass=portworx-sc-repl3 \
   --set persistence.persistentVolumeClaim.jobservice.storageClass=portworx-sc-repl3 \
   --set persistence.persistentVolumeClaim.trivy.storageClass=portworx-sc-repl3 \
+  --set expose.type=nodePort \
+  --set expose.tls.enabled=false \
+  --set externalURL=http://$IP:30002 \
   --namespace $NAMESPACE
