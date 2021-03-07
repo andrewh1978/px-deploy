@@ -44,7 +44,7 @@ spec:
       schedulerName: stork
       containers:
       - name: mysql
-        image: mysql:5.6.32
+        image: mysql:5.7.33
         imagePullPolicy: "IfNotPresent"
         ports:
         - containerPort: 5432
