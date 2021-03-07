@@ -50,7 +50,7 @@ spec:
     spec:
       containers:
         - name: redis
-          image: "redis:3.2.0-alpine"
+          image: "redis"
           command:
             - "redis-server"
           args:
