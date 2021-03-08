@@ -147,7 +147,7 @@ spec:
         - name: MYSQL_USER
         - name: MYSQL_DATABASE
           value: petclinic
-        image: mysql:5.7.14
+        image: mysql:5.7.33
         imagePullPolicy: IfNotPresent
         livenessProbe:
           exec:
