@@ -31,7 +31,7 @@ EOF
 fi
 
 k8s_version=$(kubectl version --short | awk -Fv '/Server Version: / {print $3}')
-url="https://install.portworx.com/$px_version?kbver=$k8s_version&b=true&c=px-deploy-$cluster&stork=true&st=k8s&lh=true"
+url="https://install.portworx.com/$px_version?kbver=$k8s_version&b=true&c=px-deploy-$cluster&stork=true&st=k8s&lh=true&mon=true"
 [ -e /usr/bin/oc ] && url="$url&osft=true"
 if [ "$cloud_drive" ]; then
   if [ "$cloud" = "aws" ]; then
@@ -59,6 +59,10 @@ if [ "$operator" = true ]; then
   [ -e /sbin/azure-repo-svc ] && kubectl taint node --all node-role.kubernetes.io/master=:NoSchedule
 fi
 
+kubectl apply -f https://docs.portworx.com/samples/k8s/portworx-pxc-operator.yaml
+while ! kubectl wait --for=condition=ready pod -l k8s-app=prometheus-operator -n kube-system --timeout 5m; do
+  sleep 2
+done
 curl -so /tmp/px.yml $url
 kubectl apply -f /tmp/px.yml
 
@@ -69,3 +73,6 @@ mv /tmp/pxc/kubectl-pxc /usr/bin/.
 stork_image=$(curl -s https://install.portworx.com/$px_version?comp=stork | awk '/image: openstorage.stork/{print$2}')
 id=$(docker create $stork_image)
 docker cp $id:/storkctl/linux/storkctl /usr/bin
+
+# Expose grafana on port 30112
+kubectl patch svc grafana -n kube-system -p '{"spec": { "type": "NodePort", "ports": [ { "nodePort": 30112, "port": 3000, "protocol": "TCP", "targetPort": 3000 } ] } }'
