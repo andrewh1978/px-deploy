@@ -38,7 +38,7 @@ vsphere_memory: 8
 vsphere_cpu: 2
 
 ocp4_domain: openshift.portworx.com
-ocp4_version: 4.3.0
+ocp4_version: 4.5.6
 ocp4_pull_secret: XXX
 
 #env:
