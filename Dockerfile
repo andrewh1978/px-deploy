@@ -1,7 +1,7 @@
 FROM centos:7
 RUN curl -s https://mirror.go-repo.io/centos/go-repo.repo >/etc/yum.repos.d/go-repo.repo
 RUN echo W2F6dXJlLWNsaV0KbmFtZT1BenVyZSBDTEkKYmFzZXVybD1odHRwczovL3BhY2thZ2VzLm1pY3Jvc29mdC5jb20veXVtcmVwb3MvYXp1cmUtY2xpCmVuYWJsZWQ9MQpncGdjaGVjaz0xCmdwZ2tleT1odHRwczovL3BhY2thZ2VzLm1pY3Jvc29mdC5jb20va2V5cy9taWNyb3NvZnQuYXNjCg== | base64 -d >/etc/yum.repos.d/azure-cli.repo
-RUN yum install -y gcc make openssh-clients python3-pip golang-1.15.8 git azure-cli epel-release openssl
+RUN yum install -y gcc make openssh-clients python3-pip golang-1.16.2 git azure-cli epel-release openssl
 RUN yum install -y jq
 RUN echo ServerAliveInterval 300 >/etc/ssh/ssh_config
 RUN echo ServerAliveCountMax 2 >>/etc/ssh/ssh_config
@@ -22,15 +22,9 @@ RUN vagrant box add google/gce https://vagrantcloud.com/google/boxes/gce/version
 RUN vagrant box add azure https://github.com/azure/vagrant-azure/raw/v2.0/dummy.box --provider azure --provider azure
 RUN pip3 install awscli
 RUN curl -Ls https://github.com/vmware/govmomi/releases/download/v0.23.0/govc_linux_amd64.gz | zcat >/usr/bin/govc
-RUN go get -u github.com/olekukonko/tablewriter
-RUN go get -u github.com/spf13/pflag
-RUN mkdir -p /root/go/src/github.com/spf13 ; cd /root/go/src/github.com/spf13 ; git clone https://github.com/spf13/cobra ; cd cobra ; git checkout v1.1.1
-RUN go get -u github.com/google/uuid
-RUN go get -u github.com/go-yaml/yaml
-RUN go get -u github.com/imdario/mergo
-RUN mkdir /root/go/src/px-deploy
-COPY px-deploy.go /root/go/src/px-deploy/main.go
+RUN mkdir -p /root/go/src/px-deploy
+COPY go.mod go.sum px-deploy.go /root/go/src/px-deploy
 COPY vagrant /px-deploy/vagrant
 COPY vsphere-init.sh /vsphere-init.sh
 RUN chmod 755 /usr/bin/govc /vsphere-init.sh
-RUN go install px-deploy
+RUN cd /root/go/src/px-deploy ; go install
