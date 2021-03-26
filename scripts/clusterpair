@@ -6,7 +6,7 @@ while : ; do
   sleep 5
   echo waiting for portworx
 done
-storkctl generate clusterpair -n default remotecluster-$cluster | sed "/insert_storage_options_here/c\    ip: node-$cluster-1\n    token: $token" >/var/tmp/cp.yaml
+storkctl generate clusterpair -n kube-system remotecluster | sed "/insert_storage_options_here/c\    ip: node-$cluster-1\n    token: $token" >/var/tmp/cp.yaml
 while : ; do
   cat /var/tmp/cp.yaml | ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no master-1 kubectl apply -f -
   [ $? -eq 0 ] && break
