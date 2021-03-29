@@ -9,8 +9,10 @@ cluster:
 
 # use `-e install_apps=true` to install the optional apps
 
-# Verify all is installed correctly with `storkctl get clusterpair` You should see Ready for storage and scheduler
-# Deploy your choice of application(s) from the /assets directory
+# NOTE - the cluster pair and migration template are created in the kube-system namespace
+# Verify all is installed correctly with `storkctl get clusterpair -n kube-system` You should see Ready for storage and scheduler
+# Deploy your choice of application(s) from the /assets directory - create mutliple namespaces if you wish
 # Add some sample data either using a CLI or web interface
+# Edit the migration template to add the namespaces you created, if you did so
 # Apply the migration template `/assets/app-migration.yml`
 # Verify resources including the data you added are cloned to the second cluster
