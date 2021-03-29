@@ -471,6 +471,7 @@ func create_deployment(config Config) int {
         aws ec2 delete-key-pair --key-name px-deploy.`+config.Name+` >&/dev/null
         aws ec2 import-key-pair --key-name px-deploy.`+config.Name+` --public-key-material file://keys/id_rsa.aws.`+config.Name+`.pub >&/dev/null
         _AWS_vpc=$(aws --output text ec2 create-vpc --cidr-block 192.168.0.0/16 --query Vpc.VpcId)
+	[ $? -ne 0 ] && echo "Failed to create VPC in region '`+config.Aws_Region+`'" && exit 1
         _AWS_subnet=$(aws --output text ec2 create-subnet --vpc-id $_AWS_vpc --cidr-block 192.168.0.0/16 --query Subnet.SubnetId)
         _AWS_gw=$(aws --output text ec2 create-internet-gateway --query InternetGateway.InternetGatewayId)
         aws ec2 attach-internet-gateway --vpc-id $_AWS_vpc --internet-gateway-id $_AWS_gw
