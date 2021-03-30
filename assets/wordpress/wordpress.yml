@@ -5,7 +5,7 @@ metadata:
 provisioner: kubernetes.io/portworx-volume
 parameters:
   repl: "2"
-  shared: "true"
+  sharedv4: "true"
 allowVolumeExpansion: true
 ---
 apiVersion: v1
