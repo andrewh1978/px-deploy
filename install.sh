@@ -9,9 +9,9 @@ NC='\033[0m'
 echo -e ${BLUE}Setting up installation container
 yum install -y git docker >&/dev/null
 echo Cloning repo
-git clone https://github.com/andrewh1978/px-deploy >&/dev/null
+git clone https://github.com/andrewh1978/px-deploy -b ck-vmw-datacenter >&/dev/null
 cd px-deploy
-git checkout 3.3.1
+git checkout ck-vmw-datacenter
 echo Building container
 docker build -t px-deploy . >&/dev/null
 mkdir -p /.px-deploy/{keys,deployments}
