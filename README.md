@@ -131,8 +131,10 @@ The `defaults.yml` file sets a number of deployment variables:
  * `gcp_zone` - GCP zone
  * `azure_disks` - similar to aws_ebs, for example: `"20 30"`
  * `azure_type` - the Azure machine type for each node
- * `vsphere_host` - endpoint
- * `vsphere_compute_resource` - compute resource
+ * `vsphere_host` - vCenter server IP or FQDN
+ * `vsphere_datacenter` - vCenter Datacenter
+ * `vsphere_compute_resource` - VMware Cluster Name
+ * `vsphere_resource_pool` - Cluster Resource Pool to place VMs
  * `vsphere_user` - user with which to provision VMs
  * `vsphere_password` - password
  * `vsphere_template` - full path to CentOS 7 template

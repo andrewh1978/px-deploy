@@ -45,6 +45,7 @@ type Config struct {
 	Azure_Type               string
 	Azure_Disks              string
 	Vsphere_Host             string
+	Vsphere_Datacenter       string
 	Vsphere_Compute_Resource string
 	Vsphere_Resource_Pool    string
 	Vsphere_User             string
@@ -268,8 +269,12 @@ func main() {
 				destroy_deployment(config.Name)
 				die("Aborted")
 			}
-			if config.Platform == "ocp4" && config.Cloud != "aws" { die("Openshift 4 only supported on AWS (not " + createCloud + ")") }
-			if config.Platform == "eks" && config.Cloud != "aws" { die("EKS only makes sense with AWS (not " + createCloud + ")") }
+			if config.Platform == "ocp4" && config.Cloud != "aws" {
+				die("Openshift 4 only supported on AWS (not " + createCloud + ")")
+			}
+			if config.Platform == "eks" && config.Cloud != "aws" {
+				die("EKS only makes sense with AWS (not " + createCloud + ")")
+			}
 			os.Chdir("/px-deploy/vagrant")
 			os.Setenv("deployment", config.Name)
 			var provider string
@@ -285,7 +290,7 @@ func main() {
 			}
 			fmt.Println("Provisioning VMs...")
 			output, err := exec.Command("vagrant", "up", "--provider", provider).CombinedOutput()
-			if (config.Quiet != "true") {
+			if config.Quiet != "true" {
 				fmt.Println(string(output))
 			}
 			if err != nil {
@@ -568,30 +573,34 @@ func destroy_deployment(name string) {
 		if config.Platform == "ocp4" {
 			fmt.Println("Destroying OCP4, wait about 5 minutes (per cluster)...")
 			err := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, `
-				for i in $(seq 1 ` + config.Clusters + `); do
+				for i in $(seq 1 `+config.Clusters+`); do
 				  ssh master-$i "cd /root/ocp4 ; openshift-install destroy cluster --log-level=debug"
 				done
 			`).Run()
-			if (err != nil) { die("Failed to destroy OCP4: " + err.Error()) }
+			if err != nil {
+				die("Failed to destroy OCP4: " + err.Error())
+			}
 		} else if config.Platform == "eks" {
 			fmt.Println("Destroying EKS, wait about 5 minutes (per cluster)...")
 			err := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, `
-				for i in $(seq 1 ` + config.Clusters + `); do
+				for i in $(seq 1 `+config.Clusters+`); do
 				  ssh master-$i <<\EOF
-				    vpc=$(eksctl utils describe-stacks --region ` + config.Aws_Region + ` --cluster px-deploy-` + config.Name + `-$(hostname | cut -f 2 -d -) | grep vpc- | cut -f 2 -d \")
-				    profile=$(aws ec2 describe-instances --filters "Name=vpc-id,Values=$vpc" --region ` + config.Aws_Region + ` --query Reservations[0].Instances[0].IamInstanceProfile.Arn --output text | cut -f 2 -d /)
-				    instances=$(aws ec2 describe-instances --filters "Name=vpc-id,Values=$vpc" --region ` + config.Aws_Region + ` --query Reservations[].Instances[].InstanceId --output text)
-				    volumes=$(for j in $instances; do aws ec2 describe-volumes --region ` + config.Aws_Region + ` --filters "Name=attachment.instance-id,Values=$j" "Name=tag:PWX_CLUSTER_ID,Values=px-deploy-$(hostname | cut -f 2 -d -)" --query Volumes[].Attachments[].VolumeId --output text; done)
-				    role=$(aws iam get-instance-profile --instance-profile-name $profile --region ` + config.Aws_Region + ` --query InstanceProfile.Roles[0].RoleName --output text)
-				    aws iam delete-role-policy --role-name $role --policy-name px-eks-policy --region ` + config.Aws_Region + `
-				    eksctl delete cluster --region ` + config.Aws_Region + ` --name px-deploy-` + config.Name + `-$(hostname | cut -f 2 -d -) --wait >&/tmp/delete
+				    vpc=$(eksctl utils describe-stacks --region `+config.Aws_Region+` --cluster px-deploy-`+config.Name+`-$(hostname | cut -f 2 -d -) | grep vpc- | cut -f 2 -d \")
+				    profile=$(aws ec2 describe-instances --filters "Name=vpc-id,Values=$vpc" --region `+config.Aws_Region+` --query Reservations[0].Instances[0].IamInstanceProfile.Arn --output text | cut -f 2 -d /)
+				    instances=$(aws ec2 describe-instances --filters "Name=vpc-id,Values=$vpc" --region `+config.Aws_Region+` --query Reservations[].Instances[].InstanceId --output text)
+				    volumes=$(for j in $instances; do aws ec2 describe-volumes --region `+config.Aws_Region+` --filters "Name=attachment.instance-id,Values=$j" "Name=tag:PWX_CLUSTER_ID,Values=px-deploy-$(hostname | cut -f 2 -d -)" --query Volumes[].Attachments[].VolumeId --output text; done)
+				    role=$(aws iam get-instance-profile --instance-profile-name $profile --region `+config.Aws_Region+` --query InstanceProfile.Roles[0].RoleName --output text)
+				    aws iam delete-role-policy --role-name $role --policy-name px-eks-policy --region `+config.Aws_Region+`
+				    eksctl delete cluster --region `+config.Aws_Region+` --name px-deploy-`+config.Name+`-$(hostname | cut -f 2 -d -) --wait >&/tmp/delete
 				    for j in $volumes; do
-				      aws ec2 delete-volume --region ` + config.Aws_Region + ` --volume-id $j
+				      aws ec2 delete-volume --region `+config.Aws_Region+` --volume-id $j
 				    done
 EOF
 				done
 			`).Run()
-			if (err != nil) { die("Failed to destroy OCP4: " + err.Error()) }
+			if err != nil {
+				die("Failed to destroy OCP4: " + err.Error())
+			}
 		}
 		c, _ := strconv.Atoi(config.Clusters)
 		n, _ := strconv.Atoi(config.Nodes)
@@ -683,6 +692,8 @@ func vsphere_init() {
 	config := parse_yaml("defaults.yml")
 	if config.Vsphere_Host == "" {
 		die("Must define Vsphere_Host")
+	} else if config.Vsphere_Datacenter == "" {
+		die("Must define Vsphere_Datacenter")
 	} else if config.Vsphere_Compute_Resource == "" {
 		die("Must define Vsphere_Compute_Resource")
 	} else if config.Vsphere_Resource_Pool == "" {
@@ -701,6 +712,7 @@ func vsphere_init() {
 	vsphere_template_dir := path.Dir(config.Vsphere_Template)
 	vsphere_template_base := path.Base(config.Vsphere_Template)
 	os.Setenv("vsphere_host", config.Vsphere_Host)
+	os.Setenv("vsphere_datacenter", config.Vsphere_Datacenter)
 	os.Setenv("vsphere_compute_resource", config.Vsphere_Compute_Resource)
 	os.Setenv("vsphere_resource_pool", config.Vsphere_Resource_Pool)
 	os.Setenv("vsphere_user", config.Vsphere_User)
