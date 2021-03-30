@@ -13,6 +13,7 @@ cat <<EOF >/vsphere-centos.json
 {
   "variables": {
     "vsphere-server": "$vsphere_host",
+    "vsphere-datacenter": "$vsphere_datacenter",
     "vsphere-user": "$vsphere_user",
     "vsphere-password": "$vsphere_password",
     "vsphere-cluster": "$vsphere_compute_resource",
@@ -37,6 +38,7 @@ cat <<EOF >/vsphere-centos.json
       ],
       "boot_order": "disk,cdrom,floppy",
       "boot_wait": "10s",
+      "datacenter": "{{user \'vsphere-datacenter\'}}",
       "cluster": "{{user \`vsphere-cluster\`}}",
       "resource_pool": "{{user \`vsphere-resource-pool\`}}",
       "convert_to_template": true,

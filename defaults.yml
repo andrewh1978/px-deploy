@@ -24,9 +24,10 @@ azure_type: Standard_B2ms
 azure_disks: "20"
 #azure_disks: "100 200"
 
-vsphere_host: XXX
-vsphere_compute_resource: XXX
-vsphere_resource_pool: XXX
+vsphere_host: XXX  # vCenter Server IP or FQDN
+vsphere_datacenter: XXX  # Datacenter that contains cluster you wish to use
+vsphere_compute_resource: XXX # Name of VMware ESXi Cluster
+vsphere_resource_pool: XXX # Name of Resource Pool
 vsphere_user: XXX
 vsphere_password: XXX
 vsphere_template: XXX
