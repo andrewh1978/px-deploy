@@ -26,5 +26,6 @@ RUN mkdir -p /root/go/src/px-deploy
 COPY go.mod go.sum px-deploy.go /root/go/src/px-deploy
 COPY vagrant /px-deploy/vagrant
 COPY vsphere-init.sh /vsphere-init.sh
+COPY VERSION /VERSION
 RUN chmod 755 /usr/bin/govc /vsphere-init.sh
 RUN cd /root/go/src/px-deploy ; go install
