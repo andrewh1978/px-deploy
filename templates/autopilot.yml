@@ -1,7 +1,7 @@
 description: Deploys a Kubernetes cluster and Portworx with Promethues and Autopilot pre-configured.
 cloud: aws
 clusters: 1
-scripts: ["install-px", "autopilot", "licenses"]
+scripts: ["install-px", "autopilot"]
 env:
   #licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
   px_suffix: "mon=true"
