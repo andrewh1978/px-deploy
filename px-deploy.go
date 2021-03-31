@@ -95,6 +95,8 @@ func main() {
 			if len(args) > 0 {
 				die("Invalid arguments")
 			}
+			fmt.Print("px-deploy is version: ")
+			version()
 			config := parse_yaml("defaults.yml")
 			env := config.Env
 			var env_template map[string]string
@@ -421,6 +423,16 @@ func main() {
 		},
 	}
 
+	cmdVersion := &cobra.Command{
+		Use:   "version",
+		Short: "Displays version",
+		Long:  "Displays version",
+		Run: func(cmd *cobra.Command, args []string) {
+			version()
+		},
+	}
+
+
 	defaults := parse_yaml("defaults.yml")
 	cmdCreate.Flags().StringVarP(&createName, "name", "n", "", "name of deployment to be created (if blank, generate UUID)")
 	cmdCreate.Flags().StringVarP(&createPlatform, "platform", "p", "", "k8s | dockeree | none | k3s | ocp3 | ocp3c | ocp4 | eks (default "+defaults.Platform+")")
@@ -451,7 +463,7 @@ func main() {
 	cmdStatus.Flags().StringVarP(&statusName, "name", "n", "", "name of deployment")
 	cmdStatus.MarkFlagRequired("name")
 
-	rootCmd.AddCommand(cmdCreate, cmdDestroy, cmdConnect, cmdList, cmdTemplates, cmdStatus, cmdCompletion, cmdVsphereInit)
+	rootCmd.AddCommand(cmdCreate, cmdDestroy, cmdConnect, cmdList, cmdTemplates, cmdStatus, cmdCompletion, cmdVsphereInit, cmdVersion)
 	rootCmd.Execute()
 }
 
@@ -710,6 +722,14 @@ func vsphere_init() {
 	os.Setenv("vsphere_datastore", config.Vsphere_Datastore)
 	os.Setenv("vsphere_network", config.Vsphere_Network)
 	syscall.Exec("/vsphere-init.sh", []string{}, os.Environ())
+}
+
+func version() {
+	v, err := ioutil.ReadFile("/VERSION")
+	if err != nil {
+		die(err.Error())
+	}
+	fmt.Println(strings.TrimSpace(string(v)))
 }
 
 func list_templates() {
