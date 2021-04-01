@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -13,6 +14,7 @@ import (
 	"syscall"
 	"time"
 	"unicode/utf8"
+	"net/http"
 
 	"github.com/go-yaml/yaml"
 	"github.com/google/uuid"
@@ -81,6 +83,13 @@ type Config_Cluster struct {
 	Aws_Type string
 }
 
+var Reset  = "\033[0m"
+var White  = "\033[97m"
+var Red    = "\033[31m"
+var Green  = "\033[32m"
+var Yellow = "\033[33m"
+var Blue   = "\033[34m"
+
 func main() {
 	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createGcpType, createGcpDisks, createGcpZone, createAzureType, createAzureDisks, createTemplate, createRegion, createCloud, createEnv, connectName, destroyName, statusName string
 	var createQuiet, destroyAll bool
@@ -92,11 +101,22 @@ func main() {
 		Short: "Creates a deployment",
 		Long:  "Creates a deployment",
 		Run: func(cmd *cobra.Command, args []string) {
+			version_current := get_version_current()
+			version_latest := get_version_latest()
+			if version_latest == "" {
+				fmt.Println(Yellow + "Current version is " + version_current + ", cannot determine latest version")
+			} else {
+				if version_current != version_latest {
+					fmt.Println(Yellow + "Current version is " + version_current + ", latest version is " + version_latest)
+				} else {
+					fmt.Println(Green + "Current version is " + version_current + " (current)")
+				}
+			}
+			fmt.Print(Reset)
+
 			if len(args) > 0 {
 				die("Invalid arguments")
 			}
-			fmt.Print("px-deploy is version: ")
-			version()
 			config := parse_yaml("defaults.yml")
 			env := config.Env
 			var env_template map[string]string
@@ -285,7 +305,7 @@ func main() {
 			case "vsphere":
 				provider = "vsphere"
 			}
-			fmt.Println("Provisioning VMs...")
+			fmt.Println(White + "Provisioning VMs..." + Reset)
 			output, err := exec.Command("vagrant", "up", "--provider", provider).CombinedOutput()
 			if (config.Quiet != "true") {
 				fmt.Println(string(output))
@@ -470,7 +490,7 @@ func main() {
 func create_deployment(config Config) int {
 	var output []byte
 	var err error
-	fmt.Println("Provisioning infrastructure...")
+	fmt.Println(White + "Provisioning infrastructure..." + Reset)
 	switch config.Cloud {
 	case "aws":
 		{
@@ -575,10 +595,10 @@ func destroy_deployment(name string) {
 	config := parse_yaml("deployments/" + name + ".yml")
 	var output []byte
 	ip := get_ip(config.Name)
-	fmt.Println("Destroying deployment '" + config.Name + "'...")
+	fmt.Println(White + "Destroying deployment '" + config.Name + "'..." + Reset)
 	if config.Cloud == "aws" {
 		if config.Platform == "ocp4" {
-			fmt.Println("Destroying OCP4, wait about 5 minutes (per cluster)...")
+			fmt.Println(White + "Destroying OCP4, wait about 5 minutes (per cluster)..." + Reset)
 			err := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, `
 				for i in $(seq 1 ` + config.Clusters + `); do
 				  ssh master-$i "cd /root/ocp4 ; openshift-install destroy cluster --log-level=debug"
@@ -586,7 +606,7 @@ func destroy_deployment(name string) {
 			`).Run()
 			if (err != nil) { die("Failed to destroy OCP4: " + err.Error()) }
 		} else if config.Platform == "eks" {
-			fmt.Println("Destroying EKS, wait about 5 minutes (per cluster)...")
+			fmt.Println(White + "Destroying EKS, wait about 5 minutes (per cluster)..." + Reset)
 			err := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, `
 				for i in $(seq 1 ` + config.Clusters + `); do
 				  ssh master-$i <<\EOF
@@ -672,7 +692,7 @@ EOF
 	os.Remove("deployments/" + name + ".yml")
 	os.Remove("keys/id_rsa." + config.Cloud + "." + name)
 	os.Remove("keys/id_rsa." + config.Cloud + "." + name + ".pub")
-	fmt.Println("Destroyed.")
+	fmt.Println(White + "Destroyed." + Reset)
 }
 
 func get_ip(deployment string) string {
@@ -725,11 +745,7 @@ func vsphere_init() {
 }
 
 func version() {
-	v, err := ioutil.ReadFile("/VERSION")
-	if err != nil {
-		die(err.Error())
-	}
-	fmt.Println(strings.TrimSpace(string(v)))
+	fmt.Println(get_version_current())
 }
 
 func list_templates() {
@@ -758,7 +774,7 @@ func _list_templates(dir string) [][]string {
 }
 
 func die(msg string) {
-	fmt.Println(msg)
+	fmt.Println(Red + msg + Reset)
 	os.Exit(1)
 }
 
@@ -789,4 +805,26 @@ func print_table(header []string, data [][]string) {
 	table.SetNoWhiteSpace(true)
 	table.AppendBulk(data)
 	table.Render()
+}
+
+func get_version_current() string {
+	v, err := ioutil.ReadFile("/VERSION")
+	if err != nil {
+		die(err.Error())
+	}
+	return strings.TrimSpace(string(v))
+}
+
+func get_version_latest() string {
+	resp, err := http.Get("https://raw.githubusercontent.com/andrewh1978/px-deploy/master/VERSION")
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	v := strings.TrimSpace(string(body))
+	if regexp.MustCompile(`^[0-9\.]+$`).MatchString(v) {
+		return v
+	}
+	return ""
 }
