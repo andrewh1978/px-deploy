@@ -38,7 +38,7 @@ cat <<EOF >/vsphere-centos.json
       ],
       "boot_order": "disk,cdrom,floppy",
       "boot_wait": "10s",
-      "datacenter": "{{user \'vsphere-datacenter\'}}",
+      "datacenter": "{{user \`vsphere-datacenter\`}}",
       "cluster": "{{user \`vsphere-cluster\`}}",
       "resource_pool": "{{user \`vsphere-resource-pool\`}}",
       "convert_to_template": true,
