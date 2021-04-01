@@ -15,6 +15,8 @@ import (
 	"time"
 	"unicode/utf8"
 	"net/http"
+	"encoding/base64"
+
 
 	"github.com/go-yaml/yaml"
 	"github.com/google/uuid"
@@ -39,6 +41,7 @@ type Config struct {
 	Post_Script              string
 	Auto_Destroy             string
 	Quiet                    string
+	Dry_Run                  string
 	Aws_Type                 string
 	Aws_Ebs                  string
 	Gcp_Type                 string
@@ -92,7 +95,7 @@ var Blue   = "\033[34m"
 
 func main() {
 	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createGcpType, createGcpDisks, createGcpZone, createAzureType, createAzureDisks, createTemplate, createRegion, createCloud, createEnv, connectName, destroyName, statusName string
-	var createQuiet, destroyAll bool
+	var createQuiet, createDryRun, destroyAll bool
 	os.Chdir("/px-deploy/.px-deploy")
 	rootCmd := &cobra.Command{Use: "px-deploy"}
 
@@ -207,6 +210,9 @@ func main() {
 			if createQuiet {
 				config.Quiet = "true"
 			}
+			if createDryRun {
+				config.Dry_Run = "true"
+			}
 			if createAwsType != "" {
 				if !regexp.MustCompile(`^[0-9a-z\.]+$`).MatchString(createAwsType) {
 					die("Invalid AWS type '" + createAwsType + "'")
@@ -282,6 +288,11 @@ func main() {
 				}
 			}
 			y, _ := yaml.Marshal(config)
+			log("[ "+ strings.Join(os.Args[1:], " ") + " ] " + base64.StdEncoding.EncodeToString(y))
+			if config.Dry_Run == "true" {
+				fmt.Println(string(y))
+				die("Dry-run only")
+			}
 			err := ioutil.WriteFile("deployments/"+createName+".yml", y, 0644)
 			if err != nil {
 				die(err.Error())
@@ -473,6 +484,7 @@ func main() {
 	cmdCreate.Flags().StringVarP(&createCloud, "cloud", "C", "", "aws | gcp | azure | vsphere (default "+defaults.Cloud+")")
 	cmdCreate.Flags().StringVarP(&createEnv, "env", "e", "", "Comma-separated list of environment variables to be passed, for example foo=bar,abc=123")
 	cmdCreate.Flags().BoolVarP(&createQuiet, "quiet", "q", false, "hide provisioning output")
+	cmdCreate.Flags().BoolVarP(&createDryRun, "dry_run", "d", false, "dry-run, output yaml only")
 
 	cmdDestroy.Flags().BoolVarP(&destroyAll, "all", "a", false, "destroy all deployments")
 	cmdDestroy.Flags().StringVarP(&destroyName, "name", "n", "", "name of deployment to be destroyed")
@@ -776,6 +788,17 @@ func _list_templates(dir string) [][]string {
 func die(msg string) {
 	fmt.Println(Red + msg + Reset)
 	os.Exit(1)
+}
+
+func log(msg string) {
+	file, err := os.OpenFile("/px-deploy/.px-deploy/log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		die("Cannot open log: " + err.Error())
+	}
+	defer file.Close()
+	if _, err := file.WriteString(time.Now().Format(time.RFC3339) + " " + msg + "\n"); err != nil {
+		die("Cannot write log: " + err.Error())
+	}
 }
 
 func parse_yaml(filename string) Config {
