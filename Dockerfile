@@ -23,9 +23,8 @@ RUN vagrant box add azure https://github.com/azure/vagrant-azure/raw/v2.0/dummy.
 RUN pip3 install awscli
 RUN curl -Ls https://github.com/vmware/govmomi/releases/download/v0.23.0/govc_linux_amd64.gz | zcat >/usr/bin/govc
 RUN mkdir -p /root/go/src/px-deploy
-COPY go.mod go.sum px-deploy.go /root/go/src/px-deploy
+COPY go.mod go.sum px-deploy.go /root/go/src/px-deploy/
 COPY vagrant /px-deploy/vagrant
-COPY vsphere-init.sh /vsphere-init.sh
-COPY VERSION /VERSION
+COPY vsphere-init.sh VERSION /
 RUN chmod 755 /usr/bin/govc /vsphere-init.sh
 RUN cd /root/go/src/px-deploy ; go install
