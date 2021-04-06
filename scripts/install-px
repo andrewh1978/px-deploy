@@ -81,7 +81,7 @@ fi
 
 if [ "$operator" = true -a "$platform" != ocp4 ]; then
   [ -e /sbin/azure-repo-svc ] && kubectl taint node --all node-role.kubernetes.io/master-
-  curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/0.15.1/install.sh | bash -s 0.15.1
+  curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.17.0/install.sh | bash -s v0.17.0
   kubectl create -f https://operatorhub.io/install/portworx.yaml
   while ! kubectl get csv -n operators | grep -q Succeeded ; do
     sleep 2
