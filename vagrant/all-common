@@ -74,7 +74,7 @@ passwd --stdin root <<<portworx
 systemctl stop firewalld 2>/dev/null
 systemctl disable firewalld 2>/dev/null
 yum update -y glib2
-dnf install -y at bash-completion nfs-utils chrony
+dnf install -y at bash-completion nfs-utils chrony unzip
 systemctl start atd chronyd
 systemctl enable atd chronyd
 [ "$stop_after" != 0 ] && echo /usr/sbin/shutdown -h now | at now + $stop_after hours
