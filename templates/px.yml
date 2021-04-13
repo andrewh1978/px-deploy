@@ -1,2 +1,2 @@
-description: A single Kubernetes cluster with Portworx installed
+description: Install and run Portworx on each cluster
 scripts: ["install-px"]
