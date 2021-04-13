@@ -1,0 +1,4 @@
+dnf install -y squid
+cp /assets/squid.conf /etc/squid
+systemctl start squid
+systemctl enable squid
