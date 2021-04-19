@@ -5,6 +5,8 @@
 
 # To use a journal, set the environment variable journal=auto or journal=/dev/sdb
 
+# Default secrets store is k8s; can also set environment variable secrets=vault
+
 # If you want to deploy using the operator, set the environment variable operator=true
 # otherwise the DaemonSet will be used
 
@@ -87,6 +89,11 @@ if [ "$operator" = true -a "$platform" != ocp4 ]; then
     sleep 2
   done
   [ -e /sbin/azure-repo-svc ] && kubectl taint node --all node-role.kubernetes.io/master=:NoSchedule
+fi
+
+if [ "$secrets" = vault ]; then
+  bash /assets/install-vault.sh
+  url="$url&st=vault&e=VAULT_ADDR%3Dhttp://master-$cluster:8200"
 fi
 
 kubectl apply -f https://docs.portworx.com/samples/k8s/portworx-pxc-operator.yaml
