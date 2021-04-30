@@ -60,7 +60,7 @@ until (kubectl get po --namespace px-backup -ljob-name=pxcentral-monitor-post-in
 # Installs license server
 kubectl label node node-1-1 node-1-2 px/ls=true
 
-/usr/local/bin/helm install px-license-server portworx/px-license-server --namespace px-backup --version 1.1.0
+/usr/local/bin/helm install px-license-server portworx/px-license-server --namespace px-backup --version 1.2.1
 until (kubectl get po --namespace px-backup -ljob-name=pxcentral-license-ha-setup  -o wide | awk '{print $1, $3}' |grep "Completed"); do echo "Waiting for license server to install";sleep 3; done
 
 cat <<EOF >> /etc/motd
