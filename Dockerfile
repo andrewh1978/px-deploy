@@ -6,9 +6,9 @@ RUN yum install -y jq
 RUN echo ServerAliveInterval 300 >/etc/ssh/ssh_config
 RUN echo ServerAliveCountMax 2 >>/etc/ssh/ssh_config
 RUN echo TCPKeepAlive yes >>/etc/ssh/ssh_config
-RUN curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-278.0.0-linux-x86_64.tar.gz
-RUN tar xzf google-cloud-sdk-278.0.0-linux-x86_64.tar.gz
-RUN rm google-cloud-sdk-278.0.0-linux-x86_64.tar.gz
+RUN curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-338.0.0-linux-x86_64.tar.gz
+RUN tar xzf google-cloud-sdk-338.0.0-linux-x86_64.tar.gz
+RUN rm google-cloud-sdk-338.0.0-linux-x86_64.tar.gz
 RUN ln -s /google-cloud-sdk/bin/gcloud /usr/bin/gcloud
 RUN gcloud components install alpha -q
 RUN rpm -i https://releases.hashicorp.com/vagrant/2.2.9/vagrant_2.2.9_x86_64.rpm
