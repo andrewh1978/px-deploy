@@ -112,7 +112,7 @@ func main() {
 				if version_current != version_latest {
 					fmt.Println(Yellow + "Current version is " + version_current + ", latest version is " + version_latest)
 				} else {
-					fmt.Println(Green + "Current version is " + version_current + " (current)")
+					fmt.Println(Green + "Current version is " + version_current + " (latest)")
 				}
 			}
 			fmt.Print(Reset)
