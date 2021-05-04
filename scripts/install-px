@@ -96,6 +96,10 @@ if [ "$secrets" = vault ]; then
   url="$url&st=vault&e=VAULT_ADDR%3Dhttp://master-$cluster:8200"
 fi
 
+if [ "$platform" = gke ]; then
+  url="$url&gke=true"
+fi
+
 kubectl apply -f https://docs.portworx.com/samples/k8s/portworx-pxc-operator.yaml
 while ! kubectl wait --for=condition=ready pod -l k8s-app=prometheus-operator -n kube-system --timeout 5m; do
   sleep 2
