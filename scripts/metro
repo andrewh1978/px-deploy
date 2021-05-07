@@ -9,7 +9,7 @@ kubectl patch ds/portworx -n kube-system --type json -p="[{\"op\": \"replace\", 
 
 while : ; do
   n=$(kubectl exec -n kube-system -it $(kubectl get pods -n kube-system -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- /opt/pwx/bin/pxctl status 2>/dev/null | grep "Yes.*Online.*Up" | wc -l)
-  [ $n -eq 6 ] && break
+  [ $n -eq $[$nodes*$clusters] ] && break
   sleep 1
   echo Waiting for Portworx cluster to come up
 done
