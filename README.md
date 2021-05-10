@@ -12,6 +12,7 @@ This will deploy one or more clusters in the cloud, with optional post-install t
  * Openshift 3.11 with CRI-O
  * Openshift 4 (only on AWS at this time)
  * EKS (only makes sense on AWS)
+ * GKE (only makes sense on GCP)
 
 ## Cloud
  * AWS
@@ -207,6 +208,7 @@ The `install-px` script looks for an environment variable called `cloud_drive`. 
 ```
 px-deploy create -n foo -t px -e cloud_drive=type%3Dgp2%2Csize%3D150
 px-deploy create -n bar -t px --platform ocp4 -e cloud_drive=type%3Dgp2%2Csize%3D150,operator=true
+px-deploy create -n baz -t px --platform gke --cloud gcp -e cloud_drive="type%3Dpd-standard%2Csize%3D150"
 ```
 
 # Notes for vSphere

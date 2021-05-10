@@ -40,8 +40,8 @@ if [ "$cloud_drive" ]; then
     key=$(grep ^aws_access_key_id /root/.aws/credentials | cut -f 3 -d " " | sed 's/+/%2B/g')
     secret=$(grep ^aws_secret_access_key /root/.aws/credentials | cut -f 3 -d " " | sed 's/+/%2B/g')
     url="$url&e=AWS_ACCESS_KEY_ID%3D$key%2CAWS_SECRET_ACCESS_KEY%3D$secret"
-    url="$url&s=%22$cloud_drive%22&kd=$cloud_drive"
   fi
+  url="$url&s=%22$cloud_drive%22&kd=$cloud_drive"
 fi
 if [ "$journal" ]; then
   url="$url&j=$journal"
@@ -94,6 +94,10 @@ fi
 if [ "$secrets" = vault ]; then
   bash /assets/install-vault.sh
   url="$url&st=vault&e=VAULT_ADDR%3Dhttp://master-$cluster:8200"
+fi
+
+if [ "$platform" = gke ]; then
+  url="$url&gke=true"
 fi
 
 kubectl apply -f https://docs.portworx.com/samples/k8s/portworx-pxc-operator.yaml

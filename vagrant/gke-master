@@ -1,0 +1,20 @@
+GKE_CLUSTER_NAME=px-deploy-$name-$cluster
+
+dnf install -y docker
+systemctl enable docker
+systemctl start docker
+curl -sL -o /usr/bin/kubectl "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+chmod 755 /usr/bin/kubectl
+gcloud services enable container.googleapis.com --project $gcp__project
+gcloud container clusters create $GKE_CLUSTER_NAME \
+     --disk-type=pd-ssd \
+     --disk-size=50GB \
+     --labels=portworx=gke \
+     --machine-type=$gcp_type \
+     --num-nodes=$nodes \
+     --zone=$gcp_region-$gcp_zone \
+     --image-type ubuntu \
+     --scopes compute-rw,storage-ro \
+     --project $gcp__project
+
+# FIXME disks
