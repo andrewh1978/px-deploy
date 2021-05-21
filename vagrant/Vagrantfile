@@ -19,7 +19,7 @@ node_script = "mkdir /var/log/px-deploy\n"
 node_scripts.each do |i|
   if File.exist?("/px-deploy/vagrant/#{i}") then node_script << "(\n" + File.read("/px-deploy/vagrant/#{i}") + ") >&/var/log/px-deploy/#{i}\n" end
 end
-if yaml['platform'] == "ocp4" or yaml['platform'] == "eks" or yaml['platform'] == "gke" then yaml['nodes'] = 0 end
+if yaml['platform'] == "ocp4" or yaml['platform'] == "eks" or yaml['platform'] == "gke" or yaml['platform'] == "aks" then yaml['nodes'] = 0 end
 
 cluster = Array.new
 if !yaml['cluster'].empty?
@@ -137,6 +137,7 @@ Vagrant.configure("2") do |config|
           gcp.network_ip = "#{subnet}.90"
         end
       elsif yaml['cloud'] == "azure"
+        master.vm.provision "file", source: "/root/.azure", destination: "/tmp/azure"
         master.vm.provider :azure do |azure|
           azure.dns_name = "master-#{c}"
           azure.vm_name = "master-#{c}"

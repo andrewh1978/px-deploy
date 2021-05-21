@@ -13,6 +13,7 @@ This will deploy one or more clusters in the cloud, with optional post-install t
  * Openshift 4 (only on AWS at this time)
  * EKS (only makes sense on AWS)
  * GKE (only makes sense on GCP)
+ * AKS (only makes sense on Azure)
 
 ## Cloud
  * AWS
@@ -116,7 +117,7 @@ The `defaults.yml` file sets a number of deployment variables:
  * `aws_ebs` - a list of EBS volumes to be attached to each worker node. This is a space-separate list of type:size pairs, for example: `"gp2:30 standard:20"` will provision a gp2 volume of 30 GB and a standard volume of 20GB
  * `aws_region` - AWS region
  * `aws_type` - the AWS machine type for each node
- * `cloud` - the cloud on which to deploy (aws or gcp)
+ * `cloud` - the cloud on which to deploy (aws, gcp, azure or vsphere)
  * `clusters` - the number of clusters to deploy
  * `k8s_version` - the version of Kubernetes to deploy
  * `stop_after` - stop the intances after this many hours
@@ -124,7 +125,7 @@ The `defaults.yml` file sets a number of deployment variables:
  * `quiet` - if "true", hide provisioning output
  * `auto_destroy` - if set to `true`, destroy deployment immediately after deploying (usually used with a `post_script` to output the results of a test or benchmark)
  * `nodes` - the number of worker nodes on each cluster
- * `platform` - can be set to either k8s, k3s, none, dockeree, ocp3, ocp3c (OCPv3 with CRI-O), ocp4 or eks
+ * `platform` - can be set to either k8s, k3s, none, dockeree, ocp3, ocp3c (OCPv3 with CRI-O), ocp4, eks, gke or aks
  * `px_version` - the version of Portworx to install
  * `gcp_disks` - similar to aws_ebs, for example: `"pd-standard:20 pd-ssd:30"`
  * `gcp_region` - GCP region
@@ -209,6 +210,7 @@ The `install-px` script looks for an environment variable called `cloud_drive`. 
 px-deploy create -n foo -t px -e cloud_drive=type%3Dgp2%2Csize%3D150
 px-deploy create -n bar -t px --platform ocp4 -e cloud_drive=type%3Dgp2%2Csize%3D150,operator=true
 px-deploy create -n baz -t px --platform gke --cloud gcp -e cloud_drive="type%3Dpd-standard%2Csize%3D150"
+px-deploy create -n qux -t px --platform aks --cloud azure -e cloud_drive="type%3DPremium_LRS%2Csize%3D150"
 ```
 
 # Notes for vSphere
