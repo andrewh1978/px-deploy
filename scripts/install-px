@@ -100,6 +100,14 @@ if [ "$platform" = gke ]; then
   url="$url&gke=true"
 fi
 
+if [ "$cloud" = azure ] ; then
+  kubectl create secret generic -n kube-system px-azure --from-literal=AZURE_TENANT_ID=$azure__tenant --from-literal=AZURE_CLIENT_ID=$azure__client --from-literal=AZURE_CLIENT_SECRET=$azure__secret
+fi
+
+if [ "$platform" = aks ]; then
+  url="$url&aks=true"
+fi
+
 kubectl apply -f https://docs.portworx.com/samples/k8s/portworx-pxc-operator.yaml
 while ! kubectl wait --for=condition=ready pod -l k8s-app=prometheus-operator -n kube-system --timeout 5m; do
   sleep 2
