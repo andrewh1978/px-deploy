@@ -569,6 +569,7 @@ func create_deployment(config Config) int {
 	case "azure":
 		{
 			output, _ = exec.Command("bash", "-c", `
+	az account get-access-token
         az configure --defaults location=`+config.Azure_Region+`
         yes | ssh-keygen -q -t rsa -b 2048 -f keys/id_rsa.azure.`+config.Name+` -N ''
 	_AZURE_group=pxd-$(uuidgen)
@@ -683,6 +684,7 @@ EOF
 		os.Remove("keys/px-deploy_gcp_" + config.Gcp__Project + ".json")
 	} else if config.Cloud == "azure" {
 		output, _ = exec.Command("bash", "-c", `
+      az account get-access-token
       az group delete -y -g `+config.Azure__Group+` --only-show-errors
       az ad sp delete --id http://`+config.Azure__Group+` --only-show-errors
     `).CombinedOutput()
