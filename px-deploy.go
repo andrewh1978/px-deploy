@@ -287,6 +287,10 @@ func main() {
 					die("Postscript '" + config.Post_Script + "' is not valid Bash")
 				}
 			}
+			if config.Platform == "ocp4" && config.Cloud != "aws" { die("Openshift 4 only supported on AWS (not " + config.Cloud + ")") }
+			if config.Platform == "eks" && config.Cloud != "aws" { die("EKS only makes sense with AWS (not " + config.Cloud + ")") }
+			if config.Platform == "gke" && config.Cloud != "gcp" { die("GKE only makes sense with GCP (not " + config.Cloud + ")") }
+			if config.Platform == "aks" && config.Cloud != "azure" { die("AKS only makes sense with Azure (not " + config.Cloud + ")") }
 			y, _ := yaml.Marshal(config)
 			log("[ "+ strings.Join(os.Args[1:], " ") + " ] " + base64.StdEncoding.EncodeToString(y))
 			if config.Dry_Run == "true" {
@@ -301,10 +305,6 @@ func main() {
 				destroy_deployment(config.Name)
 				die("Aborted")
 			}
-			if config.Platform == "ocp4" && config.Cloud != "aws" { die("Openshift 4 only supported on AWS (not " + createCloud + ")") }
-			if config.Platform == "eks" && config.Cloud != "aws" { die("EKS only makes sense with AWS (not " + createCloud + ")") }
-			if config.Platform == "gke" && config.Cloud != "gcp" { die("GKE only makes sense with GCP (not " + createCloud + ")") }
-			if config.Platform == "aks" && config.Cloud != "azure" { die("AKS only makes sense with Azure (not " + createCloud + ")") }
 			os.Chdir("/px-deploy/vagrant")
 			os.Setenv("deployment", config.Name)
 			var provider string
@@ -569,6 +569,7 @@ func create_deployment(config Config) int {
 	case "azure":
 		{
 			output, _ = exec.Command("bash", "-c", `
+	az account get-access-token
         az configure --defaults location=`+config.Azure_Region+`
         yes | ssh-keygen -q -t rsa -b 2048 -f keys/id_rsa.azure.`+config.Name+` -N ''
 	_AZURE_group=pxd-$(uuidgen)
@@ -683,6 +684,7 @@ EOF
 		os.Remove("keys/px-deploy_gcp_" + config.Gcp__Project + ".json")
 	} else if config.Cloud == "azure" {
 		output, _ = exec.Command("bash", "-c", `
+      az account get-access-token
       az group delete -y -g `+config.Azure__Group+` --only-show-errors
       az ad sp delete --id http://`+config.Azure__Group+` --only-show-errors
     `).CombinedOutput()
