@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"bufio"
 	"os"
 	"os/exec"
 	"path"
@@ -94,7 +95,7 @@ var Yellow = "\033[33m"
 var Blue   = "\033[34m"
 
 func main() {
-	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createGcpType, createGcpDisks, createGcpZone, createAzureType, createAzureDisks, createTemplate, createRegion, createCloud, createEnv, connectName, destroyName, statusName string
+	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createGcpType, createGcpDisks, createGcpZone, createAzureType, createAzureDisks, createTemplate, createRegion, createCloud, createEnv, connectName, destroyName, statusName, historyNumber string
 	var createQuiet, createDryRun, destroyAll bool
 	os.Chdir("/px-deploy/.px-deploy")
 	rootCmd := &cobra.Command{Use: "px-deploy"}
@@ -465,6 +466,15 @@ func main() {
 		},
 	}
 
+	cmdHistory := &cobra.Command{
+		Use:   "history [ -n <ID> ]",
+		Short: "Displays history or inspects historical deployment",
+		Long:  "Displays history or inspects historical deployment",
+		Run: func(cmd *cobra.Command, args []string) {
+			history(historyNumber)
+		},
+	}
+
 
 	defaults := parse_yaml("defaults.yml")
 	cmdCreate.Flags().StringVarP(&createName, "name", "n", "", "name of deployment to be created (if blank, generate UUID)")
@@ -497,7 +507,9 @@ func main() {
 	cmdStatus.Flags().StringVarP(&statusName, "name", "n", "", "name of deployment")
 	cmdStatus.MarkFlagRequired("name")
 
-	rootCmd.AddCommand(cmdCreate, cmdDestroy, cmdConnect, cmdList, cmdTemplates, cmdStatus, cmdCompletion, cmdVsphereInit, cmdVersion)
+	cmdHistory.Flags().StringVarP(&historyNumber, "number", "n", "", "deployment ID")
+
+	rootCmd.AddCommand(cmdCreate, cmdDestroy, cmdConnect, cmdList, cmdTemplates, cmdStatus, cmdCompletion, cmdVsphereInit, cmdVersion, cmdHistory)
 	rootCmd.Execute()
 }
 
@@ -762,6 +774,45 @@ func vsphere_init() {
 
 func version() {
 	fmt.Println(get_version_current())
+}
+
+func history(number string) {
+	f, err := os.Open("log")
+	if err != nil {
+		die(err.Error())
+	}
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	if number != "" {
+		if num, err := strconv.Atoi(number); err == nil {
+			for i := 0; i <= num; i++ {
+				scanner.Scan()
+			}
+			i := strings.Index(scanner.Text(), " ] ")
+			c, err := base64.StdEncoding.DecodeString(scanner.Text()[i+3:])
+			if err != nil {
+				die(err.Error())
+			}
+			fmt.Println(string(c))
+			os.Exit(0)
+		} else {
+			die("Invalid deployment ID")
+		}
+
+	} else {
+		var data [][]string
+		n := 0
+		for scanner.Scan() {
+			i1 := strings.Index(scanner.Text(), " [ ")
+			i2 := strings.Index(scanner.Text(), " ] ")
+			data = append(data, []string{strconv.Itoa(n), scanner.Text()[0:i1], scanner.Text()[i1+3:i2]})
+			n++
+		}
+		if err := scanner.Err(); err != nil {
+			die(err.Error())
+		}
+		print_table([]string{"Number", "Timestamp", "Parameters"}, data)
+	}
 }
 
 func list_templates() {
