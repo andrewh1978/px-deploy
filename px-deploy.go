@@ -581,7 +581,7 @@ func create_deployment(config Config) int {
 	case "azure":
 		{
 			output, _ = exec.Command("bash", "-c", `
-	az account get-access-token
+        az account get-access-token
         az configure --defaults location=`+config.Azure_Region+`
         yes | ssh-keygen -q -t rsa -b 2048 -f keys/id_rsa.azure.`+config.Name+` -N ''
 	_AZURE_group=pxd-$(uuidgen)
@@ -650,7 +650,7 @@ func destroy_deployment(name string) {
 EOF
 				done
 			`).Run()
-			if (err != nil) { die("Failed to destroy OCP4: " + err.Error()) }
+			if (err != nil) { die("Failed to destroy EKS cluster: " + err.Error()) }
 		}
 		c, _ := strconv.Atoi(config.Clusters)
 		n, _ := strconv.Atoi(config.Nodes)
