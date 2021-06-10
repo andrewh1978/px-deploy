@@ -1,0 +1,14 @@
+# Install Portworx standalone
+
+# To use a journal, set the environment variable journal=auto or journal=/dev/sdb
+
+if [ "$journal" ]; then
+  params="-j $journal"
+fi
+
+for i in $(grep node-$cluster- /etc/hosts | cut -f 1 -d " "); do
+  while ! ssh $i "docker run --entrypoint /runc-entry-point.sh --rm -i --privileged=true -v /opt/pwx:/opt/pwx -v /etc/pwx:/etc/pwx portworx/px-enterprise:$px_version ; /opt/pwx/bin/px-runc install -c disaggregated-cluster -k etcd://master-1:2382 $params -a ; systemctl daemon-reload ; systemctl enable portworx; systemctl start portworx"
+  do
+    sleep 1
+  done
+done

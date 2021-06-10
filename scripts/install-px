@@ -118,6 +118,12 @@ done
 curl -so /tmp/px.yml $url
 kubectl apply -f /tmp/px.yml
 
+if [ "$storageless" = true ]; then
+  JQ="docker run -i --rm --name jq endeveit/docker-jq jq"
+  INDEX=$(kubectl get ds portworx -n kube-system -o json | $JQ '.spec.template.spec.containers[0].args | bsearch("-a")')
+  kubectl patch ds portworx -n kube-system --type='json' -p '[{"op":"remove","path":"/spec/template/spec/containers/0/args/'$INDEX'"}]'
+fi
+
 curl -sL https://github.com/portworx/pxc/releases/download/v0.33.0/pxc-v0.33.0.linux.amd64.tar.gz | tar xvz -C /tmp/.
 mv /tmp/pxc/kubectl-pxc /usr/bin/.
 
