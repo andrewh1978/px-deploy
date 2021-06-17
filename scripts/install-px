@@ -10,6 +10,8 @@
 # If you want to deploy using the operator, set the environment variable operator=true
 # otherwise the DaemonSet will be used
 
+# You can also set csi=true and security=true
+
 # If you select cloud=vsphere, clouddrives will be provisioned from vsphere_disks
 
 if [ $cloud = vsphere ]; then
@@ -50,6 +52,8 @@ fi
 [ "$vsphere_suffix" ] && url="$url&$vsphere_suffix"
 [ "$platform" = ocp4 ] && url="$url&r=17001"
 [ "$operator" = true ] && url="$url&operator=true"
+[ "$security" = true ] && url="$url&security=true"
+[ "$csi" = true ] && url="$url&csi=true"
 
 if [ "$platform" = ocp4 ]; then
   oc apply -f - <<EOF
