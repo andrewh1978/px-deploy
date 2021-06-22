@@ -3,7 +3,8 @@ exec &>/var/log/px-deploy/all-master
 [ -d /tmp/gcloud ] && mkdir /root/.config && mv /tmp/gcloud /root/.config
 [ -d /tmp/azure ] && mv /tmp/azure /root/.azure
 mv /tmp/assets /assets
-echo 'source <(kubectl completion bash)' >>/root/.bashrc
+echo 'source <(kubectl completion bash 2>/dev/null)' >>/etc/bash_completion.d/kubectl
+echo 'source <(oc completion bash 2>/dev/null)' >>/etc/bash_completion.d/oc
 echo 'alias k=kubectl' >>/root/.bashrc
 cat <<EOF >/etc/exports
 / 10.0.0.0/8(rw,no_root_squash)
