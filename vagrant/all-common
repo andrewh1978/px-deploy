@@ -1,3 +1,6 @@
+sysctl -w net.ipv6.conf.all.disable_ipv6=1 >/etc/sysctl.conf
+sysctl -w net.ipv6.conf.default.disable_ipv6=1 >/etc/sysctl.conf
+
 sed -i '/^127.0.0.1.*\(master\|node\)/d' /etc/hosts
 while ! yum install -y dnf; do sleep 1; done
 if [ -f /etc/selinux/config ]; then
@@ -6,7 +9,6 @@ if [ -f /etc/selinux/config ]; then
 fi
 swapoff -a
 sed -i /swap/d /etc/fstab
-
 
 mkdir -p /root/.ssh
 mv /tmp/id_rsa /root/.ssh
