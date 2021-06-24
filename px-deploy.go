@@ -703,14 +703,14 @@ EOF
 	} else if config.Cloud == "vsphere" {
 		var url = config.Vsphere_User + `:` + config.Vsphere_Password + `@` + config.Vsphere_Host
 		output, _ = exec.Command("bash", "-c", `
-      for i in $(govc find -u `+url+` -k / -type m | egrep "vagrant_`+config.Name+`-(master|node)"); do
-        if [ $(govc vm.info -u `+url+` -k -json $i | jq -r '.VirtualMachines[0].Config.ExtraConfig[] | select(.Key==("pxd.deployment")).Value') = `+config.Name+` ] ; then
-          disks="$disks $(govc vm.info -json -k -u `+url+` -k -json $i | jq -r ".VirtualMachines[].Layout.Disk[].DiskFile[0]" | grep -v vagrant | cut -f 2 -d ' ')"
-          govc vm.destroy -u `+url+` -k $i
+      for i in $(govc find -u '`+url+`' -k / -type m | egrep "vagrant_`+config.Name+`-(master|node)"); do
+        if [ $(govc vm.info -u '`+url+`' -k -json $i | jq -r '.VirtualMachines[0].Config.ExtraConfig[] | select(.Key==("pxd.deployment")).Value') = `+config.Name+` ] ; then
+          disks="$disks $(govc vm.info -json -k -u '`+url+`' -k -json $i | jq -r ".VirtualMachines[].Layout.Disk[].DiskFile[0]" | grep -v vagrant | cut -f 2 -d ' ')"
+          govc vm.destroy -u '`+url+`' -k $i
         fi
       done
       for i in $disks; do
-        govc datastore.rm -k -u `+url+` -ds `+config.Vsphere_Datastore+` "[`+config.Vsphere_Datastore+`] $i"
+        govc datastore.rm -k -u '`+url+`' -ds `+config.Vsphere_Datastore+` "[`+config.Vsphere_Datastore+`] $i"
       done
     `).CombinedOutput()
 	} else {
@@ -734,7 +734,7 @@ func get_ip(deployment string) string {
 		output, _ = exec.Command("bash", "-c", `az vm show -g `+config.Azure__Group+` -n master-1 -d --query publicIps --output tsv`).Output()
 	} else if config.Cloud == "vsphere" {
 		var url = config.Vsphere_User + `:` + config.Vsphere_Password + `@` + config.Vsphere_Host
-		output, _ = exec.Command("bash", "-c", `govc vm.info -u `+url+` -k -json $(govc find -u `+url+` -k / -type m -runtime.powerState poweredOn | grep `+deployment+`-master) | jq -r '.VirtualMachines[0].Config.ExtraConfig[] | select(.Key==("guestinfo.local-ipv4")).Value' 2>/dev/null`).Output()
+		output, _ = exec.Command("bash", "-c", `govc vm.info -u '`+url+`' -k -json $(govc find -u '`+url+`' -k / -type m -runtime.powerState poweredOn | grep `+deployment+`-master) | jq -r '.VirtualMachines[0].Config.ExtraConfig[] | select(.Key==("guestinfo.local-ipv4")).Value' 2>/dev/null`).Output()
 	}
 	return strings.TrimSuffix(string(output), "\n")
 }
