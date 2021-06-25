@@ -12,7 +12,9 @@ end
 require "base64"
 require "yaml"
 yaml = YAML.load(File.read("/px-deploy/.px-deploy/deployments/#{ENV['deployment']}.yml"))
+
 env = yaml.merge(yaml['env'])
+if env.has_key?('vsphere_password') then env['vsphere_password'] = env['vsphere_password'].gsub('$','\$') end
 master_scripts = ["all-common", "#{yaml['platform']}-common", "all-master", "#{yaml['platform']}-master"]
 node_scripts = ["all-common", "#{yaml['platform']}-common", "#{yaml['platform']}-node"]
 node_script = "mkdir /var/log/px-deploy\n"
