@@ -3,7 +3,7 @@ curl -sL https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_Li
 curl -sL -o /usr/bin/kubectl "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
 chmod 755 /usr/bin/kubectl
 
-while ! dnf install -y docker azure-cli; do
+while ! dnf install -y docker; do
   sleep 2
 done
 systemctl enable docker
