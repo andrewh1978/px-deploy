@@ -119,7 +119,7 @@ done
 while ! kubectl get ServiceMonitor,Alertmanager,PrometheusRule,Prometheus; do
   sleep 2
 done
-curl -so /tmp/px.yml $url
+curl -sko /tmp/px.yml $url
 kubectl apply -f /tmp/px.yml
 
 if [ "$storageless" = true ]; then
@@ -132,7 +132,7 @@ curl -sL https://github.com/portworx/pxc/releases/download/v0.33.0/pxc-v0.33.0.l
 mv /tmp/pxc/kubectl-pxc /usr/bin/.
 
 # Install storkctl
-stork_image=$(curl -s https://install.portworx.com/$px_version?comp=stork | awk '/image: openstorage.stork/{print$2}')
+stork_image=$(curl -sk https://install.portworx.com/$px_version?comp=stork | awk '/image: openstorage.stork/{print$2}')
 id=$(docker create $stork_image)
 docker cp $id:/storkctl/linux/storkctl /usr/bin
 
