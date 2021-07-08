@@ -5,7 +5,8 @@ nodes: 3
 scripts: ["install-awscli", "install-px"]
 env:
   #licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
-  px_suffix: "k=etcd:http://master-1:2382&c=metro-cluster&b=false"
+  px_suffix: "c=metro-cluster&b=false"
+  etcd: "EXTERNAL"
 cluster:
   - id: 1
     scripts: ["etcd", "metro", "aws-elb", "licenses", "petclinic"]
