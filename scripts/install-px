@@ -54,6 +54,7 @@ fi
 [ "$operator" = true ] && url="$url&operator=true"
 [ "$security" = true ] && url="$url&security=true"
 [ "$csi" = true ] && url="$url&csi=true"
+[ "$etcd" = EXTERNAL ] && url="$url&k=etcd:http://$(ssh master-1 curl https://ipinfo.io/ip):2382"
 
 if [ "$platform" = ocp4 ]; then
   oc apply -f - <<EOF
@@ -70,7 +71,7 @@ apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
   name: portworx-certified
-  namespace: kube-system
+  namespace: openshift-operators
 spec:
   channel: stable
   installPlanApproval: Automatic
@@ -79,8 +80,7 @@ spec:
   sourceNamespace: openshift-marketplace
   startingCSV: portworx-operator.v1.4.3
 EOF
-  curl -s https://operatorhub.io/instd 's/namespace: operators/namespace: kube-system/' | oc apply -f -
-  while ! oc get csv -n kube-system | grep -q Succeeded ; do
+  while ! oc get csv -n openshift-operators  | grep portworx-operator | grep -q Succeeded ; do
     sleep 2
   done
 fi
