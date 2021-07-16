@@ -18,6 +18,7 @@ chmod +x client-setup.sh
 Export the pgo client values.
 
 ```
+export PATH="${HOME?}/.pgo/pgo:$PATH"
 export PGOUSER="${HOME?}/.pgo/pgo/pgouser"
 export PGO_CA_CERT="${HOME?}/.pgo/pgo/client.crt"
 export PGO_CLIENT_CERT="${HOME?}/.pgo/pgo/client.crt"
