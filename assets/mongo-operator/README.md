@@ -40,4 +40,7 @@ Validate that the data is present.
 
 `db.ships.find().pretty()`
 
+Show only the names of the ships.
+`db.ships.find({}, {name:true, _id:false})`
+
 
