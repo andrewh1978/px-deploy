@@ -76,7 +76,7 @@ function get_credentials() {
   if [ -z "$EXISTING_SERVICE_ACCOUNT" ]; then
     # create the service account:
     >&2 echo "creating serviceaccount: $SERVICEACCOUNT in namespace $SERVICEACCOUNT_NAMESPACE"
-    kubectl create -n $SERVICEACCOUNT_NAMESPACE serviceaccount $SERVICEACCOUNT
+    >&2 kubectl create -n $SERVICEACCOUNT_NAMESPACE serviceaccount $SERVICEACCOUNT >&/dev/null
 
     # get the RBAC api versions
     RBAC_API_VERSIONS=$(kubectl api-versions | grep rbac)
@@ -84,7 +84,7 @@ function get_credentials() {
     # If RBAC is enabled - assign cluster-admin role to service account:
     if [ -n "$RBAC_API_VERSIONS" ]; then
       >&2 echo "creating clusterrolebinding: $SERVICEACCOUNT in namespace $NAMESPACE"
-      kubectl create -n $SERVICEACCOUNT_NAMESPACE clusterrolebinding $SERVICEACCOUNT \
+      >&2 kubectl create -n $SERVICEACCOUNT_NAMESPACE clusterrolebinding $SERVICEACCOUNT \
         --clusterrole=cluster-admin \
         --serviceaccount=$SERVICEACCOUNT_NAMESPACE:$SERVICEACCOUNT
     fi
