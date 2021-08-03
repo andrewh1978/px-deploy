@@ -60,9 +60,7 @@ function write_cluster_secret() {
   app_kubectl patch secret $CREDENTIALS_SECRET_NAME -p="{\\\"data\\\":{\\\"CLUSTER_CREDENTIALS_${cluster}\\\":\\\"${value}\\\"}}"
 }
 
-# print a JSON object with everything the health-portal api server needs
-# to connect to the k8s and ssh onto this cluster
-function get_credentials() {
+function ensure_service_account() {
   # do we already have the service account namespace?
   EXISTING_SERVICE_ACCOUNT_NAMESPACE=$(kubectl get ns | grep "$SERVICEACCOUNT_NAMESPACE")
 
@@ -75,21 +73,25 @@ function get_credentials() {
 
   if [ -z "$EXISTING_SERVICE_ACCOUNT" ]; then
     # create the service account:
-    >&2 echo "creating serviceaccount: $SERVICEACCOUNT in namespace $SERVICEACCOUNT_NAMESPACE"
-    >&2 kubectl create -n $SERVICEACCOUNT_NAMESPACE serviceaccount $SERVICEACCOUNT >&/dev/null
+    echo "creating serviceaccount: $SERVICEACCOUNT in namespace $SERVICEACCOUNT_NAMESPACE"
+    kubectl create -n $SERVICEACCOUNT_NAMESPACE serviceaccount $SERVICEACCOUNT
 
     # get the RBAC api versions
     RBAC_API_VERSIONS=$(kubectl api-versions | grep rbac)
 
     # If RBAC is enabled - assign cluster-admin role to service account:
     if [ -n "$RBAC_API_VERSIONS" ]; then
-      >&2 echo "creating clusterrolebinding: $SERVICEACCOUNT in namespace $NAMESPACE"
-      >&2 kubectl create -n $SERVICEACCOUNT_NAMESPACE clusterrolebinding $SERVICEACCOUNT \
+      echo "creating clusterrolebinding: $SERVICEACCOUNT in namespace $NAMESPACE"
+      kubectl create -n $SERVICEACCOUNT_NAMESPACE clusterrolebinding $SERVICEACCOUNT \
         --clusterrole=cluster-admin \
         --serviceaccount=$SERVICEACCOUNT_NAMESPACE:$SERVICEACCOUNT
     fi
   fi
+}
 
+# print a JSON object with everything the health-portal api server needs
+# to connect to the k8s and ssh onto this cluster
+function get_credentials() {
   # get the secret name for the service account:
   >&2 echo "getting the secret name for serviceaccount: $SERVICEACCOUNT in namespace $SERVICEACCOUNT_NAMESPACE"
   SECRETNAME=$(kubectl get -n $SERVICEACCOUNT_NAMESPACE serviceaccounts $SERVICEACCOUNT -o "jsonpath={..secrets[0].name}")
@@ -129,6 +131,7 @@ function install_cluster() {
     exit 1
   fi
   ensure_app
+  ensure_service_account
   credentials=$(get_credentials | base64 -w 0)
   write_cluster_secret "$credentials"
 }
