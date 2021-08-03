@@ -108,6 +108,7 @@ function get_credentials() {
 
   PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
   PRIVATE_IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
+  PRIVATE_KEY=$(cat /root/.ssh/id_rsa | base64 -w 0)
 
   # now we have the values - we want to add them to the secret on master-1
   cat << EOF
@@ -116,7 +117,8 @@ function get_credentials() {
     "publicIp": "$PUBLIC_IP",
     "privateIp": "$PRIVATE_IP",
     "base64_token": "$BASE64_BEARER_TOKEN",
-    "base64_ca": "$BASE64_CA_FILE"
+    "base64_ca": "$BASE64_CA_FILE",
+    "base64_privateKey": "$PRIVATE_KEY"
   }
 EOF
 }
