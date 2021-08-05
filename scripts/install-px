@@ -53,7 +53,7 @@ fi
 [ "$platform" = ocp4 ] && url="$url&r=17001"
 [ "$operator" = true ] && url="$url&operator=true"
 [ "$security" = true ] && url="$url&security=true"
-[ "$csi" = true ] && url="$url&csi=true"
+[ -n "$csi" ] && url="$url&csi=$csi"
 [ "$etcd" = EXTERNAL ] && url="$url&k=etcd:http://$(ssh master-1 curl https://ipinfo.io/ip):2382"
 
 if [ "$platform" = ocp4 ]; then
