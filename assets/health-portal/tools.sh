@@ -136,4 +136,35 @@ function install_cluster() {
   write_cluster_secret "$credentials"
 }
 
+function url_summary() {
+  if [ -z "$cluster" ]; then
+    >&2 echo "cluster variable not defined"
+    exit 1
+  fi
+  if [[ "$cluster" != "1" ]]; then
+    exit 0
+  fi
+  echo ""
+  echo "-------------------------------------------------------"
+  echo ""
+  echo "Health portal app can be viewed at the following urls:"
+  echo ""
+  echo "-------------------------------------------------------"
+  echo ""
+  EC2_AVAIL_ZONE=`curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone`
+  EC2_REGION="`echo \"$EC2_AVAIL_ZONE\" | sed 's/[a-z]$//'`"
+  instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+  vpc=$(aws ec2 describe-instances --region $EC2_REGION --instance-ids $instance_id --query Reservations[0].Instances[0].VpcId --output text)
+  instances=$(aws ec2 describe-instances --region $EC2_REGION --filters "Name=network-interface.vpc-id,Values=$vpc" --query "Reservations[*].Instances[*].InstanceId" --output text)
+  for i in $instances; do
+    aws ec2 describe-instances --region $EC2_REGION --instance-id $i --query Reservations[].Instances[].Tags --output text | grep -q Name.*node
+    if [ $? -eq 0 ]; then
+      ip=$(aws ec2 describe-instances --region $EC2_REGION --instance-id $i --query Reservations[].Instances[].PublicIpAddress --output text)
+      echo "http://$ip:32384"
+    fi
+  done
+  echo ""
+  echo "-------------------------------------------------------"
+}
+
 eval "$@"
