@@ -1,3 +1,5 @@
 description: Install and run Portworx on each cluster
-scripts: ["install-awscli", "install-px", "health-portal-credentials", "health-portal-app"]
-post_script: "health-portal-summary"
+scripts: ["install-awscli", "install-px", "health-portal-credentials", "autopilot"]
+post_script: "health-portal-app"
+env:
+  px_suffix: "mon=true"

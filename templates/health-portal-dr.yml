@@ -1,9 +1,9 @@
 description: Deploys 2 clusters with Portworx, sets up and configures a cluster pairing, configures an async DR schedule with a loadbalancer in front of the setup.
 clusters: 2
-scripts: ["install-awscli", "install-px", "licenses"]
+scripts: ["install-awscli", "install-px", "licenses", "health-portal-credentials"]
 cluster:
   - id: 1
-    scripts: ["aws-elb", "async-dr", "health-portal-credentials", "health-portal-app"]
+    scripts: ["aws-elb", "async-dr"]
   - id: 2
-    scripts: ["clusterpair-dr", "health-portal-credentials"]
-post_script: "health-portal-summary"
+    scripts: ["clusterpair-dr"]
+post_script: "health-portal-app"
