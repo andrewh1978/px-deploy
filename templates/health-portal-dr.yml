@@ -3,6 +3,7 @@ clusters: 2
 scripts: ["install-awscli", "install-px", "licenses"]
 cluster:
   - id: 1
-    scripts: ["aws-elb", "async-dr", "health-portal-credentials"]
+    scripts: ["aws-elb", "async-dr", "health-portal-credentials", "health-portal-app"]
   - id: 2
     scripts: ["clusterpair-dr", "health-portal-credentials"]
+post_script: "health-portal-summary"
