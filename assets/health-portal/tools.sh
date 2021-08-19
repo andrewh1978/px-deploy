@@ -136,7 +136,41 @@ function install_cluster() {
   write_cluster_secret "$credentials"
 }
 
+function install_nginx_ingress() {
+  echo "installing nginx ingress"
+  kubectl apply -f /assets/nginx-ingress/nginx-ingress-node-port.yaml
+}
+
+function install_health_portal() {
+  echo "installing health portal"
+  kubectl apply -f /assets/health-portal/deployment.yaml
+}
+
 function url_summary() {
+  echo ""
+  echo "-------------------------------------------------------"
+  echo ""
+  echo "Health portal stack can be viewed at the following urls:"
+  echo ""
+  echo "-------------------------------------------------------"
+  echo ""
+  EC2_AVAIL_ZONE=`curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone`
+  EC2_REGION="`echo \"$EC2_AVAIL_ZONE\" | sed 's/[a-z]$//'`"
+  instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+  ip=$(aws ec2 describe-instances --region $EC2_REGION --instance-id $instance_id --query Reservations[].Instances[].PublicIpAddress --output text)  
+  echo "Health Portal:"
+  echo "http://$ip:32384"
+  echo ""
+  echo "Grafana: (user: admin, password: admin)"
+  echo "http://$ip:30112"
+  echo ""
+  echo "Cockroach:"
+  echo "http://$ip:30111"
+  echo ""
+  echo "-------------------------------------------------------"
+}
+
+function install_app() {
   if [ -z "$cluster" ]; then
     >&2 echo "cluster variable not defined"
     exit 1
@@ -144,27 +178,9 @@ function url_summary() {
   if [[ "$cluster" != "1" ]]; then
     exit 0
   fi
-  echo ""
-  echo "-------------------------------------------------------"
-  echo ""
-  echo "Health portal app can be viewed at the following urls:"
-  echo ""
-  echo "-------------------------------------------------------"
-  echo ""
-  EC2_AVAIL_ZONE=`curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone`
-  EC2_REGION="`echo \"$EC2_AVAIL_ZONE\" | sed 's/[a-z]$//'`"
-  instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
-  vpc=$(aws ec2 describe-instances --region $EC2_REGION --instance-ids $instance_id --query Reservations[0].Instances[0].VpcId --output text)
-  instances=$(aws ec2 describe-instances --region $EC2_REGION --filters "Name=network-interface.vpc-id,Values=$vpc" --query "Reservations[*].Instances[*].InstanceId" --output text)
-  for i in $instances; do
-    aws ec2 describe-instances --region $EC2_REGION --instance-id $i --query Reservations[].Instances[].Tags --output text | grep -q Name.*node
-    if [ $? -eq 0 ]; then
-      ip=$(aws ec2 describe-instances --region $EC2_REGION --instance-id $i --query Reservations[].Instances[].PublicIpAddress --output text)
-      echo "http://$ip:32384"
-    fi
-  done
-  echo ""
-  echo "-------------------------------------------------------"
+  install_nginx_ingress
+  install_health_portal
+  url_summary   
 }
 
 eval "$@"

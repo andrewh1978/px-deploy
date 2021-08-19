@@ -1,2 +1,1 @@
-kubectl apply -f /assets/nginx-ingress/nginx-ingress-node-port.yaml
-kubectl apply -f /assets/health-portal/deployment.yaml
+bash /assets/health-portal/tools.sh install_app
