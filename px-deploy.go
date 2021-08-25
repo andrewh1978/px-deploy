@@ -634,7 +634,7 @@ func destroy_deployment(name string) {
 				  ssh master-$i "cd /root/ocp4 ; openshift-install destroy cluster --log-level=debug"
 				done
 			`).Run()
-			if (err != nil) { die("Failed to destroy OCP4: " + err.Error()) }
+			if (err != nil) { fmt.Println(Yellow + "Failed to destroy OCP4 - please clean up VMs manually: " + err.Error() + Reset) }
 		} else if config.Platform == "eks" {
 			fmt.Println(White + "Destroying EKS, wait about 5 minutes (per cluster)..." + Reset)
 			err := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, `
