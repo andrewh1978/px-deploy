@@ -1,0 +1,7 @@
+apiVersion: volumesnapshot.external-storage.k8s.io/v1
+kind: VolumeSnapshot
+metadata:
+  name: px-postgres-snapshot
+  namespace: default
+spec:
+  persistentVolumeClaimName: postgres-data
