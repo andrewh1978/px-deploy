@@ -1,0 +1,11 @@
+apiVersion: volumesnapshot.external-storage.k8s.io/v1
+kind: VolumeSnapshot
+metadata:
+  name: postgres-snapshot
+  namespace: default
+  annotations:
+    portworx/snapshot-type: cloud
+    portworx/cloud-cred-id: minio
+spec:
+  persistentVolumeClaimName: postgres-data
+

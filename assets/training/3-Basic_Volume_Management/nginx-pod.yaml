@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  containers:
+  - name: nginx
+    image: nginx:latest
+    volumeMounts:
+    - name: testvol
+      mountPath: /usr/share/nginx/html
+    ports:
+    - containerPort: 80
+  volumes:
+  - name: testvol
+    portworxVolume:
+      volumeID: "testvol"
