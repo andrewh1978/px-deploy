@@ -87,11 +87,8 @@ fi
 
 if [ "$operator" = true -a "$platform" != ocp4 ]; then
   [ -e /sbin/azure-repo-svc ] && kubectl taint node --all node-role.kubernetes.io/master-
-  curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.17.0/install.sh | bash -s v0.17.0
-  kubectl create -f https://operatorhub.io/install/portworx.yaml
-  while ! kubectl get csv -n operators | grep -q Succeeded ; do
-    sleep 2
-  done
+  kubectl apply -f "https://install.portworx.com/$px_version?comp=pxoperator"
+  kubectl wait --for=condition=ready pod -lname=portworx-operator -n kube-system
   [ -e /sbin/azure-repo-svc ] && kubectl taint node --all node-role.kubernetes.io/master=:NoSchedule
 fi
 
