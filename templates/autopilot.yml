@@ -5,6 +5,7 @@ scripts: ["install-px", "autopilot"]
 env:
   #licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
   px_suffix: "mon=true"
+  operator: "false"
 
 # NOTE: edit env.licenses above, or define in defaults.yml
 # Postgres and the postgres autopilot rule are already deployed

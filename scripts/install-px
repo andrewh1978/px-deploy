@@ -7,8 +7,7 @@
 
 # Default secrets store is k8s; can also set environment variable secrets=vault
 
-# If you want to deploy using the operator, set the environment variable operator=true
-# otherwise the DaemonSet will be used
+# If you do not want to deploy using the operator, set the environment variable operator=false, and then the DaemonSet will be used
 
 # You can also set csi=true and security=true
 
@@ -34,6 +33,7 @@ EOF
   done
 fi
 
+docker pull $(curl -sk https://install.portworx.com/$px_version?comp=stork | awk '/image: openstorage.stork/{print$2}') &
 k8s_version=$(kubectl version --short | awk -Fv '/Server Version: / {print $3}')
 url="https://install.portworx.com/$px_version?kbver=$k8s_version&b=true&c=px-deploy-$cluster&stork=true&st=k8s&lh=true&mon=true"
 [ -e /usr/bin/oc ] && url="$url&osft=true"
@@ -51,7 +51,7 @@ fi
 [ "$px_suffix" ] && url="$url&$px_suffix"
 [ "$vsphere_suffix" ] && url="$url&$vsphere_suffix"
 [ "$platform" = ocp4 ] && url="$url&r=17001"
-[ "$operator" = true ] && url="$url&operator=true"
+[ "$operator" = false ] || url="$url&operator=true"
 [ "$security" = true ] && url="$url&security=true"
 [ -n "$csi" ] && url="$url&csi=$csi"
 [ "$etcd" = EXTERNAL ] && url="$url&k=etcd:http://$(ssh master-1 curl https://ipinfo.io/ip):2382"
@@ -85,10 +85,12 @@ EOF
   done
 fi
 
-if [ "$operator" = true -a "$platform" != ocp4 ]; then
+if [ "$operator" != false -a "$platform" != ocp4 ]; then
   [ -e /sbin/azure-repo-svc ] && kubectl taint node --all node-role.kubernetes.io/master-
   kubectl apply -f "https://install.portworx.com/$px_version?comp=pxoperator"
-  kubectl wait --for=condition=ready pod -lname=portworx-operator -n kube-system
+  while ! kubectl wait --for=condition=ready pod -lname=portworx-operator -n kube-system; do
+    sleep 2
+  done
   [ -e /sbin/azure-repo-svc ] && kubectl taint node --all node-role.kubernetes.io/master=:NoSchedule
 fi
 
@@ -129,6 +131,7 @@ curl -sL https://github.com/portworx/pxc/releases/download/v0.33.0/pxc-v0.33.0.l
 mv /tmp/pxc/kubectl-pxc /usr/bin/.
 
 # Install storkctl
+wait
 stork_image=$(curl -sk https://install.portworx.com/$px_version?comp=stork | awk '/image: openstorage.stork/{print$2}')
 id=$(docker create $stork_image)
 docker cp $id:/storkctl/linux/storkctl /usr/bin
