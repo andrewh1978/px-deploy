@@ -7,11 +7,14 @@ parameters:
   repl: "3"
   io_profile: "db"
   priority_io: "high"
+allowVolumeExpansion: true
 ---
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
    name: postgres-data
+   labels:
+      app: postgres
    annotations:
      volume.beta.kubernetes.io/storage-class: px-postgres-sc
 spec:
