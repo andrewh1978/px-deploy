@@ -84,28 +84,54 @@ spec:
   selector:
     app: frontend
 ---
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: healthportal
   namespace: healthportal
-  annotations:
-    kubernetes.io/ingress.class: "nginx"
+  name: ingress
 spec:
-  rules:
-  - http:
-      paths:
-      - path: /api/v1
-        pathType: Prefix
-        backend:
-          service:
-            name: api
-            port:
-              number: 80
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: frontend
-            port:
-              number: 80
+  selector:
+    matchLabels:
+      app: ingress
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: ingress
+    spec:
+      containers:
+      - name: ingress
+        image: docker.io/binocarlos/noxy:latest
+        imagePullPolicy: "Always"
+        ports:
+        - containerPort: 80
+        env:
+        - name: NOXY_DEFAULT_HOST
+          value: frontend
+        - name: NOXY_DEFAULT_WS
+          value: "1"
+        - name: NOXY_API_FRONT
+          value: /api/v1
+        - name: NOXY_API_HOST
+          value: api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingress
+  namespace: healthportal
+spec:
+  type: NodePort
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 80
+    nodePort: 32384
+  selector:
+    app: ingress
