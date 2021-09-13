@@ -52,8 +52,8 @@ pxbackupctl create schedulepolicy --interval-minutes 15 --interval-retain 12 --n
 sleep 5
 ssh master-2 cat /root/.kube/config > /cluster-2-kube-config
 ssh master-3 cat /root/.kube/config > /cluster-3-kube-config
-pxbackupctl create cluster --name cluster-1 -k /cluster-2-kube-config -e $BACKUP_POD_IP:10002 --orgID default
-pxbackupctl create cluster --name cluster-2 -k /cluster-3-kube-config -e $BACKUP_POD_IP:10002 --orgID default
+pxbackupctl create cluster --name cluster-2 -k /cluster-2-kube-config -e $BACKUP_POD_IP:10002 --orgID default
+pxbackupctl create cluster --name cluster-3 -k /cluster-3-kube-config -e $BACKUP_POD_IP:10002 --orgID default
 
 # Patches Prometheus operator to allow multiple instances to run
 kubectl patch deployment prometheus-operator -n kube-system  --type=json -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "-namespaces=kube-system" }]'
