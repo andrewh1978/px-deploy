@@ -88,6 +88,7 @@ fi
 if [ "$operator" != false -a "$platform" != ocp4 ]; then
   [ -e /sbin/azure-repo-svc ] && kubectl taint node --all node-role.kubernetes.io/master-
   kubectl apply -f "https://install.portworx.com/$px_version?comp=pxoperator"
+  kubectl create ns portworx
   while ! kubectl wait --for=condition=ready pod -lname=portworx-operator -n kube-system; do
     sleep 2
   done
@@ -119,6 +120,9 @@ while ! kubectl get ServiceMonitor,Alertmanager,PrometheusRule,Prometheus; do
   sleep 2
 done
 curl -sko /tmp/px.yml $url
+if [ "$operator" != false -a "$platform" != ocp4 ]; then
+  sed -i 's/namespace: kube-system/namespace: portworx/' /tmp/px.yml
+fi
 kubectl apply -f /tmp/px.yml
 
 if [ "$storageless" = true ]; then
