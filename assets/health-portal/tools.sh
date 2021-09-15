@@ -167,9 +167,11 @@ function install_autopilot() {
 function install_backups() {
   echo "installing backups"
   kubectl apply -f /assets/minio/minio-deployment.yml
-  ip=`curl -s https://ipinfo.io/ip`
-  sed -i -e 's/xxxx/'"$ip"'/g' /assets/backup-restore/backupLocation.yml
+  # we define the backup location in the scenario deployment
+  # ip=`curl -s https://ipinfo.io/ip`
+  # sed -i -e 's/xxxx/'"$ip"'/g' /assets/backup-restore/backupLocation.yml
   kubectl wait --for=condition=ready pod -l app=minio -n minio --timeout 30m
+  # create a bucket for our backups
   docker run --rm -v /etc/hosts:/etc/hosts -e AWS_ACCESS_KEY_ID=minio -e AWS_SECRET_ACCESS_KEY=minio123 amazon/aws-cli --endpoint-url http://node-$cluster-1:30221 s3 mb s3://portworx
 }
 
