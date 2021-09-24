@@ -1,2 +1,0 @@
-description: Deploys a single K8s cluster with Portworx and CockroachDB running
-scripts: ["install-px", "autopilot", "cockroach"]

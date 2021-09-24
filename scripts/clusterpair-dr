@@ -1,6 +1,11 @@
 # Configures cluster pairs between cluster and cluster 1
 while : ; do
-  token=$(kubectl exec -n kube-system -it $(kubectl get pods -n kube-system -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- /opt/pwx/bin/pxctl cluster token show 2>/dev/null | cut -f 3 -d " ")
+  if [ "$operator" = false ]; then
+    namespace=kube-system
+  else
+    namespace=portworx
+  fi
+  token=$(kubectl exec -n $namespace -it $(kubectl get pods -n $namespace -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- /opt/pwx/bin/pxctl cluster token show 2>/dev/null | cut -f 3 -d " ")
   echo $token | grep -Eq '\w{128}'
   [ $? -eq 0 ] && break
   sleep 5

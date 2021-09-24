@@ -82,11 +82,8 @@ $ px-deploy templates
 NAME                         DESCRIPTION
 async-dr                     Deploys 2 clusters with Portworx, sets up and configures a cluster pairing,
                              configures an async DR schedule with a loadbalancer in front of the setup.
-autopilot                    Deploys a Kubernetes cluster and Portworx with Promethues and Autopilot
-                             pre-configured.
 backup-restore               Deploys a Kubernetes cluster, Minio S3 storage, Petclinic Application and
                              Backup/Restore config
-cockroach                    Deploys a single K8s cluster with Portworx and CockroachDB running
 elk                          Deploys an ELK stack of 3 master nodes, 3 data nodes and 2 coordinator nodes, as per
                              https://docs.portworx.com/portworx-install-with-kubernetes/application-install-with-kubernetes/elastic-search-and-kibana/
 harbor                       Deploys a single K8s cluster with Portworx and Harbor (https://goharbor.io/)
@@ -96,11 +93,8 @@ migration                    Deploys 2 clusters with Portworx, sets up and confi
                              deploys a set of apps and a migration template.
 px-backup                    A single Kubernetes cluster with Portworx and PX-Backup via Helm installed
 px-fio-example               An example fio benchmark on a gp2 disk and a Portworx volume on a gp2 disk
-px-ibm-oem                   A single Openshift 3.11 cluster with Portworx installed with IBM OEM license
 px-vs-storageos-fio-example  An example fio benchmark on a gp2 disk, a Portworx volume on a gp2 disk, and a
                              StorageOS volume on a gp2 disk
-px-with-gui                  A single K8s cluster with Portworx, Lighthouse and VNC access to access the
-                             Lighthouse UI for demo purposes
 px                           A single Kubernetes cluster with Portworx installed
 storageos                    A single Kubernetes cluster with StorageOS installed
 training                     Deploys training clusters
@@ -208,7 +202,7 @@ px-deploy create -n foo -t clusterpair -e install_apps=true,foo=bar
 The `install-px` script looks for an environment variable called `cloud_drive`. If it exists, it will deploy Portworx using a clouddrive rather than looking for all attached devices. Note that this is a requirement for Openshift 4. For example:
 ```
 px-deploy create -n foo -t px -e cloud_drive=type%3Dgp2%2Csize%3D150
-px-deploy create -n bar -t px --platform ocp4 -e cloud_drive=type%3Dgp2%2Csize%3D150,operator=true
+px-deploy create -n bar -t px --platform ocp4 -e cloud_drive=type%3Dgp2%2Csize%3D150
 px-deploy create -n baz -t px --platform gke --cloud gcp -e cloud_drive="type%3Dpd-standard%2Csize%3D150"
 px-deploy create -n qux -t px --platform aks --cloud azure -e cloud_drive="type%3DPremium_LRS%2Csize%3D150"
 ```

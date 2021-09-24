@@ -3,6 +3,7 @@ clusters: 3
 env:
   px_suffix: "k=etcd:http://master-1:2382&c=disaggregated-cluster&b=false"
   storageless: "true"
+  operator: "false"
 cluster:
   - id: 1
     scripts: ["etcd", "install-px-standalone"]
