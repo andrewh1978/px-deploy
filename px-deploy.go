@@ -132,7 +132,7 @@ func main() {
 				mergo.MergeWithOverwrite(&env, env_template)
 			}
 			if createName != "" {
-				if !regexp.MustCompile(`^[a-zA-Z0-9_\-\.]+$`).MatchString(createName) {
+				if !regexp.MustCompile(`^[a-z0-9_\-\.]+$`).MatchString(createName) {
 					die("Invalid deployment name '" + createName + "'")
 				}
 				if _, err := os.Stat("deployments/" + createName + ".yml"); !os.IsNotExist(err) {
