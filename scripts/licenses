@@ -12,7 +12,12 @@ for i in $licenses; do
 done
 
 for i in $licenses; do
-  while ! kubectl exec -n kube-system -it $(kubectl get pods -n kube-system -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- /opt/pwx/bin/pxctl license activate $i; do
+  if [ "$operator" = false ]; then
+    namespace=kube-system
+  else
+    namespace=portworx
+  fi
+  while ! kubectl exec -n $namespace -it $(kubectl get pods -n $namespace -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- /opt/pwx/bin/pxctl license activate $i; do
     sleep 1
   done
 done
