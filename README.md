@@ -108,8 +108,9 @@ master-2 34.254.155.6 ec2-34-254-155-6.eu-west-1.compute.amazonaws.com
 ```
 
 The `defaults.yml` file sets a number of deployment variables:
- * `aws_ebs` - a list of EBS volumes to be attached to each worker node. This is a space-separate list of type:size pairs, for example: `"gp2:30 standard:20"` will provision a gp2 volume of 30 GB and a standard volume of 20GB
+ * `aws_ebs` - a list of EBS volumes to be attached to each worker node. This is a space-separated list of type:size pairs, for example: `"gp2:30 standard:20"` will provision a gp2 volume of 30 GB and a standard volume of 20GB
  * `aws_region` - AWS region
+ * `aws_tags` - a list of tags to be applied to each node. This is a comma-separate list of name=value pairs, for example: `"Owner=Bob,Purpose=Demo"`
  * `aws_type` - the AWS machine type for each node
  * `cloud` - the cloud on which to deploy (aws, gcp, azure or vsphere)
  * `clusters` - the number of clusters to deploy

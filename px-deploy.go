@@ -45,6 +45,7 @@ type Config struct {
 	Dry_Run                  string
 	Aws_Type                 string
 	Aws_Ebs                  string
+	Aws_Tags                 string
 	Gcp_Type                 string
 	Gcp_Disks                string
 	Gcp_Zone                 string
@@ -95,7 +96,7 @@ var Yellow = "\033[33m"
 var Blue   = "\033[34m"
 
 func main() {
-	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createGcpType, createGcpDisks, createGcpZone, createAzureType, createAzureDisks, createTemplate, createRegion, createCloud, createEnv, connectName, destroyName, statusName, historyNumber string
+	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createAwsTags, createGcpType, createGcpDisks, createGcpZone, createAzureType, createAzureDisks, createTemplate, createRegion, createCloud, createEnv, connectName, destroyName, statusName, historyNumber string
 	var createQuiet, createDryRun, destroyAll bool
 	os.Chdir("/px-deploy/.px-deploy")
 	rootCmd := &cobra.Command{Use: "px-deploy"}
@@ -225,6 +226,12 @@ func main() {
 					die("Invalid AWS EBS volumes '" + createAwsEbs + "'")
 				}
 				config.Aws_Ebs = createAwsEbs
+			}
+			if createAwsTags != "" {
+				if !regexp.MustCompile(`^[0-9a-zA-Z,=\ ]+$`).MatchString(createAwsTags) {
+					die("Invalid AWS tags '" + createAwsTags + "'")
+				}
+				config.Aws_Tags = createAwsTags
 			}
 			if createGcpType != "" {
 				if !regexp.MustCompile(`^[0-9a-z\-]+$`).MatchString(createGcpType) {
@@ -486,6 +493,7 @@ func main() {
 	cmdCreate.Flags().StringVarP(&createStopAfter, "stop_after", "s", "", "Stop instances after this many hours (default "+defaults.Stop_After+")")
 	cmdCreate.Flags().StringVarP(&createAwsType, "aws_type", "", "", "AWS type for each node (default "+defaults.Aws_Type+")")
 	cmdCreate.Flags().StringVarP(&createAwsEbs, "aws_ebs", "", "", "space-separated list of EBS volumes to be attached to worker nodes, eg \"gp2:20 standard:30\" (default "+defaults.Aws_Ebs+")")
+	cmdCreate.Flags().StringVarP(&createAwsTags, "aws_tags", "", "", "comma-separated list of tags to be applies to AWS nodes, eg \"Owner=Bob,Purpose=Demo\"")
 	cmdCreate.Flags().StringVarP(&createGcpType, "gcp_type", "", "", "GCP type for each node (default "+defaults.Gcp_Type+")")
 	cmdCreate.Flags().StringVarP(&createGcpDisks, "gcp_disks", "", "", "space-separated list of EBS volumes to be attached to worker nodes, eg \"pd-standard:20 pd-ssd:30\" (default "+defaults.Gcp_Disks+")")
 	cmdCreate.Flags().StringVarP(&createGcpZone, "gcp_zone", "", defaults.Gcp_Zone, "GCP zone (a, b or c)")
