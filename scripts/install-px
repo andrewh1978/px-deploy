@@ -13,6 +13,8 @@
 
 # If you select cloud=vsphere, clouddrives will be provisioned from vsphere_disks
 
+JQ="docker run -i --rm --name jq endeveit/docker-jq jq"
+
 if [ $cloud = vsphere ]; then
   VSPHERE_USER=$(printf $vsphere_user | base64)
   VSPHERE_PASSWORD=$(printf $vsphere_password | base64)
@@ -126,7 +128,6 @@ fi
 kubectl apply -f /tmp/px.yml
 
 if [ "$storageless" = true ]; then
-  JQ="docker run -i --rm --name jq endeveit/docker-jq jq"
   INDEX=$(kubectl get ds portworx -n kube-system -o json | $JQ '.spec.template.spec.containers[0].args | bsearch("-a")')
   kubectl patch ds portworx -n kube-system --type='json' -p '[{"op":"remove","path":"/spec/template/spec/containers/0/args/'$INDEX'"}]'
 fi
