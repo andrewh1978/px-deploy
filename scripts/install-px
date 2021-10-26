@@ -112,13 +112,6 @@ if [ "$platform" = aks ]; then
   url="$url&aks=true"
 fi
 
-kubectl apply -f https://docs.portworx.com/samples/k8s/portworx-pxc-operator.yaml
-while ! kubectl wait --for=condition=ready pod -l k8s-app=prometheus-operator -n kube-system --timeout 5m; do
-  sleep 2
-done
-while ! kubectl get ServiceMonitor,Alertmanager,PrometheusRule,Prometheus; do
-  sleep 2
-done
 curl -sko /tmp/px.yml $url
 if [ "$operator" != false -a "$platform" != ocp4 ]; then
   sed -i 's/namespace: kube-system/namespace: portworx/' /tmp/px.yml
