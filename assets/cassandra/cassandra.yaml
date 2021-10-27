@@ -1,4 +1,3 @@
-
 kind: Namespace
 apiVersion: v1
 metadata:
@@ -10,6 +9,8 @@ metadata:
   name: px-storageclass
 provisioner: kubernetes.io/portworx-volume
 parameters:
+  openstorage.io/auth-secret-name: px-user-token
+  openstorage.io/auth-secret-namespace: portworx
   repl: "2"
   io_profile: "db_remote"
   priority_io: "high"

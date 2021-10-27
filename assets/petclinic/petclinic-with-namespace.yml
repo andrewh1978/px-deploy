@@ -9,8 +9,10 @@ metadata:
     name: px-repl3-sc
 provisioner: kubernetes.io/portworx-volume
 parameters:
-   repl: "3"
-   io_profile: "db"
+  openstorage.io/auth-secret-name: px-user-token
+  openstorage.io/auth-secret-namespace: portworx
+  repl: "3"
+  io_profile: "db"
 ---
 kind: PersistentVolumeClaim
 apiVersion: v1

@@ -4,6 +4,8 @@ metadata:
   name: portworx-proxy-volume-volume
 provisioner: kubernetes.io/portworx-volume
 parameters:
+  openstorage.io/auth-secret-name: px-user-token
+  openstorage.io/auth-secret-namespace: portworx
   proxy_endpoint: "nfs://master-1"
   proxy_nfs_exportpath: "/var/nfs"
 allowVolumeExpansion: true

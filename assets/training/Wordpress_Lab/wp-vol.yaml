@@ -4,6 +4,8 @@ metadata:
   name: portworx-sc-repl3-shared
 provisioner: kubernetes.io/portworx-volume
 parameters:
+  openstorage.io/auth-secret-name: px-user-token
+  openstorage.io/auth-secret-namespace: portworx
   repl: "3"
   priority_io: "high"
   shared: "true"
