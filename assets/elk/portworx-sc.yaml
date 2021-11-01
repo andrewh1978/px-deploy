@@ -4,9 +4,11 @@ metadata:
     name: px-es-data-sc
 provisioner: kubernetes.io/portworx-volume
 parameters:
-   repl: "2"
-   group: "elastic_data_vg"
-   fg: "false"
+  openstorage.io/auth-secret-name: px-user-token
+  openstorage.io/auth-secret-namespace: portworx
+  repl: "2"
+  group: "elastic_data_vg"
+  fg: "false"
 ---
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
@@ -14,6 +16,8 @@ metadata:
     name: px-es-master-sc
 provisioner: kubernetes.io/portworx-volume
 parameters:
-   repl: "2"
-   group: "elastic_master_vg"
-   fg: "false"
+  openstorage.io/auth-secret-name: px-user-token
+  openstorage.io/auth-secret-namespace: portworx
+  repl: "2"
+  group: "elastic_master_vg"
+  fg: "false"

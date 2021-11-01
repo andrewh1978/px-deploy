@@ -7,7 +7,6 @@ env:
   #licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
   px_suffix: "c=metro-cluster&b=false"
   etcd: "EXTERNAL"
-  operator: "false"
 cluster:
   - id: 1
     scripts: ["etcd", "metro", "aws-elb", "licenses", "petclinic"]

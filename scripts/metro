@@ -1,18 +1,17 @@
 # Install PX-Metro across the clusters
 
 JQ="docker run -i --rm --name jq endeveit/docker-jq jq"
-PWX_POD=$(kubectl get pods -n kube-system -l name=portworx -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
 
-if kubectl get ds/portworx -n kube-system; then
+if [ "$operator" = false ]; then
   x=$(kubectl get ds/portworx -n kube-system -o json | $JQ -c '.spec.template.spec.containers[0].args')
   x="${x%]},-cluster_domain, cluster-$cluster]"
   kubectl patch ds/portworx -n kube-system --type json -p="[{\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/args\", \"value\":$x}]"
 else
-  kubectl patch stc metro-cluster -n kube-system --type json -p='[{"op": "add", "path": "/metadata/annotations/portworx.io~1misc-args", "value":"-cluster_domain cluster-'$cluster'"}]'
+  kubectl patch stc metro-cluster -n portworx --type json -p='[{"op": "add", "path": "/metadata/annotations/portworx.io~1misc-args", "value":"-cluster_domain cluster-'$cluster'"}]'
 fi
 
 while : ; do
-  n=$(kubectl exec -n kube-system -it $(kubectl get pods -n kube-system -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- /opt/pwx/bin/pxctl status 2>/dev/null | grep "Yes.*Online.*Up" | wc -l)
+  n=$(curl -s http://node-1-1:9001/status | $JQ .QuorumMap | grep true | wc -l)
   [ $n -eq $[$nodes*$clusters] ] && break
   sleep 1
   echo Waiting for Portworx cluster to come up

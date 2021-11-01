@@ -4,7 +4,9 @@ metadata:
     name: px-repl2-sc
 provisioner: kubernetes.io/portworx-volume
 parameters:
-   repl: "2"
+  openstorage.io/auth-secret-name: px-user-token
+  openstorage.io/auth-secret-namespace: portworx
+  repl: "2"
 allowVolumeExpansion: true
 ---
 kind: PersistentVolumeClaim

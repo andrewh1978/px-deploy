@@ -1,6 +1,17 @@
 # Configures a clusterpair from cluster 1 to this cluster
+if [ "$operator" = false ]; then
+  NAMESPACE=kube-system
+else
+  NAMESPACE=portworx
+fi
 while : ; do
-  token=$(kubectl exec -n kube-system -it $(kubectl get pods -n kube-system -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- /opt/pwx/bin/pxctl cluster token show 2>/dev/null | cut -f 3 -d " ")
+  POD=$(kubectl get pods -n $NAMESPACE -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ")
+  if [ "$security" = true ]; then
+    JQ="docker run -i --rm --name jq endeveit/docker-jq jq"
+    ADMIN_TOKEN=$(kubectl -n $NAMESPACE get secret px-admin-token -o json | $JQ -r '.data."auth-token"' | base64 -d)
+    kubectl -n $NAMESPACE exec -ti $POD -c portworx -- /opt/pwx/bin/pxctl context create admin --token=$ADMIN_TOKEN
+  fi
+  token=$(kubectl exec -n $NAMESPACE -it $POD -- /opt/pwx/bin/pxctl cluster token show 2>/dev/null | cut -f 3 -d " ")
   echo $token | grep -Eq '\w{128}'
   [ $? -eq 0 ] && break
   sleep 5
