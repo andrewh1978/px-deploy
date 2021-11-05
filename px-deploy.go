@@ -632,6 +632,7 @@ func destroy_deployment(name string) {
 	os.Chdir("/px-deploy/.px-deploy")
 	config := parse_yaml("deployments/" + name + ".yml")
 	var output []byte
+	var err error
 	ip := get_ip(config.Name)
 	fmt.Println(White + "Destroying deployment '" + config.Name + "'..." + Reset)
 	if config.Cloud == "aws" {
@@ -676,9 +677,9 @@ EOF
 			`).Start()
 			time.Sleep(5 * time.Second)
 		}
-		output, _ = exec.Command("bash", "-c", `
+		output, err = exec.Command("bash", "-c", `
       aws configure set default.region `+config.Aws_Region+`
-      aws ec2 delete-key-pair --key-name px-deploy.`+config.Name+` >&/dev/null
+      aws ec2 delete-key-pair --key-name px-deploy.`+config.Name+` >&/dev/null || exit 1
       [ "`+config.Aws__Vpc+`" ] || exit
       for i in $(aws elb describe-load-balancers --query "LoadBalancerDescriptions[].{a:VPCId,b:LoadBalancerName}" --output text | awk '/`+config.Aws__Vpc+`/{print$2}'); do
         aws elb delete-load-balancer --load-balancer-name $i
@@ -703,7 +704,7 @@ EOF
       wait
     `).CombinedOutput()
 	} else if config.Cloud == "gcp" {
-		output, _ = exec.Command("bash", "-c", "gcloud projects delete "+config.Gcp__Project+" --quiet").CombinedOutput()
+		output, err = exec.Command("bash", "-c", "gcloud projects delete "+config.Gcp__Project+" --quiet").CombinedOutput()
 		os.Remove("keys/px-deploy_gcp_" + config.Gcp__Project + ".json")
 	} else if config.Cloud == "azure" {
 		output, _ = exec.Command("bash", "-c", `
@@ -713,7 +714,7 @@ EOF
     `).CombinedOutput()
 	} else if config.Cloud == "vsphere" {
 		var url = config.Vsphere_User + `:` + config.Vsphere_Password + `@` + config.Vsphere_Host
-		output, _ = exec.Command("bash", "-c", `
+		output, err = exec.Command("bash", "-c", `
       for i in $(govc find -u '`+url+`' -k / -type m | egrep "vagrant_`+config.Name+`-(master|node)"); do
         if [ $(govc vm.info -u '`+url+`' -k -json $i | jq -r '.VirtualMachines[0].Config.ExtraConfig[] | select(.Key==("pxd.deployment")).Value') = `+config.Name+` ] ; then
           disks="$disks $(govc vm.info -json -k -u '`+url+`' -k -json $i | jq -r ".VirtualMachines[].Layout.Disk[].DiskFile[0]" | grep -v vagrant | cut -f 2 -d ' ')"
@@ -726,6 +727,9 @@ EOF
     `).CombinedOutput()
 	} else {
 		die("Bad cloud")
+	}
+	if err != nil {
+		die("Failed to destroy")
 	}
 	fmt.Print(string(output))
 	os.Remove("deployments/" + name + ".yml")
