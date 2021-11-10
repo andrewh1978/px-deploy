@@ -15,6 +15,12 @@
 
 JQ="docker run -i --rm --name jq endeveit/docker-jq jq"
 
+if [ "$operator" != false ]; then
+  namespace=portworx
+  kubectl create namespace portworx
+else
+  namespace=kube-system
+fi
 if [ $cloud = vsphere ]; then
   VSPHERE_USER=$(printf $vsphere_user | base64)
   VSPHERE_PASSWORD=$(printf $vsphere_password | base64)
@@ -23,7 +29,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: px-vsphere-secret
-  namespace: kube-system
+  namespace: $namespace
 type: Opaque
 data:
   VSPHERE_USER: $VSPHERE_USER
@@ -90,7 +96,6 @@ fi
 if [ "$operator" != false -a "$platform" != ocp4 ]; then
   [ -e /sbin/azure-repo-svc ] && kubectl taint node --all node-role.kubernetes.io/master-
   kubectl apply -f "https://install.portworx.com/$px_version?comp=pxoperator"
-  kubectl create ns portworx
   while ! kubectl wait --for=condition=ready pod -lname=portworx-operator -n kube-system; do
     sleep 2
   done
