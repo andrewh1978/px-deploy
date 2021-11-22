@@ -336,8 +336,8 @@ func main() {
 				die(err.Error())
 			}
 			reader := bufio.NewReader(stdout)
-			data := make([]byte, 4<<20)
 			for {
+				data := make([]byte, 4<<20)
 				_, err := reader.Read(data)
 				if (config.Quiet != "true") {
 					fmt.Print(string(data))
@@ -636,7 +636,9 @@ func create_deployment(config Config) int {
 	default:
 		die("Invalid cloud '" + config.Cloud + "'")
 	}
-	fmt.Print(string(output))
+	if (config.Quiet != "true") {
+		fmt.Print(string(output))
+	}
 	if err != nil {
 		return 1
 	}
