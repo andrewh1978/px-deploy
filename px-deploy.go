@@ -327,11 +327,26 @@ func main() {
 				provider = "vsphere"
 			}
 			fmt.Println(White + "Provisioning VMs..." + Reset)
-			output, err := exec.Command("vagrant", "up", "--provider", provider).CombinedOutput()
-			if (config.Quiet != "true") {
-				fmt.Println(string(output))
-			}
+			vcmd := exec.Command("sh", "-c", "vagrant up --provider " + provider + " 2>&1")
+			stdout, err := vcmd.StdoutPipe()
 			if err != nil {
+				die(err.Error())
+			}
+			if err := vcmd.Start(); err != nil {
+				die(err.Error())
+			}
+			reader := bufio.NewReader(stdout)
+			for {
+				data := make([]byte, 4<<20)
+				_, err := reader.Read(data)
+				if (config.Quiet != "true") {
+					fmt.Print(string(data))
+				}
+				if err == io.EOF {
+					break
+				}
+			}
+			if err := vcmd.Wait(); err != nil {
 				die(err.Error())
 			}
 			if config.Auto_Destroy == "true" {
@@ -621,7 +636,9 @@ func create_deployment(config Config) int {
 	default:
 		die("Invalid cloud '" + config.Cloud + "'")
 	}
-	fmt.Print(string(output))
+	if (config.Quiet != "true") {
+		fmt.Print(string(output))
+	}
 	if err != nil {
 		return 1
 	}
