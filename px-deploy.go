@@ -327,11 +327,26 @@ func main() {
 				provider = "vsphere"
 			}
 			fmt.Println(White + "Provisioning VMs..." + Reset)
-			output, err := exec.Command("vagrant", "up", "--provider", provider).CombinedOutput()
-			if (config.Quiet != "true") {
-				fmt.Println(string(output))
-			}
+			vcmd := exec.Command("sh", "-c", "vagrant up --provider " + provider + " 2>&1")
+			stdout, err := vcmd.StdoutPipe()
 			if err != nil {
+				die(err.Error())
+			}
+			if err := vcmd.Start(); err != nil {
+				die(err.Error())
+			}
+			reader := bufio.NewReader(stdout)
+			data := make([]byte, 4<<20)
+			for {
+				_, err := reader.Read(data)
+				if (config.Quiet != "true") {
+					fmt.Print(string(data))
+				}
+				if err == io.EOF {
+					break
+				}
+			}
+			if err := vcmd.Wait(); err != nil {
 				die(err.Error())
 			}
 			if config.Auto_Destroy == "true" {
