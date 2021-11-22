@@ -172,6 +172,11 @@ These variables are passed to the script:
  * `$px_version`
  * `$k8s_version`
 
+You can also select a different defaults file with:
+```
+$ DEFAULTS=/path/to/other/defaults.yml px-deploy create ...
+```
+
 All files in `~/.px-deploy/assets` will be copied to `/assets` on the master nodes. They are then available to be used by the script, as above.
 
 In addition to these, there are some more variables available:
