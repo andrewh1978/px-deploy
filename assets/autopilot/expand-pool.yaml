@@ -23,5 +23,5 @@ spec:
       params:
         # resize pool by scalepercentage of current size
         scalepercentage: "50"
-        # when scaling, add disks to the pool
+        # when scaling, resize disk
         scaletype: "resize-disk"
