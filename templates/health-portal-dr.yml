@@ -3,7 +3,10 @@ clusters: 2
 scripts: ["install-awscli", "install-px", "licenses", "health-portal-credentials"]
 cluster:
   - id: 1
-    scripts: ["aws-elb", "async-dr"]
+    scripts: ["aws-elb", "health-portal-async-dr"]
   - id: 2
     scripts: ["clusterpair-dr"]
 post_script: "health-portal-app"
+env:
+  px_suffix: "mon=true"
+  scenarios: "azOffline"

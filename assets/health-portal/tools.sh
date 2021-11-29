@@ -175,6 +175,10 @@ function install_backups() {
   # docker run --rm -v /etc/hosts:/etc/hosts -e AWS_ACCESS_KEY_ID=minio -e AWS_SECRET_ACCESS_KEY=minio123 amazon/aws-cli --endpoint-url http://node-$cluster-1:30221 s3 mb s3://portworx
 }
 
+function install_async_dr_source() {
+  kubectl apply -f /assets/health-portal/async-dr.yaml
+}
+
 function url_summary() {
   echo ""
   echo "-------------------------------------------------------"
