@@ -3,10 +3,10 @@ clusters: 2
 scripts: ["install-awscli", "install-px", "licenses", "health-portal-credentials"]
 cluster:
   - id: 1
-    scripts: []
+    scripts: ["health-portal-autopilot", "health-portal-backups"]
   - id: 2
     scripts: []
 post_script: "health-portal-app"
 env:
   px_suffix: "mon=true"
-  scenarios: "azOffline"
+  scenarios: "multiWriter,diskFull,backups,azOffline"
