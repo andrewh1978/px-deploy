@@ -1,0 +1,15 @@
+apiVersion: stork.libopenstorage.org/v1alpha1
+kind: MigrationSchedule
+metadata:
+  name: migrationschedule
+  namespace: kube-system
+spec:
+  template:
+    spec:
+      clusterPair: dest-cluster
+      includeResources: true
+      startApplications: false
+      includeVolumes: false
+      namespaces:
+      - postgres
+  schedulePolicyName: testpolicy
