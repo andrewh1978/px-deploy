@@ -6,6 +6,10 @@ cluster:
     scripts: ["aws-elb", "async-dr", "optional-apps"]
   - id: 2
     scripts: ["clusterpair-dr"]
+env:
+  operator: true
+  #licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
+  #DR_BUCKET: "<YOUR BUCKET NAME>"
 
 # use `-e install_apps=true` to install the optional apps
 # deploy an application of your choice in the default namespace
