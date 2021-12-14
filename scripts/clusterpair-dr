@@ -1,17 +1,32 @@
 # Configures cluster pairs between cluster and cluster 1
+
+UUID=$(kubectl get stc -n portworx -o jsonpath='{.items[].status.clusterUid}')
+AWS_ACCESS_KEY=$(sed -n 's/aws_access_key_id[ =]*//p' /root/.aws/credentials 2>/dev/null | head -1)
+AWS_SECRET_KEY=$(sed -n 's/aws_secret_access_key[ =]*//p' /root/.aws/credentials 2>/dev/null | head -1)
+
 while : ; do
-  if [ "$operator" = false ]; then
-    namespace=kube-system
-  else
-    namespace=portworx
-  fi
-  token=$(kubectl exec -n $namespace -it $(kubectl get pods -n $namespace -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- /opt/pwx/bin/pxctl cluster token show 2>/dev/null | cut -f 3 -d " ")
+  token=$(kubectl exec -n portworx -it $(kubectl get pods -n portworx -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- /opt/pwx/bin/pxctl cluster token show 2>/dev/null | cut -f 3 -d " ")
   echo $token | grep -Eq '\w{128}'
   [ $? -eq 0 ] && break
   sleep 5
   echo waiting for portworx
 done
-storkctl generate clusterpair -n kube-system remotecluster-$cluster | sed "/insert_storage_options_here/c\    ip: node-$cluster-1\n    token: $token\n    mode: DisasterRecovery" >/var/tmp/cp.yaml
+
+kubectl exec $POD -n portworx -- /opt/pwx/bin/pxctl credentials create --provider s3 --s3-access-key $AWS_ACCESS_KEY --s3-secret-key $AWS_SECRET_KEY --s3-region $aws_region --s3-endpoint s3.amazonaws.com --s3-storage-class STANDARD clusterPair_$UUID
+ssh master-1 kubectl exec $POD -n portworx -- /opt/pwx/bin/pxctl credentials create --provider s3 --s3-access-key $AWS_ACCESS_KEY --s3-secret-key $AWS_SECRET_KEY --s3-region $aws_region --s3-endpoint s3.amazonaws.com --s3-storage-class STANDARD clusterPair_$UUID
+
+if [ "$platform" = eks ]; then
+  kubectl patch stc $(kubectl get stc -n portworx -o jsonpath='{.items[].metadata.name}') -n portworx --type='json' -p '[{"op":"add","path":"/metadata/annotations/portworx.io~1service-type","value":"LoadBalancer"}]'
+  while : ;do
+    host=$(kubectl get svc -n portworx portworx-service -o jsonpath='{.status.loadBalancer.ingress[].hostname}')
+    [ "$host" ] && break
+    sleep 1
+  done
+else
+  host=node-$cluster-1
+fi
+storkctl generate clusterpair -n kube-system remotecluster-$cluster | sed "/insert_storage_options_here/c\    ip: $host\n    token: $token\n    mode: DisasterRecovery" >/var/tmp/cp.yaml
+
 while : ; do
   cat /var/tmp/cp.yaml | ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no master-1 kubectl apply -f -
   [ $? -eq 0 ] && break
