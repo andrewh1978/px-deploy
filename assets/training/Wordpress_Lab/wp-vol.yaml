@@ -8,7 +8,7 @@ parameters:
   openstorage.io/auth-secret-namespace: portworx
   repl: "3"
   priority_io: "high"
-  shared: "true"
+  sharedv4: "true"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

@@ -22,7 +22,7 @@ data:
   entrypoint.sh: |-
     #!/bin/sh
     if [ ! -f /sysroot/var/log/px-deploy/.lock ]; then
-      echo "export PS1='\e[0;33m[\u@\h \W]\$ \e[m'" >>/sysroot/root/.bashrc
+      echo "export PS1='\e[0;33m[\u@\h \W]\\\\$ \e[m'" >>/sysroot/root/.bashrc
       touch /sysroot/var/log/px-deploy/.lock
     fi
     sleep infinity
