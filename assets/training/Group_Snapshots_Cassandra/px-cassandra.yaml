@@ -4,8 +4,8 @@ metadata:
   name: px-cassandra-sc
 provisioner: kubernetes.io/portworx-volume
 parameters:
-  openstorage.io/auth-secret-name: px-user-token
-  openstorage.io/auth-secret-namespace: portworx
+  #openstorage.io/auth-secret-name: px-user-token
+  #openstorage.io/auth-secret-namespace: portworx
   repl: "2"
   priority_io: "high"
   group: "cassandra_vg"

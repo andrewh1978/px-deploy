@@ -9,8 +9,8 @@ metadata:
     name: portworx-db-ha
 provisioner: kubernetes.io/portworx-volume
 parameters:
-  openstorage.io/auth-secret-name: px-user-token
-  openstorage.io/auth-secret-namespace: portworx
+  #openstorage.io/auth-secret-name: px-user-token
+  #openstorage.io/auth-secret-namespace: portworx
   repl: "3"
   io_profile: "db"
   priority_io: "high"
@@ -21,8 +21,8 @@ metadata:
     name: portworx-tmp-fs
 provisioner: kubernetes.io/portworx-volume
 parameters:
-  openstorage.io/auth-secret-name: px-user-token
-  openstorage.io/auth-secret-namespace: portworx
+  #openstorage.io/auth-secret-name: px-user-token
+  #openstorage.io/auth-secret-namespace: portworx
   repl: "1"
   shared: "true"
   priority_io: "high"
@@ -33,8 +33,8 @@ metadata:
     name: portworx-queue-ha
 provisioner: kubernetes.io/portworx-volume
 parameters:
-  openstorage.io/auth-secret-name: px-user-token
-  openstorage.io/auth-secret-namespace: portworx
+  #openstorage.io/auth-secret-name: px-user-token
+  #openstorage.io/auth-secret-namespace: portworx
   repl: "2"
   priority_io: "high"
 ---
