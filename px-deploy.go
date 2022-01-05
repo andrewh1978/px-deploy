@@ -406,6 +406,9 @@ func main() {
 				if info.Mode()&os.ModeDir != 0 {
 					return nil
 				}
+				if !strings.HasSuffix(file, ".yml") {
+					return nil
+				}
 				config := parse_yaml(file)
 				var region string
 				switch config.Cloud {
@@ -417,14 +420,15 @@ func main() {
 					region = config.Azure_Region
 				case "vsphere":
 					region = config.Vsphere_Compute_Resource
-				default:
-					die("Bad cloud")
 				}
-				template := config.Template
-				if template == "" {
-					template = "<None>"
+				if config.Name == "" {
+					config.Name = Red + "UNKNOWN" + Reset
+				} else {
+					if config.Template == "" {
+						config.Template = "<None>"
+					}
 				}
-				data = append(data, []string{config.Name, config.Cloud, region, config.Platform, template, config.Clusters, config.Nodes, info.ModTime().Format(time.RFC3339)})
+				data = append(data, []string{config.Name, config.Cloud, region, config.Platform, config.Template, config.Clusters, config.Nodes, info.ModTime().Format(time.RFC3339)})
 
 				return nil
 			})
