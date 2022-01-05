@@ -4,8 +4,8 @@ metadata:
     name: px-jhub-sc
 provisioner: kubernetes.io/portworx-volume
 parameters:
-  openstorage.io/auth-secret-name: px-user-token
-  openstorage.io/auth-secret-namespace: portworx
+  #openstorage.io/auth-secret-name: px-user-token
+  #openstorage.io/auth-secret-namespace: portworx
   repl: "2"
 ---
 kind: StorageClass
@@ -14,8 +14,8 @@ metadata:
   name: px-jhub-shared-sc
 provisioner: kubernetes.io/portworx-volume
 parameters:
-  openstorage.io/auth-secret-name: px-user-token
-  openstorage.io/auth-secret-namespace: portworx
+  #openstorage.io/auth-secret-name: px-user-token
+  #openstorage.io/auth-secret-namespace: portworx
   repl: "2"
   sharedv4: "true"
   io_profile: "cms"
