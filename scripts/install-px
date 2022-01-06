@@ -58,6 +58,7 @@ if [ "$journal" ]; then
 fi
 [ "$px_suffix" ] && url="$url&$px_suffix"
 [ "$vsphere_suffix" ] && url="$url&$vsphere_suffix"
+[ "$platform" = eks ] && url="$url&eks=true"
 [ "$platform" = ocp4 ] && url="$url&r=17001"
 [ "$operator" = false ] || url="$url&operator=true"
 [ "$security" = true ] && url="$url&security=true"
