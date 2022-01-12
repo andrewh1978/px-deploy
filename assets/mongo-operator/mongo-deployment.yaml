@@ -64,6 +64,8 @@ metadata:
   name: px-db
 provisioner: kubernetes.io/portworx-volume
 parameters:
+  #openstorage.io/auth-secret-name: px-user-token
+  #openstorage.io/auth-secret-namespace: portworx
   repl: "2"
   io_profile: "auto"
   priority_io: "high"

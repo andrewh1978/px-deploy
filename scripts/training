@@ -1,10 +1,79 @@
-# Set up training clusters, including vim, git and shellinabox
-dnf install -y git epel-release vim-enhanced
+# Set up training clusters, including vim and shellinabox
+dnf install -y epel-release vim-enhanced
 dnf install -y shellinabox
 rm -f /etc/securetty
 sed -i s/4200/443/ /etc/sysconfig/shellinaboxd
 systemctl enable shellinaboxd
 systemctl restart shellinaboxd sshd
-cd /root
-git config --global color.ui auto
-git clone https://github.com/portworx/pwx-fundamentals-training.git
+mv /assets/training /root
+
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: px-deploy
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: script
+  namespace: px-deploy
+data:
+  entrypoint.sh: |-
+    #!/bin/sh
+    if [ ! -f /sysroot/var/log/px-deploy/.lock ]; then
+      echo "export PS1='\e[0;33m[\u@\h \W]\\\\$ \e[m'" >>/sysroot/root/.bashrc
+      touch /sysroot/var/log/px-deploy/.lock
+    fi
+    sleep infinity
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: px-deploy
+  namespace: px-deploy
+  labels:
+    name: px-deploy
+spec:
+  selector:
+    matchLabels:
+      name: px-deploy
+  minReadySeconds: 0
+  template:
+    metadata:
+      labels:
+        name: px-deploy
+    spec:
+      tolerations:
+      - key: "node-role.kubernetes.io/master"
+        operator: "Exists"
+        effect: "NoSchedule"
+      terminationGracePeriodSeconds: 0
+      volumes:
+      - name: script
+        configMap:
+          defaultMode: 0700
+          name: script
+      - name: sysroot
+        hostPath:
+          path: /
+          type: Directory
+      containers:
+        - name: px-deploy
+          image: centos:7
+          command:
+          - /entrypoint.sh
+          readinessProbe:
+            exec:
+              command:
+              - cat
+              - /sysroot/var/log/px-deploy/.lock
+            initialDelaySeconds: 1
+            periodSeconds: 10
+          volumeMounts:
+          - name: script
+            mountPath: /entrypoint.sh
+            subPath: entrypoint.sh
+          - name: sysroot
+            mountPath: /sysroot
+EOF

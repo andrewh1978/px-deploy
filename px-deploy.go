@@ -45,6 +45,7 @@ type Config struct {
 	Dry_Run                  string
 	Aws_Type                 string
 	Aws_Ebs                  string
+	Aws_Tags                 string
 	Gcp_Type                 string
 	Gcp_Disks                string
 	Gcp_Zone                 string
@@ -95,7 +96,7 @@ var Yellow = "\033[33m"
 var Blue   = "\033[34m"
 
 func main() {
-	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createGcpType, createGcpDisks, createGcpZone, createAzureType, createAzureDisks, createTemplate, createRegion, createCloud, createEnv, connectName, destroyName, statusName, historyNumber string
+	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createAwsTags, createGcpType, createGcpDisks, createGcpZone, createAzureType, createAzureDisks, createTemplate, createRegion, createCloud, createEnv, connectName, destroyName, statusName, historyNumber string
 	var createQuiet, createDryRun, destroyAll bool
 	os.Chdir("/px-deploy/.px-deploy")
 	rootCmd := &cobra.Command{Use: "px-deploy"}
@@ -132,7 +133,7 @@ func main() {
 				mergo.MergeWithOverwrite(&env, env_template)
 			}
 			if createName != "" {
-				if !regexp.MustCompile(`^[a-zA-Z0-9_\-\.]+$`).MatchString(createName) {
+				if !regexp.MustCompile(`^[a-z0-9_\-\.]+$`).MatchString(createName) {
 					die("Invalid deployment name '" + createName + "'")
 				}
 				if _, err := os.Stat("deployments/" + createName + ".yml"); !os.IsNotExist(err) {
@@ -225,6 +226,12 @@ func main() {
 					die("Invalid AWS EBS volumes '" + createAwsEbs + "'")
 				}
 				config.Aws_Ebs = createAwsEbs
+			}
+			if createAwsTags != "" {
+				if !regexp.MustCompile(`^[0-9a-zA-Z,=\ ]+$`).MatchString(createAwsTags) {
+					die("Invalid AWS tags '" + createAwsTags + "'")
+				}
+				config.Aws_Tags = createAwsTags
 			}
 			if createGcpType != "" {
 				if !regexp.MustCompile(`^[0-9a-z\-]+$`).MatchString(createGcpType) {
@@ -320,11 +327,26 @@ func main() {
 				provider = "vsphere"
 			}
 			fmt.Println(White + "Provisioning VMs..." + Reset)
-			output, err := exec.Command("vagrant", "up", "--provider", provider).CombinedOutput()
-			if (config.Quiet != "true") {
-				fmt.Println(string(output))
-			}
+			vcmd := exec.Command("sh", "-c", "vagrant up --provider " + provider + " 2>&1")
+			stdout, err := vcmd.StdoutPipe()
 			if err != nil {
+				die(err.Error())
+			}
+			if err := vcmd.Start(); err != nil {
+				die(err.Error())
+			}
+			reader := bufio.NewReader(stdout)
+			for {
+				data := make([]byte, 4<<20)
+				_, err := reader.Read(data)
+				if (config.Quiet != "true") {
+					fmt.Print(string(data))
+				}
+				if err == io.EOF {
+					break
+				}
+			}
+			if err := vcmd.Wait(); err != nil {
 				die(err.Error())
 			}
 			if config.Auto_Destroy == "true" {
@@ -384,6 +406,9 @@ func main() {
 				if info.Mode()&os.ModeDir != 0 {
 					return nil
 				}
+				if !strings.HasSuffix(file, ".yml") {
+					return nil
+				}
 				config := parse_yaml(file)
 				var region string
 				switch config.Cloud {
@@ -395,14 +420,15 @@ func main() {
 					region = config.Azure_Region
 				case "vsphere":
 					region = config.Vsphere_Compute_Resource
-				default:
-					die("Bad cloud")
 				}
-				template := config.Template
-				if template == "" {
-					template = "<None>"
+				if config.Name == "" {
+					config.Name = Red + "UNKNOWN" + Reset
+				} else {
+					if config.Template == "" {
+						config.Template = "<None>"
+					}
 				}
-				data = append(data, []string{config.Name, config.Cloud, region, config.Platform, template, config.Clusters, config.Nodes, info.ModTime().Format(time.RFC3339)})
+				data = append(data, []string{config.Name, config.Cloud, region, config.Platform, config.Template, config.Clusters, config.Nodes, info.ModTime().Format(time.RFC3339)})
 
 				return nil
 			})
@@ -486,6 +512,7 @@ func main() {
 	cmdCreate.Flags().StringVarP(&createStopAfter, "stop_after", "s", "", "Stop instances after this many hours (default "+defaults.Stop_After+")")
 	cmdCreate.Flags().StringVarP(&createAwsType, "aws_type", "", "", "AWS type for each node (default "+defaults.Aws_Type+")")
 	cmdCreate.Flags().StringVarP(&createAwsEbs, "aws_ebs", "", "", "space-separated list of EBS volumes to be attached to worker nodes, eg \"gp2:20 standard:30\" (default "+defaults.Aws_Ebs+")")
+	cmdCreate.Flags().StringVarP(&createAwsTags, "aws_tags", "", "", "comma-separated list of tags to be applies to AWS nodes, eg \"Owner=Bob,Purpose=Demo\"")
 	cmdCreate.Flags().StringVarP(&createGcpType, "gcp_type", "", "", "GCP type for each node (default "+defaults.Gcp_Type+")")
 	cmdCreate.Flags().StringVarP(&createGcpDisks, "gcp_disks", "", "", "space-separated list of EBS volumes to be attached to worker nodes, eg \"pd-standard:20 pd-ssd:30\" (default "+defaults.Gcp_Disks+")")
 	cmdCreate.Flags().StringVarP(&createGcpZone, "gcp_zone", "", defaults.Gcp_Zone, "GCP zone (a, b or c)")
@@ -523,6 +550,8 @@ func create_deployment(config Config) int {
 			output, err = exec.Command("bash", "-c", `
         aws configure set default.region `+config.Aws_Region+`
         yes | ssh-keygen -q -t rsa -b 2048 -f keys/id_rsa.aws.`+config.Name+` -N ''
+	aws ec2 describe-regions >&/dev/null
+	[ $? -ne 0 ] && echo "Invalid AWS credentials" && exit 1
         aws ec2 describe-instance-types --instance-types `+config.Aws_Type+`>&/dev/null
         [ $? -ne 0 ] && echo "Invalid AWS type '`+config.Aws_Type+`' for region '`+config.Aws_Region+`'" && exit 1
 	echo "Provisioning as user $(aws --output text iam get-user --query User.[UserName,UserId] --output text | sed 's/	/(/;s/$/)/')"
@@ -611,7 +640,9 @@ func create_deployment(config Config) int {
 	default:
 		die("Invalid cloud '" + config.Cloud + "'")
 	}
-	fmt.Print(string(output))
+	if (config.Quiet != "true") {
+		fmt.Print(string(output))
+	}
 	if err != nil {
 		return 1
 	}
@@ -622,6 +653,7 @@ func destroy_deployment(name string) {
 	os.Chdir("/px-deploy/.px-deploy")
 	config := parse_yaml("deployments/" + name + ".yml")
 	var output []byte
+	var err error
 	ip := get_ip(config.Name)
 	fmt.Println(White + "Destroying deployment '" + config.Name + "'..." + Reset)
 	if config.Cloud == "aws" {
@@ -632,7 +664,7 @@ func destroy_deployment(name string) {
 				  ssh master-$i "cd /root/ocp4 ; openshift-install destroy cluster --log-level=debug"
 				done
 			`).Run()
-			if (err != nil) { die("Failed to destroy OCP4: " + err.Error()) }
+			if (err != nil) { fmt.Println(Yellow + "Failed to destroy OCP4 - please clean up VMs manually: " + err.Error() + Reset) }
 		} else if config.Platform == "eks" {
 			fmt.Println(White + "Destroying EKS, wait about 5 minutes (per cluster)..." + Reset)
 			err := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, `
@@ -666,9 +698,9 @@ EOF
 			`).Start()
 			time.Sleep(5 * time.Second)
 		}
-		output, _ = exec.Command("bash", "-c", `
+		output, err = exec.Command("bash", "-c", `
       aws configure set default.region `+config.Aws_Region+`
-      aws ec2 delete-key-pair --key-name px-deploy.`+config.Name+` >&/dev/null
+      aws ec2 delete-key-pair --key-name px-deploy.`+config.Name+` >&/dev/null || exit 1
       [ "`+config.Aws__Vpc+`" ] || exit
       for i in $(aws elb describe-load-balancers --query "LoadBalancerDescriptions[].{a:VPCId,b:LoadBalancerName}" --output text | awk '/`+config.Aws__Vpc+`/{print$2}'); do
         aws elb delete-load-balancer --load-balancer-name $i
@@ -693,7 +725,7 @@ EOF
       wait
     `).CombinedOutput()
 	} else if config.Cloud == "gcp" {
-		output, _ = exec.Command("bash", "-c", "gcloud projects delete "+config.Gcp__Project+" --quiet").CombinedOutput()
+		output, err = exec.Command("bash", "-c", "gcloud projects delete "+config.Gcp__Project+" --quiet").CombinedOutput()
 		os.Remove("keys/px-deploy_gcp_" + config.Gcp__Project + ".json")
 	} else if config.Cloud == "azure" {
 		output, _ = exec.Command("bash", "-c", `
@@ -703,7 +735,7 @@ EOF
     `).CombinedOutput()
 	} else if config.Cloud == "vsphere" {
 		var url = config.Vsphere_User + `:` + config.Vsphere_Password + `@` + config.Vsphere_Host
-		output, _ = exec.Command("bash", "-c", `
+		output, err = exec.Command("bash", "-c", `
       for i in $(govc find -u '`+url+`' -k / -type m | egrep "vagrant_`+config.Name+`-(master|node)"); do
         if [ $(govc vm.info -u '`+url+`' -k -json $i | jq -r '.VirtualMachines[0].Config.ExtraConfig[] | select(.Key==("pxd.deployment")).Value') = `+config.Name+` ] ; then
           disks="$disks $(govc vm.info -json -k -u '`+url+`' -k -json $i | jq -r ".VirtualMachines[].Layout.Disk[].DiskFile[0]" | grep -v vagrant | cut -f 2 -d ' ')"
@@ -716,6 +748,9 @@ EOF
     `).CombinedOutput()
 	} else {
 		die("Bad cloud")
+	}
+	if err != nil {
+		die("Failed to destroy")
 	}
 	fmt.Print(string(output))
 	os.Remove("deployments/" + name + ".yml")

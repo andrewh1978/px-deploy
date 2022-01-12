@@ -7,13 +7,20 @@
 
 # Default secrets store is k8s; can also set environment variable secrets=vault
 
-# If you want to deploy using the operator, set the environment variable operator=true
-# otherwise the DaemonSet will be used
+# If you do not want to deploy using the operator, set the environment variable operator=false, and then the DaemonSet will be used
 
 # You can also set csi=true and security=true
 
 # If you select cloud=vsphere, clouddrives will be provisioned from vsphere_disks
 
+JQ="docker run -i --rm --name jq endeveit/docker-jq jq"
+
+if [ "$operator" != false ]; then
+  namespace=portworx
+  kubectl create namespace portworx
+else
+  namespace=kube-system
+fi
 if [ $cloud = vsphere ]; then
   VSPHERE_USER=$(printf $vsphere_user | base64)
   VSPHERE_PASSWORD=$(printf $vsphere_password | base64)
@@ -22,7 +29,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: px-vsphere-secret
-  namespace: kube-system
+  namespace: $namespace
 type: Opaque
 data:
   VSPHERE_USER: $VSPHERE_USER
@@ -34,8 +41,9 @@ EOF
   done
 fi
 
+docker pull $(curl -sk https://install.portworx.com/$px_version?comp=stork | awk '/image: openstorage.stork/{print$2}') &
 k8s_version=$(kubectl version --short | awk -Fv '/Server Version: / {print $3}')
-url="https://install.portworx.com/$px_version?kbver=$k8s_version&b=true&c=px-deploy-$cluster&stork=true&st=k8s&lh=true&mon=true"
+url="https://install.portworx.com/$px_version?kbver=$k8s_version&b=true&c=px-deploy-$cluster&stork=true&st=k8s&lh=true&mon=true&promop=true"
 [ -e /usr/bin/oc ] && url="$url&osft=true"
 if [ "$cloud_drive" ]; then
   if [ "$cloud" = "aws" ]; then
@@ -50,10 +58,11 @@ if [ "$journal" ]; then
 fi
 [ "$px_suffix" ] && url="$url&$px_suffix"
 [ "$vsphere_suffix" ] && url="$url&$vsphere_suffix"
+[ "$platform" = eks ] && url="$url&eks=true"
 [ "$platform" = ocp4 ] && url="$url&r=17001"
-[ "$operator" = true ] && url="$url&operator=true"
+[ "$operator" = false ] || url="$url&operator=true"
 [ "$security" = true ] && url="$url&security=true"
-[ "$csi" = true ] && url="$url&csi=true"
+[ -n "$csi" ] && url="$url&csi=$csi"
 [ "$etcd" = EXTERNAL ] && url="$url&k=etcd:http://$(ssh master-1 curl https://ipinfo.io/ip):2382"
 
 if [ "$platform" = ocp4 ]; then
@@ -85,11 +94,10 @@ EOF
   done
 fi
 
-if [ "$operator" = true -a "$platform" != ocp4 ]; then
+if [ "$operator" != false -a "$platform" != ocp4 ]; then
   [ -e /sbin/azure-repo-svc ] && kubectl taint node --all node-role.kubernetes.io/master-
-  curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.17.0/install.sh | bash -s v0.17.0
-  kubectl create -f https://operatorhub.io/install/portworx.yaml
-  while ! kubectl get csv -n operators | grep -q Succeeded ; do
+  kubectl apply -f "https://install.portworx.com/$px_version?comp=pxoperator"
+  while ! kubectl wait --for=condition=ready pod -lname=portworx-operator -n kube-system; do
     sleep 2
   done
   [ -e /sbin/azure-repo-svc ] && kubectl taint node --all node-role.kubernetes.io/master=:NoSchedule
@@ -112,29 +120,39 @@ if [ "$platform" = aks ]; then
   url="$url&aks=true"
 fi
 
-kubectl apply -f https://docs.portworx.com/samples/k8s/portworx-pxc-operator.yaml
-while ! kubectl wait --for=condition=ready pod -l k8s-app=prometheus-operator -n kube-system --timeout 5m; do
-  sleep 2
-done
-while ! kubectl get ServiceMonitor,Alertmanager,PrometheusRule,Prometheus; do
-  sleep 2
-done
 curl -sko /tmp/px.yml $url
+if [ "$operator" != false -a "$platform" != ocp4 ]; then
+  sed -i 's/namespace: kube-system/namespace: portworx/' /tmp/px.yml
+fi
 kubectl apply -f /tmp/px.yml
 
 if [ "$storageless" = true ]; then
-  JQ="docker run -i --rm --name jq endeveit/docker-jq jq"
   INDEX=$(kubectl get ds portworx -n kube-system -o json | $JQ '.spec.template.spec.containers[0].args | bsearch("-a")')
   kubectl patch ds portworx -n kube-system --type='json' -p '[{"op":"remove","path":"/spec/template/spec/containers/0/args/'$INDEX'"}]'
 fi
 
 curl -sL https://github.com/portworx/pxc/releases/download/v0.33.0/pxc-v0.33.0.linux.amd64.tar.gz | tar xvz -C /tmp/.
-mv /tmp/pxc/kubectl-pxc /usr/bin/.
+mv /tmp/pxc/kubectl-pxc /usr/bin
+[ "$operator" != false ] && kubectl-pxc config cluster set --portworx-service-namespace=portworx
 
 # Install storkctl
+wait
 stork_image=$(curl -sk https://install.portworx.com/$px_version?comp=stork | awk '/image: openstorage.stork/{print$2}')
 id=$(docker create $stork_image)
 docker cp $id:/storkctl/linux/storkctl /usr/bin
 
-# Expose grafana on port 30112
-kubectl patch svc grafana -n kube-system -p '{"spec": { "type": "NodePort", "ports": [ { "nodePort": 30112, "port": 3000, "protocol": "TCP", "targetPort": 3000 } ] } }'
+# Install Grafana
+if [ "$operator" != false ]; then
+  cd /tmp
+  curl -sO https://docs.portworx.com/samples/k8s/pxc/grafana-dashboard-config.yaml
+  curl -sO https://docs.portworx.com/samples/k8s/pxc/grafana-datasource.yaml
+  curl -sO https://docs.portworx.com/samples/k8s/pxc/portworx-cluster-dashboard.json
+  curl -sO https://docs.portworx.com/samples/k8s/pxc/portworx-node-dashboard.json
+  curl -sO https://docs.portworx.com/samples/k8s/pxc/portworx-volume-dashboard.json
+  curl -sO https://docs.portworx.com/samples/k8s/pxc/portworx-etcd-dashboard.json
+  kubectl -n portworx create configmap grafana-dashboard-config --from-file=grafana-dashboard-config.yaml
+  kubectl -n portworx create configmap grafana-source-config --from-file=grafana-datasource.yaml
+  kubectl -n portworx create configmap grafana-dashboards --from-file=portworx-cluster-dashboard.json --from-file=portworx-node-dashboard.json --from-file=portworx-volume-dashboard.json --from-file=portworx-etcd-dashboard.json
+  curl -s https://docs.portworx.com/samples/k8s/pxc/grafana.yaml | sed 's/namespace: kube-system/namespace: portworx/' | kubectl apply -f -
+  kubectl patch svc grafana -n portworx -p '{"spec": { "type": "NodePort", "ports": [ { "nodePort": 30112, "port": 3000, "protocol": "TCP", "targetPort": 3000 } ] } }'
+fi

@@ -4,7 +4,9 @@ metadata:
     name: cockroach-pwx-storage-class
 provisioner: kubernetes.io/portworx-volume
 parameters:
-   repl: "3"
+  #openstorage.io/auth-secret-name: px-user-token
+  #openstorage.io/auth-secret-namespace: portworx
+  repl: "3"
 allowVolumeExpansion: true
 ---
 apiVersion: v1

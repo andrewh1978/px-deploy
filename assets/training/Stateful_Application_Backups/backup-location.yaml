@@ -1,0 +1,17 @@
+apiVersion: stork.libopenstorage.org/v1alpha1
+kind: BackupLocation
+metadata:
+  name: internal-objectstore
+  namespace: backup-lab
+  annotations:
+    stork.libopenstorage.org/skipresource: "false"
+location:
+  type: s3
+  sync: true
+  path: "portworx"
+  s3Config:
+    region: default
+    accessKeyID: xxx
+    secretAccessKey: xxx
+    endpoint: "http://xxx:9010"
+    disableSSL: true

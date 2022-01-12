@@ -21,10 +21,12 @@ for i in scripts templates assets defaults.yml; do
   cp -r $i /.px-deploy
 done
 echo
-echo -e ${YELLOW}Append this to your .bash_profile or .zshrc:
-echo -e "${WHITE}alias px-deploy='docker run -it -e PXDUSER=\$USER --rm --name px-deploy.\$\$ -v \$HOME/.px-deploy:/px-deploy/.px-deploy -v \$HOME/.aws/credentials:/root/.aws/credentials -v \$HOME/.config/gcloud:/root/.config/gcloud -v \$HOME/.azure:/root/.azure -v /etc/localtime:/etc/localtime px-deploy /root/go/bin/px-deploy'"
+echo -e ${YELLOW}If you are using zsh, append this to your .zshrc:
+echo -e ${WHITE}'px-deploy() { [ "$DEFAULTS" ] && params="-v $DEFAULTS:/px-deploy/.px-deploy/defaults.yml" ; docker run -it -e PXDUSER=$USER --rm --name px-deploy.$$ $=params -v $HOME/.px-deploy:/px-deploy/.px-deploy -v $HOME/.aws/credentials:/root/.aws/credentials -v $HOME/.config/gcloud:/root/.config/gcloud -v $HOME/.azure:/root/.azure -v /etc/localtime:/etc/localtime px-deploy /root/go/bin/px-deploy $* ; }'
+echo -e ${YELLOW}If you are using bash, append this to your .bash_profile:
+echo -e ${WHITE}'px-deploy() { [ "$DEFAULTS" ] && params="-v $DEFAULTS:/px-deploy/.px-deploy/defaults.yml" ; docker run -it -e PXDUSER=$USER --rm --name px-deploy.$$ $params -v $HOME/.px-deploy:/px-deploy/.px-deploy -v $HOME/.aws/credentials:/root/.aws/credentials -v $HOME/.config/gcloud:/root/.config/gcloud -v $HOME/.azure:/root/.azure -v /etc/localtime:/etc/localtime px-deploy /root/go/bin/px-deploy $* ; }'
 echo
-echo -e ${GREEN}When your alias is set, create a deployment with:
+echo -e ${GREEN}When your px-deploy function is set, create a deployment with:
 echo -e "${WHITE}px-deploy create --name myDeployment --template px$NC"
 echo
 echo -e ${YELLOW}If using bash completion, execute:

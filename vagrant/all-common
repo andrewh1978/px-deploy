@@ -54,7 +54,7 @@ if [ $cloud = "aws" -o $cloud = "gcp" ]; then
     done
   done
 elif [ $cloud = "vsphere" ]; then
-  dnf install -y jq
+  while ! dnf install -y jq; do sleep 1; done
   curl -Ls https://github.com/vmware/govmomi/releases/download/v0.23.0/govc_linux_amd64.gz | zcat >/usr/bin/govc
   chmod 755 /usr/bin/govc
   export GOVC_URL=$vsphere_user:$vsphere_password@$vsphere_host

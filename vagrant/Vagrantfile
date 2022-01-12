@@ -14,6 +14,7 @@ require "yaml"
 yaml = YAML.load(File.read("/px-deploy/.px-deploy/deployments/#{ENV['deployment']}.yml"))
 
 env = yaml.merge(yaml['env'])
+aws_tags = Hash.new
 if env.has_key?('vsphere_password') then env['vsphere_password'] = env['vsphere_password'].gsub('$','\$') end
 master_scripts = ["all-common", "#{yaml['platform']}-common", "all-master", "#{yaml['platform']}-master"]
 node_scripts = ["all-common", "#{yaml['platform']}-common", "#{yaml['platform']}-node"]
@@ -44,6 +45,10 @@ Vagrant.configure("2") do |config|
       aws.subnet_id = yaml['aws__subnet']
       aws.associate_public_ip = true
       aws.block_device_mapping = [{ :DeviceName => "/dev/sda1", "Ebs.DeleteOnTermination" => true, "Ebs.VolumeSize" => 50 }]
+      yaml['aws_tags'].split(',').each do |i|
+        (name, value) = i.split('=')
+        aws_tags[name] = value
+      end
     end
   elsif yaml['cloud'] == "gcp"
     config.vm.box = "google/gce"
@@ -130,7 +135,7 @@ Vagrant.configure("2") do |config|
         master.vm.provision "file", source: "/root/.aws/credentials", destination: "/tmp/credentials"
         master.vm.provider :aws do |aws|
           aws.private_ip_address = "#{subnet}.90"
-          aws.tags = { "Name" => "master-#{c}", "px-deploy_name" => yaml['name'], "px-deploy_username" => ENV['PXDUSER'] }
+          aws.tags = aws_tags.merge({ "Name" => "master-#{c}", "px-deploy_name" => yaml['name'], "px-deploy_username" => ENV['PXDUSER'] })
         end
       elsif yaml['cloud'] == "gcp"
         master.vm.provision "file", source: "/root/.config/gcloud", destination: "/tmp/gcloud"
@@ -164,7 +169,7 @@ Vagrant.configure("2") do |config|
               aws.instance_type = yaml['aws_type']
             end
             aws.private_ip_address = "#{subnet}.#{100+n}"
-            aws.tags = { "Name" => "node-#{c}-#{n}", "px-deploy_name" => yaml['name'], "px-deploy_username" => ENV['PXDUSER'] }
+            aws.tags = aws_tags.merge({ "Name" => "node-#{c}-#{n}", "px-deploy_name" => yaml['name'], "px-deploy_username" => ENV['PXDUSER'] })
             d = 97
             yaml['aws_ebs'].split(' ').each do |i|
               (type, size) = i.split(':')

@@ -1,0 +1,20 @@
+apiVersion: autopilot.libopenstorage.org/v1alpha1
+kind: AutopilotRule
+metadata:
+  name: pool-rebalance
+spec:
+  conditions:
+    requiredMatches: 1
+    expressions:
+    - keyAlias: PoolProvDeviationPerc
+      operator: NotInRange
+      values:
+        - "-20"
+        - "20"
+    - keyAlias: PoolUsageDeviationPerc
+      operator: NotInRange
+      values:
+        - "-20"
+        - "20"
+  actions:
+    - name: "openstorage.io.action.storagepool/rebalance"

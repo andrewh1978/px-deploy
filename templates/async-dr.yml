@@ -1,11 +1,15 @@
 description: Deploys 2 clusters with Portworx, sets up and configures a cluster pairing, configures an async DR schedule with a loadbalancer in front of the setup.
 clusters: 2
-scripts: ["install-awscli", "install-px", "licenses"]
+scripts: ["install-awscli", "install-px", "px-wait", "licenses"]
 cluster:
   - id: 1
     scripts: ["aws-elb", "async-dr", "optional-apps"]
   - id: 2
     scripts: ["clusterpair-dr"]
+env:
+  operator: true
+  #licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
+  #DR_BUCKET: "<YOUR BUCKET NAME>"
 
 # use `-e install_apps=true` to install the optional apps
 # deploy an application of your choice in the default namespace

@@ -1,2 +1,0 @@
-description: A single K8s cluster with Portworx, Lighthouse and VNC access to access the Lighthouse UI for demo purposes
-scripts: ["install-px", "px-wait", "vncserver", "firefox-lh"]
