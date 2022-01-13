@@ -142,28 +142,6 @@ function install_health_portal() {
   cat /assets/health-portal/deployment.yaml | envsubst | kubectl apply -f -
 }
 
-function install_autopilot() {
-  echo "installing autopilot"
-  kubectl apply -f /assets/monitoring/prometheus-operator.yaml
-  kubectl wait --for=condition=ready pod -l app=prometheus-operator -n kube-system --timeout 5m
-  while : ; do
-    n=$(kubectl exec -n kube-system -it $(kubectl get pods -n kube-system -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- /opt/pwx/bin/pxctl status 2>/dev/null | grep "Yes.*Online.*Up" | wc -l)
-    [ $n -eq $nodes ] && break
-    sleep 1
-  done
-  sleep 5
-
-  # Fix because we don't seem to support the latest prometheus operator!
-  kubectl apply -f /assets/monitoring/prometheus-cluster.yaml
-  kubectl apply -f /assets/monitoring/service-monitor.yaml
-  sleep 10
-
-  # Wait for AutoPilot to be available before we apply rules
-  kubectl wait --for=condition=ready pod -l name=autopilot -n kube-system --timeout 10m
-  kubectl apply -f /assets/monitoring/prometheus-rules.yaml
-  kubectl patch svc grafana -n kube-system -p '{"spec": { "type": "NodePort", "ports": [ { "nodePort": 30112, "port": 3000, "protocol": "TCP", "targetPort": 3000 } ] } }'
-}
-
 function install_backups() {
   echo "installing backups"
   kubectl apply -f /assets/minio/minio-deployment.yml

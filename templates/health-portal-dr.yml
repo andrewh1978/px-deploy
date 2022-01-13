@@ -3,7 +3,7 @@ clusters: 2
 scripts: ["install-awscli", "install-px", "licenses", "health-portal-credentials"]
 cluster:
   - id: 1
-    scripts: ["health-portal-autopilot", "health-portal-backups"]
+    scripts: ["health-portal-backups"]
   - id: 2
     scripts: []
 post_script: "health-portal-app"
