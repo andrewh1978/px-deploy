@@ -130,6 +130,11 @@ function install_cluster() {
     >&2 echo "cluster variable not defined"
     exit 1
   fi
+  while ! kubectl get po
+  do
+    echo "waiting for kubectl"
+    sleep 10
+  done
   ensure_app
   ensure_service_account
   credentials=$(get_credentials | base64 -w 0)
