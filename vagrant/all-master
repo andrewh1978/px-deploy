@@ -19,3 +19,8 @@ curl -L https://storage.googleapis.com/etcd/${ETCD_VER}/etcd-${ETCD_VER}-linux-a
 cd /usr/bin
 tar xzvf /tmp/etcd-${ETCD_VER}-linux-amd64.tar.gz etcd-v3.4.14-linux-amd64/etcdctl --strip-components=1
 curl -sL https://github.com/derailed/k9s/releases/download/v0.24.8/k9s_Linux_x86_64.tar.gz | tar xz k9s
+
+while ! dnf install -y vim-enhanced git; do
+  sleep 1
+done
+git config --global color.ui auto true
