@@ -355,7 +355,7 @@ spec:
         env:
         - name: UI_KEYPHRASE
           value: secretkeyphrase
-        image: rdeenik/k8s-collector:devel
+        image: rdeenik/k8s-collector:latest
         imagePullPolicy: Always
         name: k8s-collector
         resources:
@@ -371,7 +371,7 @@ spec:
         - -c
         - /usr/local/bin/podcli check http http://px-explorer/ui/dashboard --delay
           5s --retry 120
-        image: rdeenik/k8s-collector:devel
+        image: rdeenik/k8s-collector:latest
         name: wait-for-ui
       serviceAccountName: px-explorer
 ---
@@ -405,7 +405,7 @@ spec:
         env:
         - name: UI_KEYPHRASE
           value: secretkeyphrase
-        image: rdeenik/metrics-collector:devel
+        image: rdeenik/metrics-collector:latest
         imagePullPolicy: Always
         name: metrics-collector
         resources:
@@ -421,7 +421,7 @@ spec:
         - -c
         - /usr/local/bin/podcli check http http://px-explorer/ui/dashboard --delay
           5s --retry 120
-        image: rdeenik/metrics-collector:devel
+        image: rdeenik/metrics-collector:latest
         name: wait-for-ui
       serviceAccountName: px-explorer
 ---
@@ -453,7 +453,7 @@ spec:
         env:
         - name: UI_KEYPHRASE
           value: secretkeyphrase
-        image: rdeenik/pwx-collector:devel
+        image: rdeenik/pwx-collector:latest
         imagePullPolicy: Always
         name: pwx-collector
         resources:
@@ -469,7 +469,7 @@ spec:
         - -c
         - /usr/local/bin/podcli check http http://px-explorer/ui/dashboard --delay
           5s --retry 120
-        image: rdeenik/pwx-collector:devel
+        image: rdeenik/pwx-collector:latest
         name: wait-for-ui
       serviceAccountName: px-explorer
 ---
@@ -498,7 +498,7 @@ spec:
           value: info
         - name: UI_KEYPHRASE
           value: secretkeyphrase
-        image: rdeenik/px-explorer:devel
+        image: rdeenik/px-explorer:latest
         imagePullPolicy: Always
         livenessProbe:
           exec:
@@ -536,7 +536,7 @@ spec:
         - -c
         - /usr/bin/wait-for-it -h px-explorer-db -p 3306 -t 600 -s -- /usr/bin/php
           /var/www/html/artisan migrate:fresh --force
-        image: rdeenik/px-explorer:devel
+        image: rdeenik/px-explorer:latest
         name: init-db-tables
 ---
 apiVersion: apps/v1
