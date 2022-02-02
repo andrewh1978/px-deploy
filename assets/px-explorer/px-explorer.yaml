@@ -1,0 +1,582 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: px-explorer
+---
+allowVolumeExpansion: true
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: px-explorer
+parameters:
+  io_profile: db_remote
+  repl: "3"
+provisioner: kubernetes.io/portworx-volume
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: px-explorer
+  namespace: px-explorer
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: px-explorer-api
+rules:
+- apiGroups:
+  - apiregistration.k8s.io
+  resources:
+  - apiservices
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: px-explorer-apps
+rules:
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets
+  - deployments
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: px-explorer-core
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - persistentvolumeclaims
+  - pods
+  - configmaps
+  - persistentvolumes
+  - nodes
+  - pods/log
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: px-explorer-external-storage
+rules:
+- apiGroups:
+  - volumesnapshot.external-storage.k8s.io
+  resources:
+  - volumesnapshots
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: px-explorer-jobs
+rules:
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: px-explorer-snapshot
+rules:
+- apiGroups:
+  - snapshot.storage.k8s.io
+  resources:
+  - volumesnapshots
+  - volumesnapshotclasses
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: px-explorer-storage
+rules:
+- apiGroups:
+  - storage.k8s.io
+  resources:
+  - storageclasses
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: px-explorer-storagecluster
+rules:
+- apiGroups:
+  - core.libopenstorage.org
+  resources:
+  - storageclusters
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: px-explorer-stork
+rules:
+- apiGroups:
+  - stork.libopenstorage.org
+  resources:
+  - applicationbackups
+  - applicationbackupschedules
+  - applicationclones
+  - applicationregistrations
+  - applicationrestores
+  - backuplocations
+  - clusterdomainsstatuses
+  - clusterdomainupdates
+  - clusterpairs
+  - groupvolumesnapshots
+  - migrations
+  - migrationschedules
+  - namespacedschedulepolicies
+  - rules
+  - schedulepolicies
+  - volumesnapshotrestores
+  - volumesnapshotschedules
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: px-explorer-api
+  namespace: px-explorer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: px-explorer-api
+subjects:
+- kind: ServiceAccount
+  name: px-explorer
+  namespace: px-explorer
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: px-explorer-apps
+  namespace: px-explorer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: px-explorer-apps
+subjects:
+- kind: ServiceAccount
+  name: px-explorer
+  namespace: px-explorer
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: px-explorer-core
+  namespace: px-explorer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: px-explorer-core
+subjects:
+- kind: ServiceAccount
+  name: px-explorer
+  namespace: px-explorer
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: px-explorer-external-storage
+  namespace: px-explorer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: px-explorer-external-storage
+subjects:
+- kind: ServiceAccount
+  name: px-explorer
+  namespace: px-explorer
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: px-explorer-jobs
+  namespace: px-explorer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: px-explorer-jobs
+subjects:
+- kind: ServiceAccount
+  name: px-explorer
+  namespace: px-explorer
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: px-explorer-snapshot
+  namespace: px-explorer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: px-explorer-snapshot
+subjects:
+- kind: ServiceAccount
+  name: px-explorer
+  namespace: px-explorer
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: px-explorer-storage
+  namespace: px-explorer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: px-explorer-storage
+subjects:
+- kind: ServiceAccount
+  name: px-explorer
+  namespace: px-explorer
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: px-explorer-storagecluster
+  namespace: px-explorer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: px-explorer-storagecluster
+subjects:
+- kind: ServiceAccount
+  name: px-explorer
+  namespace: px-explorer
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: px-explorer-stork
+  namespace: px-explorer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: px-explorer-stork
+subjects:
+- kind: ServiceAccount
+  name: px-explorer
+  namespace: px-explorer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: px-explorer
+  namespace: px-explorer
+spec:
+  ports:
+  - name: http
+    nodePort: 31313
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: px-explorer-ui
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: px-explorer-db
+  namespace: px-explorer
+spec:
+  ports:
+  - name: mariadb
+    port: 3306
+    protocol: TCP
+    targetPort: 3306
+  selector:
+    app: px-explorer-db
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k8s-collector
+  namespace: px-explorer
+spec:
+  revisionHistoryLimit: 0
+  selector:
+    matchLabels:
+      app: k8s-collector
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: k8s-collector
+    spec:
+      containers:
+      - args:
+        - -baseurl
+        - http://px-explorer:80
+        - -loglevel
+        - info
+        env:
+        - name: UI_KEYPHRASE
+          value: secretkeyphrase
+        image: rdeenik/k8s-collector:devel
+        imagePullPolicy: Always
+        name: k8s-collector
+        resources:
+          limits:
+            cpu: 2000m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 64Mi
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - /usr/local/bin/podcli check http http://px-explorer/ui/dashboard --delay
+          5s --retry 120
+        image: rdeenik/k8s-collector:devel
+        name: wait-for-ui
+      serviceAccountName: px-explorer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metrics-collector
+  namespace: px-explorer
+spec:
+  revisionHistoryLimit: 0
+  selector:
+    matchLabels:
+      app: metrics-collector
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: metrics-collector
+    spec:
+      containers:
+      - args:
+        - -baseurl
+        - http://px-explorer:80
+        - -metricsapi
+        - portworx-api.portworx:9020
+        - -loglevel
+        - info
+        env:
+        - name: UI_KEYPHRASE
+          value: secretkeyphrase
+        image: rdeenik/metrics-collector:devel
+        imagePullPolicy: Always
+        name: metrics-collector
+        resources:
+          limits:
+            cpu: 2000m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 64Mi
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - /usr/local/bin/podcli check http http://px-explorer/ui/dashboard --delay
+          5s --retry 120
+        image: rdeenik/metrics-collector:devel
+        name: wait-for-ui
+      serviceAccountName: px-explorer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pwx-collector
+  namespace: px-explorer
+spec:
+  revisionHistoryLimit: 0
+  selector:
+    matchLabels:
+      app: pwx-collector
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: pwx-collector
+    spec:
+      containers:
+      - args:
+        - -baseurl
+        - http://px-explorer:80
+        - -loglevel
+        - info
+        env:
+        - name: UI_KEYPHRASE
+          value: secretkeyphrase
+        image: rdeenik/pwx-collector:devel
+        imagePullPolicy: Always
+        name: pwx-collector
+        resources:
+          limits:
+            cpu: 2000m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 64Mi
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - /usr/local/bin/podcli check http http://px-explorer/ui/dashboard --delay
+          5s --retry 120
+        image: rdeenik/pwx-collector:devel
+        name: wait-for-ui
+      serviceAccountName: px-explorer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: px-explorer
+  namespace: px-explorer
+spec:
+  revisionHistoryLimit: 0
+  selector:
+    matchLabels:
+      app: px-explorer-ui
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: px-explorer-ui
+    spec:
+      containers:
+      - env:
+        - name: LOG_LEVEL
+          value: info
+        - name: UI_KEYPHRASE
+          value: secretkeyphrase
+        image: rdeenik/px-explorer:devel
+        imagePullPolicy: Always
+        livenessProbe:
+          exec:
+            command:
+            - podcli
+            - check
+            - http
+            - localhost:8080
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+        name: px-explorer
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        readinessProbe:
+          exec:
+            command:
+            - podcli
+            - check
+            - http
+            - localhost:8080
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+        resources:
+          limits:
+            cpu: 2000m
+            memory: 768Mi
+          requests:
+            cpu: 100m
+            memory: 64Mi
+      initContainers:
+      - command:
+        - /bin/bash
+        - -c
+        - /usr/bin/wait-for-it -h px-explorer-db -p 3306 -t 600 -s -- /usr/bin/php
+          /var/www/html/artisan migrate:fresh --force
+        image: rdeenik/px-explorer:devel
+        name: init-db-tables
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: px-explorer-db
+  namespace: px-explorer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: px-explorer-db
+  serviceName: px-explorer-db
+  template:
+    metadata:
+      labels:
+        app: px-explorer-db
+    spec:
+      containers:
+      - env:
+        - name: MARIADB_ALLOW_EMPTY_ROOT_PASSWORD
+          value: "1"
+        - name: MARIADB_USER
+          value: ui
+        - name: MARIADB_PASSWORD
+          value: password
+        - name: MARIADB_DATABASE
+          value: ui
+        image: mariadb:10.6-focal
+        name: mariadb
+        volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: data
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 5Gi
+      storageClassName: px-explorer
