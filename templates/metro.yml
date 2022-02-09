@@ -16,5 +16,5 @@ cluster:
 # NOTE: edit env.licenses above, or define in defaults.yml
 # Verify all is working with `storkctl get clusterdomainsstatus` (take around 7 minutes)
 # Stop the nodes on cluster 1
-# Mark cluster 1 as down with `storkctl deactivate clusterdomain cluster_1` on master-2
-# Scale up on cluster 2 with `storkctl activate migration` on master-2
+# Mark cluster 1 as down with `storkctl deactivate clusterdomain cluster-1` on master-2
+# Scale up on cluster 2 with `storkctl activate migration` on master-2 
