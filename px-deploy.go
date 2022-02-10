@@ -96,7 +96,7 @@ var Yellow = "\033[33m"
 var Blue   = "\033[34m"
 
 func main() {
-	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createAwsTags, createGcpType, createGcpDisks, createGcpZone, createAzureType, createAzureDisks, createTemplate, createRegion, createCloud, createEnv, connectName, destroyName, statusName, historyNumber string
+	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createAwsTags, createGcpType, createGcpDisks, createGcpZone, createAzureType, createAzureDisks, createTemplate, createRegion, createCloud, createEnv, connectName, kubeconfigName, destroyName, statusName, historyNumber string
 	var createQuiet, createDryRun, destroyAll bool
 	os.Chdir("/px-deploy/.px-deploy")
 	rootCmd := &cobra.Command{Use: "px-deploy"}
@@ -396,6 +396,28 @@ func main() {
 		},
 	}
 
+	cmdKubeconfig := &cobra.Command{
+		Use:   "kubeconfig -n name",
+		Short: "Downloads kubeconfigs from clusters",
+		Long:  "Downloads kubeconfigs from clusters",
+		Run: func(cmd *cobra.Command, args []string) {
+			config := parse_yaml("deployments/" + kubeconfigName + ".yml")
+			ip := get_ip(kubeconfigName)
+			clusters, _ := strconv.Atoi(config.Clusters)
+			for c := 1; c <= clusters; c++ {
+				cmd := exec.Command("bash", "-c", "ssh -oLoglevel=ERROR -oStrictHostKeyChecking=no -i keys/id_rsa." + config.Cloud + "." + config.Name + " root@" + ip + " ssh master-" + strconv.Itoa(c) + " cat /root/.kube/config")
+				kubeconfig, err := cmd.Output()
+				if err != nil {
+					die(err.Error())
+				}
+				err = ioutil.WriteFile("kubeconfig/" + config.Name + "." + strconv.Itoa(c), kubeconfig, 0644)
+				if err != nil {
+					die(err.Error())
+				}
+			}
+		},
+	}
+
 	cmdList := &cobra.Command{
 		Use:   "list",
 		Short: "Lists available deployments",
@@ -530,13 +552,15 @@ func main() {
 
 	cmdConnect.Flags().StringVarP(&connectName, "name", "n", "", "name of deployment to connect to")
 	cmdConnect.MarkFlagRequired("name")
+	cmdKubeconfig.Flags().StringVarP(&kubeconfigName, "name", "n", "", "name of deployment to connect to")
+	cmdKubeconfig.MarkFlagRequired("name")
 
 	cmdStatus.Flags().StringVarP(&statusName, "name", "n", "", "name of deployment")
 	cmdStatus.MarkFlagRequired("name")
 
 	cmdHistory.Flags().StringVarP(&historyNumber, "number", "n", "", "deployment ID")
 
-	rootCmd.AddCommand(cmdCreate, cmdDestroy, cmdConnect, cmdList, cmdTemplates, cmdStatus, cmdCompletion, cmdVsphereInit, cmdVersion, cmdHistory)
+	rootCmd.AddCommand(cmdCreate, cmdDestroy, cmdConnect, cmdKubeconfig, cmdList, cmdTemplates, cmdStatus, cmdCompletion, cmdVsphereInit, cmdVersion, cmdHistory)
 	rootCmd.Execute()
 }
 
@@ -756,6 +780,10 @@ EOF
 	os.Remove("deployments/" + name + ".yml")
 	os.Remove("keys/id_rsa." + config.Cloud + "." + name)
 	os.Remove("keys/id_rsa." + config.Cloud + "." + name + ".pub")
+	clusters, _ := strconv.Atoi(config.Clusters)
+	for c := 0; c <= clusters; c++ {
+		os.Remove("kubeconfig/" + name + "." + strconv.Itoa(c))
+	}
 	fmt.Println(White + "Destroyed." + Reset)
 }
 
