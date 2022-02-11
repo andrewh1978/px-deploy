@@ -721,7 +721,12 @@ EOF
       aws ec2 detach-internet-gateway --internet-gateway-id `+config.Aws__Gw+` --vpc-id `+config.Aws__Vpc+` &&
       aws ec2 delete-internet-gateway --internet-gateway-id `+config.Aws__Gw+` &&
       aws ec2 delete-route-table --route-table-id `+config.Aws__Routetable+` &&
-      aws ec2 delete-vpc --vpc-id `+config.Aws__Vpc+`
+      aws ec2 describe-vpcs --vpc-id `+config.Aws__Vpc+` >&/dev/null
+      if [ $? -eq 0 ]; then
+        aws ec2 delete-vpc --vpc-id `+config.Aws__Vpc+`
+      else
+        echo "VPC already destroyed"
+      fi
       wait
     `).CombinedOutput()
 	} else if config.Cloud == "gcp" {
