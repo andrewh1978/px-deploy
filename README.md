@@ -107,6 +107,17 @@ master-1 34.247.219.101 ec2-34-247-219-101.eu-west-1.compute.amazonaws.com
 master-2 34.254.155.6 ec2-34-254-155-6.eu-west-1.compute.amazonaws.com
 ```
 
+Generate kubeconfig files so you can run kubectl from your laptop:
+```
+$ px-deploy kubeconfig --name exampleDeployment
+$ kubectl get nodes --kubeconfig $HOME/.px-deploy/kubeconfig/exampleDeployment.1
+NAME                                           STATUS   ROLES    AGE   VERSION
+ip-192-168-5-19.eu-west-1.compute.internal     Ready    <none>   11m   v1.21.5-eks-9017834
+ip-192-168-56-14.eu-west-1.compute.internal    Ready    <none>   11m   v1.21.5-eks-9017834
+ip-192-168-74-141.eu-west-1.compute.internal   Ready    <none>   11m   v1.21.5-eks-9017834
+```
+Note this is currently only tested with EKS.
+
 The `defaults.yml` file sets a number of deployment variables:
  * `aws_ebs` - a list of EBS volumes to be attached to each worker node. This is a space-separated list of type:size pairs, for example: `"gp2:30 standard:20"` will provision a gp2 volume of 30 GB and a standard volume of 20GB
  * `aws_region` - AWS region
