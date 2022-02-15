@@ -21,6 +21,7 @@ for i in scripts templates assets defaults.yml; do
   [ -e /.px-deploy/$i ] && echo Backing up $home/.px-deploy/$i to $home/.px-deploy/$i.$time && mv /.px-deploy/$i /.px-deploy/$i.$time
   cp -r $i /.px-deploy
 done
+docker run --help | grep -q -- "--platform string" && PLATFORM="--platform linux/amd64"
 echo
 echo -e ${YELLOW}If you are using zsh, append this to your .zshrc:
 echo -e ${WHITE}'px-deploy() { [ "$DEFAULTS" ] && params="-v $DEFAULTS:/px-deploy/.px-deploy/defaults.yml" ; docker run '$PLATFORM' -it -e PXDUSER=$USER --rm --name px-deploy.$$ $=params -v $HOME/.px-deploy:/px-deploy/.px-deploy -v $HOME/.aws/credentials:/root/.aws/credentials -v $HOME/.config/gcloud:/root/.config/gcloud -v $HOME/.azure:/root/.azure -v /etc/localtime:/etc/localtime px-deploy /root/go/bin/px-deploy $* ; }'
