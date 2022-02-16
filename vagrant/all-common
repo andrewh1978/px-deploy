@@ -86,4 +86,4 @@ systemctl enable atd chronyd
 [ "$stop_after" != 0 ] && echo /usr/sbin/shutdown -h now | at now + $stop_after hours
 modprobe br_netfilter
 sysctl -w net.bridge.bridge-nf-call-iptables=1 >/etc/sysctl.conf
-[ "$run_everywhere" ] && eval $run_everywhere
+[ "$run_everywhere" ] && eval $run_everywhere || true
