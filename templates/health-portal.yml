@@ -3,4 +3,4 @@ scripts: ["install-awscli", "install-px", "health-portal-credentials", "health-p
 post_script: "health-portal-app"
 env:
   px_suffix: "mon=true"
-  scenarios: "multiWriter,diskFull,backups"
+  scenarios: "multiwriter,diskfull,backups"
