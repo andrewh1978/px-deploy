@@ -9,4 +9,4 @@ cluster:
 post_script: "health-portal-app"
 env:
   px_suffix: "mon=true"
-  scenarios: "multiWriter,diskFull,backups,azOffline"
+  scenarios: "multiwriter,diskfull,backups,azoffline"
