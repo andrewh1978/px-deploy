@@ -48,6 +48,7 @@ This will:
 It may take 10-20 minutes to complete.
 
 5. Deploy something:
+
 If you are using AWS and you have not accepted the CentOS terms, browse to https://aws.amazon.com/marketplace/pp?sku=aw0evgkw8e5c1q413zgy5pjce.
 ```
 px-deploy create --name=my-deployment --template=clusterpair
