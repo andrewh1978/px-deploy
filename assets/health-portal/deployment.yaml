@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
       - name: api
-        image: docker.io/binocarlos/px-health-portal-api:latest
+        image: docker.io/binocarlos/px-health-portal-api:refactor
         imagePullPolicy: "Always"
         ports:
         - containerPort: 80
@@ -33,6 +33,12 @@ spec:
           value: production
         - name: SCENARIOS
           value: "${scenarios}"
+        - name: JWT_SECRET
+          value: "${jwt_secret}"
+        - name: AUTH_USERNAME
+          value: "${username}"
+        - name: AUTH_PASSWORD
+          value: "${password}"
 ---
 apiVersion: apps/v1
 kind: Deployment
