@@ -45,25 +45,28 @@ This will:
  * create and populate `$HOME/.px-deploy`
  * provide instructions to configure `.bash_profile`/`.zshrc`
 
+It may take 10-20 minutes to complete.
+
 5. Deploy something:
+If you are using AWS and you have not accepted the CentOS terms, browse to https://aws.amazon.com/marketplace/pp?sku=aw0evgkw8e5c1q413zgy5pjce.
 ```
-px-deploy create --name=myDeployment --template=clusterpair
+px-deploy create --name=my-deployment --template=clusterpair
 ```
 This will provision a VPC and some other objects, and deploy into it from the template.
 
 6. Connect via SSH:
 ```
-px-deploy connect --name myDeployment
+px-deploy connect --name my-deployment
 ```
 
 7. Execute a command:
 ```
-px-deploy connect --name myDeployment "storkctl get clusterpair"
+px-deploy connect --name my-deployment "storkctl get clusterpair"
 ```
 
 8. Tear down the deployment:
 ```
-px-deploy destroy --name myDeployment
+px-deploy destroy --name my-deployment
 ```
 
 # NOTES
@@ -156,9 +159,18 @@ The `defaults.yml` file sets a number of deployment variables:
 
 There are two ways to override these variables. The first is to specify a template with the `--template=...` parameter. For example:
 ```
-$ cat templates/clusterpair.yml
-clusters: 2
-scripts: ["install-px", "clusterpair"]
+$ cat templates/px-fio-example.yml
+description: An example fio benchmark on a gp2 disk and a Portworx volume on a gp2 disk
+scripts: ["install-px", "px-wait", "px-fio-example"]
+clusters: 1
+nodes: 3
+cloud: aws
+aws_ebs: "gp2:150 gp2:150"
+post_script: cat
+auto_destroy: true
+env:
+  px_suffix: "s=/dev/nvme1n1"
+  cat: "/tmp/output"
 ```
 
 More on `scripts` below.
@@ -213,7 +225,7 @@ env:
 ```
 Enviroment variables can also be defined on the command line:
 ```
-px-deploy create -n foo -t clusterpair -e install_apps=true,foo=bar
+px-deploy create -n foo -t migration -e install_apps=true,foo=bar
 ```
 
 The `install-px` script looks for an environment variable called `cloud_drive`. If it exists, it will deploy Portworx using a clouddrive rather than looking for all attached devices. Note that this is a requirement for Openshift 4. For example:
