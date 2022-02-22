@@ -113,7 +113,6 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-  - port: 
   - port: 8080
     protocol: TCP
   selector:
