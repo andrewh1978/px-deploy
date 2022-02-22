@@ -24,7 +24,7 @@ spec:
         image: docker.io/binocarlos/px-health-portal-api:refactor
         imagePullPolicy: "Always"
         ports:
-        - containerPort: 80
+        - containerPort: 8080
         envFrom:
         - secretRef:
             name: clusters
@@ -62,7 +62,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: docker.io/binocarlos/px-health-portal-frontend:latest
+        image: docker.io/binocarlos/px-health-portal-frontend:refactor
         imagePullPolicy: "Always"
         ports:
         - containerPort: 80
@@ -100,6 +100,8 @@ spec:
           value: "1"
         - name: NOXY_API_FRONT
           value: /api/v1
+        - name: NOXY_API_PORT
+          value: "8080"
         - name: NOXY_API_HOST
           value: api
 ---
@@ -111,7 +113,8 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-  - port: 80
+  - port: 
+  - port: 8080
     protocol: TCP
   selector:
     app: api
