@@ -23,6 +23,8 @@ If you have a LoadBalancer in your Kubernetes cluster, you can access the cluste
 kubectl get svc -n px-explorer px-explorer
 ```
 
+The default username and password are pureuser/pureuser.
+
 # Known limitations
 - Does not yet work on RedHat OpenShift (untested)
 - No support for SSL / encryption of the application
