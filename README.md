@@ -47,7 +47,8 @@ This will:
 
 It may take 10-20 minutes to complete.
 
-Update your `.bash_profile`/`.zshrc` as directed. Source them or login again. Validate it is complete with `px-deploy -h`.
+Update your `.bash_profile` or `.zshrc` as directed. Source them or login again. Validate it is complete with `px-deploy -h`.
+
 Review the various cloud settings in `~/.px-deploy/defaults.yml`.
 
 5. Deploy something:
