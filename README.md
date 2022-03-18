@@ -47,11 +47,8 @@ This will:
 
 It may take 10-20 minutes to complete.
 
-Ensure to include in the shell profile - check directions on the console where the above script is run.
-
-Change settings (for AWS, GCP, Azure, vSphere, OCP) in the defaults.yml file - this file is located under ~/.px-deploy/.
-
-Run 'px-deploy' to check if the script is properly functioning.
+Update your `.bash_profile`/`.zshrc` as directed. Source them or login again. Validate it is complete with `px-deploy -h`.
+Review the various cloud settings in `~/.px-deploy/defaults.yml`.
 
 5. Deploy something:
 
