@@ -47,6 +47,10 @@ This will:
 
 It may take 10-20 minutes to complete.
 
+Update your `.bash_profile` or `.zshrc` as directed. Source them or login again. Validate it is complete with `px-deploy -h`.
+
+Review the various cloud settings in `~/.px-deploy/defaults.yml`.
+
 5. Deploy something:
 
 If you are using AWS and you have not accepted the CentOS terms, browse to https://aws.amazon.com/marketplace/pp?sku=aw0evgkw8e5c1q413zgy5pjce.
