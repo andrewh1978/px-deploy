@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
       - name: api
-        image: docker.io/binocarlos/px-health-portal-api:refactor
+        image: docker.io/binocarlos/px-health-portal-api:latest
         imagePullPolicy: "Always"
         ports:
         - containerPort: 8080
