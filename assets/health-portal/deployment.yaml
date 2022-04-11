@@ -32,13 +32,13 @@ spec:
         - name: NODE_ENV
           value: production
         - name: SCENARIOS
-          value: "${scenarios}"
+          value: "${healthportal_scenarios}"
         - name: JWT_SECRET
-          value: "${jwt_secret}"
+          value: "${healthportal_jwt_secret}"
         - name: AUTH_USERNAME
-          value: "${username}"
+          value: "${healthportal_username}"
         - name: AUTH_PASSWORD
-          value: "${password}"
+          value: "${healthportal_password}"
 ---
 apiVersion: apps/v1
 kind: Deployment

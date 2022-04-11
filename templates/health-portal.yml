@@ -1,6 +1,10 @@
-description: Install and run Portworx on each cluster
+description: Deploys single cluster with Portworx and health portal app configured (on AWS only)
 scripts: ["install-awscli", "install-px", "health-portal-credentials", "health-portal-backups"]
 post_script: "health-portal-app"
 env:
   px_suffix: "mon=true"
-  scenarios: "multiwriter,diskfull,backups"
+  # you can read how to configure the health-portal app here https://github.com/binocarlos/px-health-portal/tree/master/docs
+  healthportal_scenarios: "multiwriter,diskfull,backups"
+  healthportal_jwt_secret: "somethingreallysecret"
+  healthportal_username: "admin"
+  healthportal_password: "password"
