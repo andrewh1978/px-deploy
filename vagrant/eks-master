@@ -13,7 +13,7 @@ dnf install -y python3-pip
 pip3 install awscli
 ln -s /usr/local/bin/aws /usr/bin/aws
 eksctl create cluster --region $aws_region --nodes $nodes --node-type $aws_type --name $EKS_CLUSTER_NAME
-vpc=$(eksctl utils describe-stacks --region us-east-2 --cluster $EKS_CLUSTER_NAME --output json | grep vpc- | cut -f 4 -d \")
+vpc=$(eksctl utils describe-stacks --region $aws_region --cluster $EKS_CLUSTER_NAME --output json | grep vpc- | cut -f 4 -d \")
 profile=$(aws ec2 describe-instances --filters "Name=vpc-id,Values=$vpc" --region $aws_region --query Reservations[0].Instances[0].IamInstanceProfile.Arn --output text | cut -f 2 -d /)
 role=$(aws iam get-instance-profile --instance-profile-name $profile --region $aws_region --query InstanceProfile.Roles[0].RoleName --output text)
 cat <<EOF >/tmp/role.json
