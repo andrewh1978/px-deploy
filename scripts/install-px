@@ -148,10 +148,12 @@ if [ "$operator" != false ]; then
   kubectl -n portworx create configmap grafana-source-config --from-file=grafana-datasource.yaml=<(curl -s https://docs.portworx.com/samples/k8s/pxc/grafana-datasource.yaml)
   kubectl -n portworx create configmap grafana-dashboards --from-file=portworx-cluster-dashboard.json=<(curl -s https://docs.portworx.com/samples/k8s/pxc/portworx-cluster-dashboard.json) --from-file=portworx-node-dashboard.json=<(curl -s https://docs.portworx.com/samples/k8s/pxc/portworx-node-dashboard.json) --from-file=portworx-volume-dashboard.json=<(curl -s https://docs.portworx.com/samples/k8s/pxc/portworx-volume-dashboard.json) --from-file=portworx-etcd-dashboard.json=<(curl -s https://docs.portworx.com/samples/k8s/pxc/portworx-etcd-dashboard.json)
   kubectl apply -f <(curl -s https://docs.portworx.com/samples/k8s/pxc/grafana.yaml | sed s/kube-system/portworx/)
-  kubectl patch svc grafana -n portworx -p '{"spec": { "type": "NodePort", "ports": [ { "nodePort": 30112, "port": 3000, "protocol": "TCP", "targetPort": 3000 } ] } }'
-  while ! curl -m 1 -s -X POST -H "Content-Type: application/json" -d '{"Name":"portworx","type":"prometheus","access":"server","url":"http://px-prometheus:9090"}' http://admin:admin@localhost:30112/api/datasources; do
-    echo waiting for grafana
-    sleep 2
-  done
-  curl -s -X PUT -H "Content-Type: application/json" -d '{"oldPassword":"admin","newPassword":"admin","confirmNew":"admin"}' http://admin:admin@localhost:30112/api/user/password
+  if [ $platform != eks ]; then
+    kubectl patch svc grafana -n portworx -p '{"spec": { "type": "NodePort", "ports": [ { "nodePort": 30112, "port": 3000, "protocol": "TCP", "targetPort": 3000 } ] } }'
+    while ! curl -m 1 -s -X POST -H "Content-Type: application/json" -d '{"Name":"portworx","type":"prometheus","access":"server","url":"http://px-prometheus:9090"}' http://admin:admin@localhost:30112/api/datasources; do
+      echo waiting for grafana
+      sleep 2
+    done
+    curl -s -X PUT -H "Content-Type: application/json" -d '{"oldPassword":"admin","newPassword":"admin","confirmNew":"admin"}' http://admin:admin@localhost:30112/api/user/password
+  fi
 fi
