@@ -37,6 +37,7 @@ Vagrant.configure("2") do |config|
   if yaml['cloud'] == "aws"
     config.vm.box = "dummy"
     config.vm.provider :aws do |aws|
+      aws.instance_ready_timeout = 300
       aws.security_groups = yaml['aws__sg']
       aws.keypair_name = "px-deploy.#{yaml['name']}"
       aws.region = yaml['aws_region']
