@@ -3,6 +3,7 @@
 ## Improvements
  * Add nomad as a platform
  * Bump PX-Central to 2.2.0
+ * Bump Portworx to 2.10.2
 
 # 4.12.1
 
