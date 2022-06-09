@@ -2,6 +2,7 @@
 
 ## Improvements
  * Add nomad as a platform
+ * Bump PX-Central to 2.2.0
 
 # 4.12.1
 
