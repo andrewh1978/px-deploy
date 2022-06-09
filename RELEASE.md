@@ -1,3 +1,8 @@
+# 4.13
+
+## Improvements
+ * Add nomad as a platform
+
 # 4.12.1
 
 ## Improvements
