@@ -1,0 +1,3 @@
+description: Install and run Portworx on each cluster
+scripts: ["px-nomad"]
+platform: nomad
