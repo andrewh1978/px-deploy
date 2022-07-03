@@ -5,6 +5,9 @@
  * Bump PX-Central to 2.2.0
  * Bump Portworx to 2.10.2
 
+## Fixes
+ * Find soon-to-be-deprecated CentOS 7 AMI
+
 # 4.12.1
 
 ## Improvements
