@@ -601,7 +601,7 @@ func create_deployment(config Config) int {
         aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol all --cidr 192.168.0.0/16 &
         aws ec2 create-tags --resources $_AWS_vpc $_AWS_subnet $_AWS_gw $_AWS_routetable $_AWS_sg --tags Key=px-deploy_name,Value=`+config.Name+` &
         aws ec2 create-tags --resources $_AWS_vpc --tags Key=Name,Value=px-deploy.`+config.Name+` &
-        _AWS_ami=$(aws --output text ec2 describe-images --owners 679593333241 --filters Name=name,Values='CentOS Linux 7 x86_64 HVM EBS*' Name=architecture,Values=x86_64 Name=root-device-type,Values=ebs --query 'sort_by(Images, &Name)[-1].ImageId')
+        _AWS_ami=$(aws --output text ec2 describe-images --include-deprecated --owners 679593333241 --filters Name=name,Values='CentOS Linux 7 x86_64 HVM EBS*' Name=architecture,Values=x86_64 Name=root-device-type,Values=ebs --query 'sort_by(Images, &Name)[-1].ImageId')
         wait
         echo aws__vpc: $_AWS_vpc >>deployments/`+config.Name+`.yml
         echo aws__sg: $_AWS_sg >>deployments/`+config.Name+`.yml
