@@ -3,7 +3,7 @@
 ## Improvements
  * Add nomad as a platform
  * Bump PX-Central to 2.2.0
- * Bump Portworx to 2.10.2
+ * Bump Portworx to 2.10.3
 
 ## Fixes
  * Find soon-to-be-deprecated CentOS 7 AMI
