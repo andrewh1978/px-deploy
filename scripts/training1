@@ -1,0 +1,17 @@
+dnf install -y epel-release vim-enhanced
+dnf install -y shellinabox
+rm -f /etc/securetty
+sed -i s/4200/443/ /etc/sysconfig/shellinaboxd
+systemctl enable shellinaboxd
+systemctl restart shellinaboxd sshd
+mv /assets/training /root
+mkdir /etc/skel/.kube
+cat <<EOF >>/etc/skel/.bashrc
+alias k=kubectl
+complete -F __start_kubectl k
+PS1='[\u@px-training \W]\$ '
+EOF
+for i in $(seq 1 $clusters); do
+  useradd training$i
+  passwd --stdin training$i <<<portworx
+done
