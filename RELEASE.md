@@ -1,3 +1,8 @@
+# 4.13.1
+
+## Fixes
+ * Bump Vagrant to 2.2.19 to fix build bug
+
 # 4.13
 
 ## Improvements
