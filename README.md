@@ -24,7 +24,7 @@ This will deploy one or more clusters in the cloud, with optional post-install t
 ## Getting started
 
 1. Install the CLI for your choice of cloud provider and ensure it is configured:
- * AWS: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html
+ * AWS: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
  * GCP: https://cloud.google.com/sdk/docs/quickstarts
  * Azure: https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest
 
