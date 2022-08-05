@@ -610,6 +610,26 @@ func create_deployment(config Config) int {
         echo aws__routetable: $_AWS_routetable >>deployments/`+config.Name+`.yml
         echo aws__ami: $_AWS_ami >>deployments/`+config.Name+`.yml
       `).CombinedOutput()
+			err := os.Mkdir("/px-deploy/.px-deploy/terraform/" + config.Name, 0755)
+			if err != nil {
+				die(err.Error())
+			}
+			write_tf_file(config.Name, "aws.auto.tfvars", map[string]string{
+				"deployment_name": config.Name,
+				"cluster_count": config.Clusters,
+				"node_count": config.Nodes,
+				"aws_instance_type": config.Aws_Type,
+				"aws_ebs": config.Aws_Ebs,
+				"aws_tags": config.Aws_Tags,
+				"aws_vpc_cidr_block": "192.168.0.0/16",
+				"aws_sec_group_name": "pxdeploy-Sec-Group",
+				"aws_public_ip": "true",
+			})
+			write_tf_file(config.Name, "secrets.tfvars", map[string]string{
+				"aws_region": config.Aws_Region,
+				"aws_access_key_id": "PLACEHOLDER",
+				"aws_secret_access_key": "PLACEHOLDER",
+			})
 		}
 	case "gcp":
 		{
@@ -660,6 +680,27 @@ func create_deployment(config Config) int {
 	_Vsphere_userdata=$(echo -e '#cloud-config\nusers:\n  - default\n  - name: centos\n    primary_group: centos\n    sudo: ALL=(ALL) NOPASSWD:ALL\n    groups: sudo, wheel\n    ssh_import_id: None\n    lock_passwd: true\n    ssh_authorized_keys:\n    - '$(cat keys/id_rsa.vsphere.`+config.Name+`.pub) | base64 -w0)
 	echo vsphere__userdata: $_Vsphere_userdata >>deployments/`+config.Name+`.yml
       `).CombinedOutput()
+			write_tf_file(config.Name, "vsphere.auto.tfvars", map[string]string{
+				"deployment_name": config.Name,
+				"cluster_count": config.Clusters,
+				"node_count": config.Nodes,
+				"vsphere_datacenter": "PLACEHOLDER",
+				"vsphere_compute_resource": config.Vsphere_Compute_Resource,
+				"vsphere_datastore": config.Vsphere_Datastore,
+				"vsphere_resource_pool": config.Vsphere_Resource_Pool,
+				"vsphere_network": config.Vsphere_Network,
+				"vsphere_virtual_machine_folder": config.Vsphere_Folder,
+				"vsphere_template_name": config.Vsphere_Template,
+				"vsphere_virtual_machine_cpus": config.Vsphere_Cpu,
+				"vsphere_virtual_machine_memory": config.Vsphere_Memory,
+			})
+			write_tf_file(config.Name, "secrets.tfvars", map[string]string{
+				"vsphere_user": config.Vsphere_User,
+				"vsphere_password": config.Vsphere_Password,
+				"vsphere_server": config.Vsphere_Host,
+				"vsphere_insecure": "true",
+				"vsphere_userdata" : "I2Nsb3VkLWNvbmZpZwp1c2VyczoKICAtIGRlZmF1bHQKICAtIG5hbWU6IGNlbnRvcwogICAgcHJpbWFyeV9ncm91cDogY2VudG9zCiAgICBzdWRvOiBBTEw9KEFMTCkgTk9QQVNTV0Q6QUxMCiAgICBncm91cHM6IHN1ZG8sIHdoZWVsCiAgICBzc2hfaW1wb3J0X2lkOiBOb25lCiAgICBsb2NrX3Bhc3N3ZDogdHJ1ZQogICAgc3NoX2F1dGhvcml6ZWRfa2V5czoKICAgIC0gc3NoLXJzYSBBQUFBQjNOemFDMXljMkVBQUFBREFRQUJBQUFCQVFER3l5UHFnRmpWcGZJUXE0RHNmc0lhL2xKWG55dWpQYlBHT1FVa0Z6MWNTeXRnVmNJbzF4T1N5T0ZmWDJzWldjQzVmUXo0b2Z3cVUweUIycEovRDA5ZDBMWEFvL2hiWWpHemdacm1YcVBwQ0VWWkY5b0ZUVWlTL0hwZjlpdm92YkZUdXpyNVRjMHRuTy9vNGdrMi9uNGlGSTlCOGVyTDlseGgyQ3ExSU5oNUU2cHNiY1lmcUFRRkZ2RmFJYWIzUitVdDh4TzdPMnYwNUM3MXY2OFg0SjdQelB5MDM3UjNHQ3RnMU80aDR4UlVhVnpCUVJaeW1xWkNSMnpCOWg3OGVTMFUyQnRQbFAvUXNHSmZLeC95Zy95QVhSZW42OFpIU1dwRmJhc0Z2bG5wNG1NK29VWFp5K0Z4NDRXdE9HREwrT3hWd3pTYng4VXFwSU0zRFpBRXVQT2Qgcm9vdEA5NThmOWJjMGI2NzgK",
+			})
 		}
 	default:
 		die("Invalid cloud '" + config.Cloud + "'")
@@ -782,6 +823,7 @@ EOF
 		die("Failed to destroy")
 	}
 	fmt.Print(string(output))
+	os.RemoveAll("terraform/" + name)
 	os.Remove("deployments/" + name + ".yml")
 	os.Remove("keys/id_rsa." + config.Cloud + "." + name)
 	os.Remove("keys/id_rsa." + config.Cloud + "." + name + ".pub")
@@ -922,6 +964,19 @@ func log(msg string) {
 	defer file.Close()
 	if _, err := file.WriteString(time.Now().Format(time.RFC3339) + " " + msg + "\n"); err != nil {
 		die("Cannot write log: " + err.Error())
+	}
+}
+
+func write_tf_file (deployment string, filename string, data map[string]string) {
+	file, err := os.OpenFile("/px-deploy/.px-deploy/terraform/" + deployment + "/" + filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		die("Cannot open file: " + err.Error())
+	}
+	defer file.Close()
+	for name, value := range data {
+		if _, err := file.WriteString(name + " = \"" + value + "\"\n"); err != nil {
+			die("Cannot write file: " + err.Error())
+		}
 	}
 }
 
