@@ -51,6 +51,8 @@ Update your `.bash_profile` or `.zshrc` as directed. Source them or login again.
 
 Review the various cloud settings in `~/.px-deploy/defaults.yml`.
 
+4a. For AWS, establish credentials through "aws configure" and provide both access and secret keys.
+
 5. Deploy something:
 
 If you are using AWS and you have not accepted the CentOS terms, browse to https://aws.amazon.com/marketplace/pp?sku=aw0evgkw8e5c1q413zgy5pjce.
