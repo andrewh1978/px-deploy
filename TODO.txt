@@ -1,0 +1,14 @@
+
+transport  /assets directory
+
+mount aws credentials into master nodes(?)
+
+in Cluster -> 
+        scripts -> done
+        Aws_Type TODO
+
+aws_ebs -> TODO (see vagrantfile, node vm definition)
+
+post_script TODO
+
+get PXDUSER from container ENV -> maybe set a new env variable
