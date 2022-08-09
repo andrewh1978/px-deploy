@@ -36,7 +36,7 @@ resource "aws_vpc" "vpc" {
 	enable_dns_hostnames	= false
 	enable_dns_support		= true
 	tags = {
-		Name = format("%s-%s-%s",var.name_prefix,var.config_name,"vpc")
+		Name = format("%s.%s-%s",var.name_prefix,var.config_name,"vpc")
         px-deploy_name = var.config_name
 	}
 }
@@ -155,7 +155,7 @@ resource "aws_security_group" "sg_px-deploy" {
 		}
 }
 
-
+/*
 resource "aws_instance" "master" {
 	for_each 					=	var.masters
 	ami 						= 	var.aws_ami_image
@@ -203,7 +203,7 @@ resource "aws_instance" "node" {
 								px-deploy_username = var.PXDUSER
 	}
 }
-
+*/
 
 resource "local_file" "cloud-init-master" {
 	for_each = var.masters
@@ -226,4 +226,17 @@ resource "local_file" "cloud-init-node" {
 		}
 	)
 	filename = "${path.module}/cloud-init-${each.key}-generated.yaml"
+}
+
+resource "local_file" "aws-returns" {
+	content = templatefile("${path.module}/aws-returns.tpl", { 
+		tpl_vpc = aws_vpc.vpc.id,
+		tpl_sg = aws_security_group.sg_px-deploy.id,
+		tpl_subnet = aws_subnet.subnet.id,
+		tpl_gw = aws_internet_gateway.igw.id,
+		tpl_routetable = aws_route_table.rt.id,
+		tpl_ami = 	var.aws_ami_image,
+		}
+	)
+	filename = "${path.module}/aws-returns-generated.yaml"
 }

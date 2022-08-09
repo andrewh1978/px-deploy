@@ -17,6 +17,7 @@ import (
 	"unicode/utf8"
 	"net/http"
 	"encoding/base64"
+	//"reflect"
 
 
 	"github.com/go-yaml/yaml"
@@ -316,9 +317,9 @@ func main() {
 			os.Chdir("/px-deploy/vagrant")
 			os.Setenv("deployment", config.Name)
 			
-			if config.Cloud == "awstf" {
-				fmt.Println("at this place of code terraform should run. Do manually...")
-			} else {
+			// when using awstf everything should be up and running. other clouds now run vagrant
+			if config.Cloud != "awstf" {
+	
 			var provider string
 				switch config.Cloud {
 				case "aws":
@@ -572,6 +573,7 @@ func main() {
 func create_deployment(config Config) int {
 	var output []byte
 	var err error
+	var errapply error
 	
 	var tf_node_scripts []string
 	var tf_master_scripts []string
@@ -579,7 +581,7 @@ func create_deployment(config Config) int {
 	
 	var tf_var_masters []string 
 	var tf_var_nodes []string
-	
+
 	var tf_common_master_script []byte
 	var tf_node_script []byte
 	var tf_master_script []byte
@@ -598,6 +600,7 @@ func create_deployment(config Config) int {
 		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/variables.tf`,`/px-deploy/.px-deploy/deployments/`+ config.Name).Run()
 		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/cloud-init-master.tpl`,`/px-deploy/.px-deploy/deployments/`+ config.Name).Run()
 		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/cloud-init-node.tpl`,`/px-deploy/.px-deploy/deployments/`+ config.Name).Run()
+		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/aws-returns.tpl`,`/px-deploy/.px-deploy/deployments/`+ config.Name).Run()
 		// also copy terraform modules - these must be init'ed during px-deploy setup!!! use "terraform init"
 		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/.terraform`,`/px-deploy/.px-deploy/deployments/`+ config.Name).Run()
 		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/.terraform.lock.hcl`,`/px-deploy/.px-deploy/deployments/`+ config.Name).Run()
@@ -667,8 +670,11 @@ func create_deployment(config Config) int {
 							tf_master_script = append(tf_master_script,content...)
 							tf_master_script = append(tf_master_script,"\n) >&/var/log/px-deploy/"+filename+"\n"...)			
 						}
-						// TODO Aws_Type should also be catched here
-					}
+					}	
+				//TODO is there a cluster specific aws_type override?
+				if clusterconf.Aws_Type != "" {
+					fmt.Println("aws_type override :"+clusterconf.Aws_Type+": for cluster "+strconv.Itoa(clusterconf.Id))
+				}
 				}
 			}
 
@@ -689,21 +695,6 @@ func create_deployment(config Config) int {
 				}
 			}
 		}
-/*
-			for _, c := range config.Cluster {
-				for _, s := range c.Scripts {
-				}
-			}
-
-			for _, c := range config.Scripts {
-			
-			}
-
-			if config.Post_Script != "" {
-			
-			}
-*/
-
 
 		// build terraform variable file
 		tf_variables = append (tf_variables, "config_name = \"" + config.Name + "\"")
@@ -721,11 +712,34 @@ func create_deployment(config Config) int {
 		tf_variables = append (tf_variables, "}")
 		
 		write_tf_file(config.Name, ".tfvars",tf_variables)
-
-		// TODO run terraform & handle errors
-
-		// TODO apply aws___vpc aws___sg aws___subnet aws___gw aws___routetable aws___ami to yaml for maintaining compatibility
-			
+		
+		// now run terraform plan & terraform apply
+		fmt.Println(White+"running terraform PLAN"+Reset)
+		_, err = exec.Command("terraform","-chdir=/px-deploy/.px-deploy/deployments/"+config.Name, "plan", "-var-file",".tfvars").CombinedOutput()
+		if err != nil {
+			fmt.Println(Yellow+"ERROR: terraform plan failed. Check validity of terraform scripts"+Reset)
+			die(err.Error())
+		} else { 
+			fmt.Println(White+"running terraform APPLY"+Reset)
+			output, errapply = exec.Command("terraform","-chdir=/px-deploy/.px-deploy/deployments/"+config.Name, "apply", "-auto-approve", "-var-file",".tfvars").CombinedOutput()
+			if errapply != nil {
+				fmt.Println(Yellow+"ERROR: terraform apply failed. Check validity of terraform scripts"+Reset)
+				die(errapply.Error())
+			}
+		
+			// apply the terraform aws-returns-generated to deployment yml file (maintains compatibility to px-deploy behaviour, maybe not needed any longer)
+			content, err := ioutil.ReadFile("/px-deploy/.px-deploy/deployments/"+config.Name+"/aws-returns-generated.yaml")
+			file,err := os.OpenFile("/px-deploy/.px-deploy/deployments/" + config.Name+".yml", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+    		if err != nil {
+				die(err.Error())
+	  		}
+	  		defer file.Close()
+	    	_, err = file.WriteString(string(content))
+	  		if err != nil {
+				die(err.Error())
+        	}
+		
+		}
 	}
 	case "aws":
 		{
@@ -836,12 +850,25 @@ func destroy_deployment(name string) {
 	config := parse_yaml("deployments/" + name + ".yml")
 	var output []byte
 	var err error
+	var errdestroy error
+
 	ip := get_ip(config.Name)
 	fmt.Println(White + "Destroying deployment '" + config.Name + "'..." + Reset)
 	if config.Cloud == "awstf" {
+		fmt.Println(White+"running Terraform PLAN"+ Reset)
+		_, err = exec.Command("terraform","-chdir=/px-deploy/.px-deploy/deployments/"+config.Name, "plan", "-var-file",".tfvars").CombinedOutput()
+		if err != nil {
+			fmt.Println(Yellow+"ERROR: Terraform plan failed. Check validity of terraform scripts"+Reset)
+			die(err.Error())
+		} else {
+			fmt.Println(White+"running Terraform DESTROY"+ Reset)
+			output, errdestroy = exec.Command("terraform","-chdir=/px-deploy/.px-deploy/deployments/"+config.Name, "destroy", "-auto-approve","-var-file",".tfvars").CombinedOutput()
+			if errdestroy != nil {
+				fmt.Println(Yellow+"ERROR: Terraform destroy failed. Check validity of terraform scripts"+Reset)
+				die(errdestroy.Error())
+			}
+		}
 		os.RemoveAll("deployments/" + name)
-		fmt.Println(White + "implementation terraform delete to be done at this place..." + Reset)
-
 	} else if config.Cloud == "aws" {
 		if config.Platform == "ocp4" {
 			fmt.Println(White + "Destroying OCP4, wait about 5 minutes (per cluster)..." + Reset)

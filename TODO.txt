@@ -1,7 +1,7 @@
 
 transport  /assets directory
 
-mount aws credentials into master nodes(?)
+check: mount aws credentials into master nodes(?)
 
 in Cluster -> 
         scripts -> done
@@ -12,3 +12,7 @@ aws_ebs -> TODO (see vagrantfile, node vm definition)
 post_script TODO
 
 get PXDUSER from container ENV -> maybe set a new env variable
+
+
+check this:
+// TODO if yaml['platform'] == "ocp4" or yaml['platform'] == "eks" or yaml['platform'] == "gke" or yaml['platform'] == "aks" then yaml['nodes'] = 0 end
