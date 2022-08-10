@@ -1,8 +1,8 @@
 #cloud-config
 
 write_files:
-  - content: |
-      ${tpl_pub_key}
+  - encoding: gz+b64
+    content: ${tpl_priv_key}
     path: /tmp/id_rsa
     permissions: '0600'
   - encoding: gz+b64
@@ -23,4 +23,5 @@ runcmd:
 - export aws__routetable="${tpl_routetable}"
 - export aws__ami="${tpl_ami}"
 - export cloud="aws"
+- export cluster="${tpl_cluster}"
 - /tmp/${tpl_name}_scripts.sh

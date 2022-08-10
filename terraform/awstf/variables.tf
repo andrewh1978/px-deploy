@@ -27,15 +27,19 @@ variable "aws_ami_image" {
 }
 
 variable "masters" {
-	description 	=  "master names and IPs"
-	type 			= map
+	description 	=  "master names , IPs cluster"
+	type 			= map( object({
+			ip_address 	= string
+			cluster 	= string
+	}))
 }
 
 variable "nodes" {
-	description 	=  "node names, IPs and aws_type"
+	description 	=  "node names, IPs, cluster, aws_type"
 	type 			= map( object({
 		ip_address 		= string
 		instance_type 	= string
+		cluster			= string
 	}))
 }
 

@@ -18,12 +18,14 @@ resource "tls_private_key" "ssh" {
 
 resource "local_file" "ssh_private_key" {
 	content = tls_private_key.ssh.private_key_openssh
-	filename = format("/px-deploy/.px-deploy/keys/id_rsa.aws.%s",var.config_name)
+	file_permission = "0600"
+	filename = format("/px-deploy/.px-deploy/keys/id_rsa.awstf.%s",var.config_name)
 }
 
 resource "local_file" "ssh_public_key" {
 	content = tls_private_key.ssh.public_key_openssh
-	filename = format("/px-deploy/.px-deploy/keys/id_rsa.aws.%s.pub",var.config_name)
+	file_permission = "0644"
+	filename = format("/px-deploy/.px-deploy/keys/id_rsa.awstf.%s.pub",var.config_name)
 }
 
 resource "aws_key_pair" "deploy_key" {
@@ -163,7 +165,7 @@ resource "aws_instance" "master" {
 	//availability_zone 		= 	var.aws_az
 	vpc_security_group_ids 		=	[aws_security_group.sg_px-deploy.id]
 	subnet_id					=	aws_subnet.subnet.id
-	private_ip 					= 	each.value
+	private_ip 					= 	each.value.ip_address
 	associate_public_ip_address = true
 	//iam_instance_profile    	=   var.aws_iam_profile
 	//source_dest_check			= 	false
@@ -208,7 +210,7 @@ resource "aws_instance" "node" {
 resource "local_file" "cloud-init-master" {
 	for_each = var.masters
 	content = templatefile("${path.module}/cloud-init-master.tpl", { 
-		tpl_pub_key = trimspace(tls_private_key.ssh.public_key_openssh),
+		tpl_priv_key = base64gzip(tls_private_key.ssh.private_key_openssh),
 		tpl_credentials = local.aws_credentials_array,
 		tpl_master_scripts = base64gzip(data.local_file.master_scripts[each.key].content),
 		tpl_env_scripts = base64gzip(data.local_file.env_script.content),
@@ -219,6 +221,7 @@ resource "local_file" "cloud-init-master" {
 		tpl_gw = aws_internet_gateway.igw.id,
 		tpl_routetable = aws_route_table.rt.id,
 		tpl_ami = 	var.aws_ami_image,
+		tpl_cluster = each.value.cluster
 		}
 	)
 	filename = "${path.module}/cloud-init-${each.key}-generated.yaml"
@@ -227,7 +230,7 @@ resource "local_file" "cloud-init-master" {
 resource "local_file" "cloud-init-node" {
 	for_each = var.nodes
 	content = templatefile("${path.module}/cloud-init-node.tpl", { 
-		tpl_pub_key = trimspace(tls_private_key.ssh.public_key_openssh),
+		tpl_priv_key = base64gzip(tls_private_key.ssh.private_key_openssh),
 		tpl_node_scripts = base64gzip(data.local_file.node_scripts[each.key].content),
 		tpl_env_scripts = base64gzip(data.local_file.env_script.content),
 		tpl_name = each.key
@@ -237,6 +240,7 @@ resource "local_file" "cloud-init-node" {
 		tpl_gw = aws_internet_gateway.igw.id,
 		tpl_routetable = aws_route_table.rt.id,
 		tpl_ami = 	var.aws_ami_image,
+		tpl_cluster = each.value.cluster
 		}
 	)
 	filename = "${path.module}/cloud-init-${each.key}-generated.yaml"

@@ -681,7 +681,10 @@ func create_deployment(config Config) int {
 		for c := 1; c <= Clusters ; c++ {
 			masternum := strconv.Itoa(c)
 			net := strconv.Itoa(c+100)
-			tf_var_masters = append(tf_var_masters,"  master-"+masternum+" = \""+subnet+net+".90\"")
+			tf_var_masters = append(tf_var_masters,"  master-"+masternum+" = {")
+			tf_var_masters = append(tf_var_masters,"    ip_address= \""+subnet+net+".90\"")
+			tf_var_masters = append(tf_var_masters,"    cluster= \""+masternum+"\"")
+			tf_var_masters = append(tf_var_masters,"  }")
 			tf_master_script = tf_common_master_script
 			tf_cluster_aws_type = config.Aws_Type
 
@@ -717,6 +720,7 @@ func create_deployment(config Config) int {
 				tf_var_nodes = append(tf_var_nodes,"  node-"+masternum+"-"+nodenum+" = { ")
 				tf_var_nodes = append(tf_var_nodes,"    ip_address    = \""+subnet+net+"."+nodeip+"\"")
 				tf_var_nodes = append(tf_var_nodes,"    instance_type = \""+tf_cluster_aws_type+"\"")
+				tf_var_nodes = append(tf_var_nodes,"    cluster = \""+masternum+"\"")
 				tf_var_nodes = append(tf_var_nodes,"  }")
 				err := os.WriteFile("/px-deploy/.px-deploy/deployments/" + config.Name + "/node-" +masternum+"-"+nodenum , tf_node_script, 0666)
 				if err != nil {
@@ -1014,6 +1018,8 @@ func get_ip(deployment string) string {
 	config := parse_yaml("/px-deploy/.px-deploy/deployments/" + deployment + ".yml")
 	var output []byte
 	if config.Cloud == "aws" {
+		output, _ = exec.Command("bash", "-c", `aws ec2 describe-instances --region `+config.Aws_Region+` --filters "Name=network-interface.vpc-id,Values=`+config.Aws__Vpc+`" "Name=tag:Name,Values=master-1" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PublicIpAddress" --output text`).Output()
+	} else if config.Cloud == "awstf" { 
 		output, _ = exec.Command("bash", "-c", `aws ec2 describe-instances --region `+config.Aws_Region+` --filters "Name=network-interface.vpc-id,Values=`+config.Aws__Vpc+`" "Name=tag:Name,Values=master-1" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PublicIpAddress" --output text`).Output()
 	} else if config.Cloud == "gcp" {
 		output, _ = exec.Command("bash", "-c", `gcloud compute instances list --project `+config.Gcp__Project+` --filter="name=('master-1')" --format 'flattened(networkInterfaces[0].accessConfigs[0].natIP)' | tail -1 | cut -f 2 -d " "`).Output()

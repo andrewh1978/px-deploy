@@ -1,7 +1,6 @@
 
-transport  /assets directory
 
-check: mount aws credentials into master nodes(?)
+$cluster env variable must be set individually
 
 aws_ebs -> TODO (see vagrantfile, node vm definition)
 
