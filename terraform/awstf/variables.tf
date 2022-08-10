@@ -32,8 +32,11 @@ variable "masters" {
 }
 
 variable "nodes" {
-	description 	=  "node names and IPs"
-	type 			= map
+	description 	=  "node names, IPs and aws_type"
+	type 			= map( object({
+		ip_address 		= string
+		instance_type 	= string
+	}))
 }
 
 variable "aws_cidr_vpc" {
@@ -63,6 +66,11 @@ data "local_file" "node_scripts" {
 	for_each = var.nodes
 	filename = "${path.module}/${each.key}"
 }
+
+data "local_file" "env_script" {
+	filename = "${path.module}/env.sh"
+}
+
 
 # local aws credentials to be passed to master nodes via cloud-init file
 data "local_file" "aws_credential_file" {

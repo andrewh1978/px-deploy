@@ -155,7 +155,7 @@ resource "aws_security_group" "sg_px-deploy" {
 		}
 }
 
-/*
+
 resource "aws_instance" "master" {
 	for_each 					=	var.masters
 	ami 						= 	var.aws_ami_image
@@ -183,11 +183,11 @@ resource "aws_instance" "master" {
 resource "aws_instance" "node" {
 	for_each 					=	var.nodes
 	ami 						= 	var.aws_ami_image
-	instance_type				=	var.aws_instance_type
+	instance_type				=	each.value.instance_type
 	//availability_zone 		= 	var.aws_az
 	vpc_security_group_ids 		=	[aws_security_group.sg_px-deploy.id]
 	subnet_id					=	aws_subnet.subnet.id
-	private_ip 					= 	each.value
+	private_ip 					= 	each.value.ip_address
 	associate_public_ip_address = true
 	//iam_instance_profile    	=   var.aws_iam_profile
 	//source_dest_check			= 	false
@@ -203,7 +203,7 @@ resource "aws_instance" "node" {
 								px-deploy_username = var.PXDUSER
 	}
 }
-*/
+
 
 resource "local_file" "cloud-init-master" {
 	for_each = var.masters
@@ -211,7 +211,14 @@ resource "local_file" "cloud-init-master" {
 		tpl_pub_key = trimspace(tls_private_key.ssh.public_key_openssh),
 		tpl_credentials = local.aws_credentials_array,
 		tpl_master_scripts = base64gzip(data.local_file.master_scripts[each.key].content),
+		tpl_env_scripts = base64gzip(data.local_file.env_script.content),
 		tpl_name = each.key
+		tpl_vpc = aws_vpc.vpc.id,
+		tpl_sg = aws_security_group.sg_px-deploy.id,
+		tpl_subnet = aws_subnet.subnet.id,
+		tpl_gw = aws_internet_gateway.igw.id,
+		tpl_routetable = aws_route_table.rt.id,
+		tpl_ami = 	var.aws_ami_image,
 		}
 	)
 	filename = "${path.module}/cloud-init-${each.key}-generated.yaml"
@@ -222,7 +229,14 @@ resource "local_file" "cloud-init-node" {
 	content = templatefile("${path.module}/cloud-init-node.tpl", { 
 		tpl_pub_key = trimspace(tls_private_key.ssh.public_key_openssh),
 		tpl_node_scripts = base64gzip(data.local_file.node_scripts[each.key].content),
+		tpl_env_scripts = base64gzip(data.local_file.env_script.content),
 		tpl_name = each.key
+		tpl_vpc = aws_vpc.vpc.id,
+		tpl_sg = aws_security_group.sg_px-deploy.id,
+		tpl_subnet = aws_subnet.subnet.id,
+		tpl_gw = aws_internet_gateway.igw.id,
+		tpl_routetable = aws_route_table.rt.id,
+		tpl_ami = 	var.aws_ami_image,
 		}
 	)
 	filename = "${path.module}/cloud-init-${each.key}-generated.yaml"

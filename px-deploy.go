@@ -17,7 +17,7 @@ import (
 	"unicode/utf8"
 	"net/http"
 	"encoding/base64"
-	//"reflect"
+	"reflect"
 
 
 	"github.com/go-yaml/yaml"
@@ -585,7 +585,10 @@ func create_deployment(config Config) int {
 	var tf_common_master_script []byte
 	var tf_node_script []byte
 	var tf_master_script []byte
-
+	
+	var tf_cluster_aws_type string
+	var tf_env_script []byte
+	
 	fmt.Println(White + "Provisioning infrastructure..." + Reset)
 	switch config.Cloud {
 	case "awstf":
@@ -606,15 +609,35 @@ func create_deployment(config Config) int {
 		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/.terraform.lock.hcl`,`/px-deploy/.px-deploy/deployments/`+ config.Name).Run()
 	
 			
+		
+		
+		// prepare ENV variables for node/master scripts
+		// to maintain compatibility, create a env variable of everything from the yml spec which is from type string
+		e := reflect.ValueOf(&config).Elem()
+		for i:=0; i < e.NumField(); i++ {
+			if e.Type().Field(i).Type.Name() == "string" {
+				tf_env_script = append(tf_env_script,"export "+strings.ToLower(strings.TrimSpace(e.Type().Field(i).Name))+"=\""+strings.ToLower(strings.TrimSpace(e.Field(i).Interface().(string)))+"\"\n"...)
+			}
+		}
+		
+		// set env variables from env spec
+		for key,val := range config.Env {
+			tf_env_script = append(tf_env_script,"export "+key+"=\""+val+"\"\n"...)
+		}
+		err = os.WriteFile("/px-deploy/.px-deploy/deployments/" + config.Name + "/env.sh", tf_env_script, 0666)
+		if err != nil {
+			die(err.Error())
+		}
+
+		
 		subnet := "192.168."
 		// use aws vagrant scripts as awstf is just the tf implementation of aws
-		tf_node_scripts = []string{"all-common","aws-common","aws-node"}
-		
-		
 		// prepare (single) cloud-init script for all nodes			
+		tf_node_scripts = []string{"all-common",config.Platform+"-common",config.Platform+"-node"}
 		tf_node_script = append(tf_node_script,"#!/bin/bash\n"...)
-		tf_node_script = append(tf_node_script,"mkdir /var/log/px-deploy\n"...)
 		
+		tf_node_script = append(tf_node_script,"mkdir /var/log/px-deploy\n"...)
+
 		for _,filename := range tf_node_scripts {
 			content, err := ioutil.ReadFile("/px-deploy/vagrant/"+filename)
 			if err == nil {
@@ -625,10 +648,11 @@ func create_deployment(config Config) int {
 		}
 
 		// prepare common base script for all master nodes
-		tf_master_scripts = []string{"all-common","aws-common","all-master","aws-master"}
+		// prepare common cloud-init script for all master nodes
+		tf_master_scripts = []string{"all-common","awstf",config.Platform+"-common","all-master",config.Platform+"-master"}
 		tf_common_master_script = append(tf_common_master_script,"#!/bin/bash\n"...)
 		tf_common_master_script = append(tf_common_master_script,"mkdir /var/log/px-deploy\n"...)
-		
+
 		for _,filename := range tf_master_scripts {
 			content, err := ioutil.ReadFile("/px-deploy/vagrant/"+filename)
 			if err == nil {
@@ -659,8 +683,9 @@ func create_deployment(config Config) int {
 			net := strconv.Itoa(c+100)
 			tf_var_masters = append(tf_var_masters,"  master-"+masternum+" = \""+subnet+net+".90\"")
 			tf_master_script = tf_common_master_script
+			tf_cluster_aws_type = config.Aws_Type
 
-			// find individual scripts for cluster
+			// if exist, apply individual scripts/aws_type settings for nodes of a cluster
 			for _, clusterconf := range config.Cluster {
 				if clusterconf.Id == c {
 					for _,filename := range clusterconf.Scripts {
@@ -671,10 +696,11 @@ func create_deployment(config Config) int {
 							tf_master_script = append(tf_master_script,"\n) >&/var/log/px-deploy/"+filename+"\n"...)			
 						}
 					}	
-				//TODO is there a cluster specific aws_type override?
-				if clusterconf.Aws_Type != "" {
-					fmt.Println("aws_type override :"+clusterconf.Aws_Type+": for cluster "+strconv.Itoa(clusterconf.Id))
-				}
+				
+					//is there a cluster specific aws_type override? if not, set from generic config
+					if clusterconf.Aws_Type != "" {
+						tf_cluster_aws_type = clusterconf.Aws_Type
+					} 
 				}
 			}
 
@@ -688,7 +714,10 @@ func create_deployment(config Config) int {
 			for n :=1; n <= Nodes ; n++ {
 				nodenum := strconv.Itoa(n)
 				nodeip := strconv.Itoa(n+100)
-				tf_var_nodes = append(tf_var_nodes," node-"+masternum+"-"+nodenum+" = \""+subnet+net+"."+nodeip+"\"")
+				tf_var_nodes = append(tf_var_nodes,"  node-"+masternum+"-"+nodenum+" = { ")
+				tf_var_nodes = append(tf_var_nodes,"    ip_address    = \""+subnet+net+"."+nodeip+"\"")
+				tf_var_nodes = append(tf_var_nodes,"    instance_type = \""+tf_cluster_aws_type+"\"")
+				tf_var_nodes = append(tf_var_nodes,"  }")
 				err := os.WriteFile("/px-deploy/.px-deploy/deployments/" + config.Name + "/node-" +masternum+"-"+nodenum , tf_node_script, 0666)
 				if err != nil {
 					die(err.Error())
@@ -712,7 +741,7 @@ func create_deployment(config Config) int {
 		tf_variables = append (tf_variables, "}")
 		
 		write_tf_file(config.Name, ".tfvars",tf_variables)
-		
+	
 		// now run terraform plan & terraform apply
 		fmt.Println(White+"running terraform PLAN"+Reset)
 		_, err = exec.Command("terraform","-chdir=/px-deploy/.px-deploy/deployments/"+config.Name, "plan", "-var-file",".tfvars").CombinedOutput()

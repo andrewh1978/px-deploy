@@ -3,10 +3,6 @@ transport  /assets directory
 
 check: mount aws credentials into master nodes(?)
 
-in Cluster -> 
-        scripts -> done
-        Aws_Type TODO
-
 aws_ebs -> TODO (see vagrantfile, node vm definition)
 
 post_script TODO
