@@ -67,6 +67,7 @@ elif [ $cloud = "vsphere" ]; then
     done
     [ $(wc -l /tmp/hosts | cut -f 1 -d " ") -eq $[($nodes+1)*$clusters] ] && break
   done
+  echo 127.0.0.1 localhost >/etc/hosts
   cat /tmp/hosts >>/etc/hosts
 fi
 
