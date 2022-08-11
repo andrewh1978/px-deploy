@@ -16,7 +16,7 @@ RUN rpm -i https://rpm.releases.hashicorp.com/RHEL/7/x86_64/stable/packer-1.6.5-
 RUN vagrant plugin install vagrant-google --plugin-version 2.5.0
 RUN vagrant plugin install vagrant-aws
 RUN vagrant plugin install vagrant-azure
-RUN vagrant plugin install vagrant-vsphere
+RUN vagrant plugin install vagrant-vsphere --plugin-version 1.13.5
 RUN vagrant box add dummy https://github.com/mitchellh/vagrant-aws/raw/master/dummy.box --provider aws
 RUN vagrant box add google/gce https://vagrantcloud.com/google/boxes/gce/versions/0.1.0/providers/google.box --provider google
 RUN vagrant box add azure https://github.com/azure/vagrant-azure/raw/v2.0/dummy.box --provider azure --provider azure
