@@ -157,22 +157,42 @@ resource "aws_security_group" "sg_px-deploy" {
 		}
 }
 
+resource "aws_ebs_volume" "ebs_node" {
+  	for_each			= var.node_ebs_devices
+  	availability_zone   = aws_instance.node[each.value.node].availability_zone
+	size	= each.value.ebs_size
+  	type	= each.value.ebs_type	
+   	tags = {
+		Name = format("%s.%s-%s",var.name_prefix,var.config_name,each.key)
+		px-deploy_name = var.config_name
+		px-deploy_username = var.PXDUSER
+	}  
+}
+
+resource "aws_volume_attachment" "pwx_data_ebs_att1" {
+	for_each 		= var.node_ebs_devices
+	device_name 	= each.value.ebs_device_name
+	volume_id   	= aws_ebs_volume.ebs_node[each.key].id
+	instance_id 	= aws_instance.node[each.value.node].id
+}
 
 resource "aws_instance" "master" {
 	for_each 					=	var.masters
 	ami 						= 	var.aws_ami_image
 	instance_type				=	var.aws_instance_type
-	//availability_zone 		= 	var.aws_az
 	vpc_security_group_ids 		=	[aws_security_group.sg_px-deploy.id]
 	subnet_id					=	aws_subnet.subnet.id
 	private_ip 					= 	each.value.ip_address
 	associate_public_ip_address = true
-	//iam_instance_profile    	=   var.aws_iam_profile
-	//source_dest_check			= 	false
 	key_name 					= 	aws_key_pair.deploy_key.key_name
 	root_block_device {
 	  volume_size				=	50
 	  delete_on_termination 	= true
+	  tags 					= {
+								Name = format("%s.%s-%s-%s",var.name_prefix,var.config_name,each.key,"root")
+								px-deploy_name = var.config_name
+								px-deploy_username = var.PXDUSER
+	  }
 	}
 	user_data_base64			= 	base64gzip(local_file.cloud-init-master[each.key].content)
 	tags 					= {
@@ -186,19 +206,20 @@ resource "aws_instance" "node" {
 	for_each 					=	var.nodes
 	ami 						= 	var.aws_ami_image
 	instance_type				=	each.value.instance_type
-	//availability_zone 		= 	var.aws_az
 	vpc_security_group_ids 		=	[aws_security_group.sg_px-deploy.id]
 	subnet_id					=	aws_subnet.subnet.id
 	private_ip 					= 	each.value.ip_address
 	associate_public_ip_address = true
-	//iam_instance_profile    	=   var.aws_iam_profile
-	//source_dest_check			= 	false
 	key_name 					= 	aws_key_pair.deploy_key.key_name
 	root_block_device {
 	  volume_size				=	50
 	  delete_on_termination 	= true
+	  tags 					= {
+								Name = format("%s.%s-%s-%s",var.name_prefix,var.config_name,each.key,"root")
+								px-deploy_name = var.config_name
+								px-deploy_username = var.PXDUSER
+	  }
 	}
-	//user_data 				= 	base64encode(local_file.cloud-init-node[each.key].content)
 	user_data_base64			= 	base64gzip(local_file.cloud-init-node[each.key].content)
 	tags 					= {
 								Name = each.key
@@ -211,11 +232,8 @@ resource "aws_instance" "node" {
 resource "local_file" "cloud-init-master" {
 	for_each = var.masters
 	content = templatefile("${path.module}/cloud-init-master.tpl", { 
-//		tpl_priv_key = base64gzip(tls_private_key.ssh.private_key_openssh),
 		tpl_priv_key = tls_private_key.ssh.private_key_openssh,
 		tpl_credentials = local.aws_credentials_array,
-//		tpl_master_scripts = base64gzip(data.local_file.master_scripts[each.key].content),
-//		tpl_env_scripts = base64gzip(data.local_file.env_script.content),
 		tpl_master_scripts = data.local_file.master_scripts[each.key].content,
 		tpl_env_scripts = data.local_file.env_script.content,
 		tpl_name = each.key
@@ -234,10 +252,7 @@ resource "local_file" "cloud-init-master" {
 resource "local_file" "cloud-init-node" {
 	for_each = var.nodes
 	content = templatefile("${path.module}/cloud-init-node.tpl", { 
-//		tpl_priv_key = base64gzip(tls_private_key.ssh.private_key_openssh),
 		tpl_priv_key = tls_private_key.ssh.private_key_openssh,
-//		tpl_node_scripts = base64gzip(data.local_file.node_scripts[each.key].content),
-//		tpl_env_scripts = base64gzip(data.local_file.env_script.content),
 		tpl_node_scripts = data.local_file.node_scripts[each.key].content,
 		tpl_env_scripts = data.local_file.env_script.content,
 		tpl_name = each.key

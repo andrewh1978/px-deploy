@@ -43,6 +43,16 @@ variable "nodes" {
 	}))
 }
 
+variable "node_ebs_devices" {
+	description 	= "define mapping of EBS to nodes"
+	type 			= map( object({
+		node 		= string
+		ebs_type 	= string
+		ebs_size	= string
+		ebs_device_name = string
+	}))
+}
+
 variable "aws_cidr_vpc" {
 	description ="CIDR block for VPC"
 	type		= string

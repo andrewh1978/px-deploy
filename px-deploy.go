@@ -588,6 +588,9 @@ func create_deployment(config Config) int {
 	
 	var tf_cluster_aws_type string
 	var tf_env_script []byte
+
+	var tf_var_ebs_common []string
+	var tf_var_ebs []string
 	
 	fmt.Println(White + "Provisioning infrastructure..." + Reset)
 	switch config.Cloud {
@@ -634,7 +637,17 @@ func create_deployment(config Config) int {
 			die(err.Error())
 		}
 
-		
+		// create EBS definitions
+		// split ebs definition by spaces and range the results
+		tf_var_ebs = append(tf_var_ebs,"node_ebs_devices ={")
+		ebs := strings.Fields(config.Aws_Ebs)
+		for i,val := range ebs {
+			// split by : and create common .tfvars entry for all nodes
+			entry := strings.Split(val,":")
+			tf_var_ebs_common = append(tf_var_ebs_common, "    ebs_type = \""+entry[0]+"\"\n    ebs_size = \""+entry[1]+"\"\n    ebs_device_name = \"/dev/sd"+string(i+98)+"\"")
+		}
+		// other node ebs processing happens in cluster/node loop
+
 		subnet := "192.168."
 		// use aws vagrant scripts as awstf is just the tf implementation of aws
 		// prepare (single) cloud-init script for all nodes			
@@ -737,9 +750,19 @@ func create_deployment(config Config) int {
 				if err != nil {
 					die(err.Error())
 				}
+				
+				// create EBS definition for each single node
+				for i,val := range tf_var_ebs_common {
+					tf_var_ebs = append(tf_var_ebs,"  node-"+masternum+"-"+nodenum+"-ebs-"+strconv.Itoa(i)+" = {")
+					tf_var_ebs = append(tf_var_ebs,"    node = \"node-"+masternum+"-"+nodenum+"\"")
+					tf_var_ebs = append(tf_var_ebs,val)
+					tf_var_ebs = append(tf_var_ebs,"  }")
+				}
 			}
 		}
-
+		// close ebs definition
+		tf_var_ebs = append(tf_var_ebs,"}\n")
+		
 		// build terraform variable file
 		tf_variables = append (tf_variables, "config_name = \"" + config.Name + "\"")
 		tf_variables = append (tf_variables, "aws_region = \"" + config.Aws_Region + "\"")
@@ -755,6 +778,9 @@ func create_deployment(config Config) int {
 		}
 		tf_variables = append (tf_variables, "}")
 		
+		// last item of variables is node ebs definition
+		tf_variables = append (tf_variables,tf_var_ebs...)
+
 		write_tf_file(config.Name, ".tfvars",tf_variables)
 	
 		// now run terraform plan & terraform apply
