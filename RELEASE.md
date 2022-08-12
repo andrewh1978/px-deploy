@@ -1,3 +1,13 @@
+# 4.13.3
+
+## Improvements
+ * Add pxc to .bashrc
+ * Bump Portworx to 2.10.3
+ * Bump PX-Central to 2.2.1
+
+## Fixes
+ * Fix vagrant-vsphere provisioning race condition
+
 # 4.13.2
 
 ## Fixes
