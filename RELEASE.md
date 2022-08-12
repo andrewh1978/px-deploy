@@ -1,3 +1,8 @@
+# 4.13.2
+
+## Fixes
+ * Specify vagrant-vsphere plugin version to fix provision bug
+
 # 4.13.1
 
 ## Fixes

@@ -135,6 +135,7 @@ curl -sL https://github.com/portworx/pxc/releases/download/v0.33.0/pxc-v0.33.0.l
 curl -so /usr/local/bin/pxc-pxctl https://raw.githubusercontent.com/portworx/pxc/master/component/pxctl/pxc-pxctl
 mv /tmp/pxc/kubectl-pxc /usr/bin
 chmod +x /usr/local/bin/pxc-pxctl
+echo "alias pxctl='kubectl pxc pxctl'" >>/root/.bashrc
 [ "$operator" != false ] && kubectl-pxc config cluster set --portworx-service-namespace=portworx
 
 # Install storkctl
