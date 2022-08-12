@@ -593,6 +593,11 @@ func create_deployment(config Config) int {
 	switch config.Cloud {
 	case "awstf":
 	{
+		if _, err = os.Stat("/px-deploy/.px-deploy/terraform/awstf/.terraform"); os.IsNotExist(err) {
+			fmt.Println(White + "Running first time terraform initpx" + Reset)
+			_, err = exec.Command("terraform","-chdir=/px-deploy/.px-deploy/terraform/awstf", "init").CombinedOutput()
+		}
+	
 		// create directory for deployment and copy terraform scripts 
 		err := os.Mkdir("/px-deploy/.px-deploy/deployments/" + config.Name, 0755)
 		if err != nil {
@@ -642,7 +647,9 @@ func create_deployment(config Config) int {
 			content, err := ioutil.ReadFile("/px-deploy/vagrant/"+filename)
 			if err == nil {
 				tf_node_script = append(tf_node_script,"(\n"...)			
+				tf_node_script = append(tf_node_script,"echo \"Started ($date)\"\n"...)			
 				tf_node_script = append(tf_node_script,content...)
+				tf_node_script = append(tf_node_script,"echo \"Finished ($date)\"\n"...)			
 				tf_node_script = append(tf_node_script,"\n) >&/var/log/px-deploy/"+filename+"\n"...)			
 			}
 		}
@@ -657,7 +664,9 @@ func create_deployment(config Config) int {
 			content, err := ioutil.ReadFile("/px-deploy/vagrant/"+filename)
 			if err == nil {
 				tf_common_master_script = append(tf_common_master_script,"(\n"...)			
+				tf_common_master_script = append(tf_common_master_script,"echo \"Started $(date)\"\n"...)			
 				tf_common_master_script = append(tf_common_master_script,content...)
+				tf_common_master_script = append(tf_common_master_script,"echo \"Finished $(date)\"\n"...)			
 				tf_common_master_script = append(tf_common_master_script,"\n) >&/var/log/px-deploy/"+filename+"\n"...)			
 			}
 		}
@@ -666,8 +675,10 @@ func create_deployment(config Config) int {
 		for _,filename := range config.Scripts {
 			content, err := ioutil.ReadFile("/px-deploy/.px-deploy/scripts/"+filename)
 			if err == nil {
-				tf_common_master_script = append(tf_common_master_script,"(\n"...)			
+				tf_common_master_script = append(tf_common_master_script,"(\n"...)
+				tf_common_master_script = append(tf_common_master_script,"echo \"Started $(date)\"\n"...)						
 				tf_common_master_script = append(tf_common_master_script,content...)
+				tf_common_master_script = append(tf_common_master_script,"echo \"Finished $(date)\"\n"...)			
 				tf_common_master_script = append(tf_common_master_script,"\n) >&/var/log/px-deploy/"+filename+"\n"...)			
 			}
 		}

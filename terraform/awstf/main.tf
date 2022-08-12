@@ -139,10 +139,10 @@ resource "aws_security_group" "sg_px-deploy" {
 		}
 
     ingress {
-		description = "tcp ingress all from vpc"
+		description = "all ingress from within vpc"
 		from_port 	= 0
-		to_port 	= 0
-		protocol	= "tcp"
+		to_port 	= 65535
+		protocol	= "all"
 		cidr_blocks = [aws_vpc.vpc.cidr_block]
 		}
 
@@ -174,7 +174,7 @@ resource "aws_instance" "master" {
 	  volume_size				=	50
 	  delete_on_termination 	= true
 	}
-	user_data 				= 	base64encode(local_file.cloud-init-master[each.key].content)
+	user_data_base64			= 	base64gzip(local_file.cloud-init-master[each.key].content)
 	tags 					= {
 								Name = each.key
 								px-deploy_name = var.config_name
@@ -198,7 +198,8 @@ resource "aws_instance" "node" {
 	  volume_size				=	50
 	  delete_on_termination 	= true
 	}
-	user_data 				= 	base64encode(local_file.cloud-init-node[each.key].content)
+	//user_data 				= 	base64encode(local_file.cloud-init-node[each.key].content)
+	user_data_base64			= 	base64gzip(local_file.cloud-init-node[each.key].content)
 	tags 					= {
 								Name = each.key
 								px-deploy_name = var.config_name
@@ -210,10 +211,13 @@ resource "aws_instance" "node" {
 resource "local_file" "cloud-init-master" {
 	for_each = var.masters
 	content = templatefile("${path.module}/cloud-init-master.tpl", { 
-		tpl_priv_key = base64gzip(tls_private_key.ssh.private_key_openssh),
+//		tpl_priv_key = base64gzip(tls_private_key.ssh.private_key_openssh),
+		tpl_priv_key = tls_private_key.ssh.private_key_openssh,
 		tpl_credentials = local.aws_credentials_array,
-		tpl_master_scripts = base64gzip(data.local_file.master_scripts[each.key].content),
-		tpl_env_scripts = base64gzip(data.local_file.env_script.content),
+//		tpl_master_scripts = base64gzip(data.local_file.master_scripts[each.key].content),
+//		tpl_env_scripts = base64gzip(data.local_file.env_script.content),
+		tpl_master_scripts = data.local_file.master_scripts[each.key].content,
+		tpl_env_scripts = data.local_file.env_script.content,
 		tpl_name = each.key
 		tpl_vpc = aws_vpc.vpc.id,
 		tpl_sg = aws_security_group.sg_px-deploy.id,
@@ -230,9 +234,12 @@ resource "local_file" "cloud-init-master" {
 resource "local_file" "cloud-init-node" {
 	for_each = var.nodes
 	content = templatefile("${path.module}/cloud-init-node.tpl", { 
-		tpl_priv_key = base64gzip(tls_private_key.ssh.private_key_openssh),
-		tpl_node_scripts = base64gzip(data.local_file.node_scripts[each.key].content),
-		tpl_env_scripts = base64gzip(data.local_file.env_script.content),
+//		tpl_priv_key = base64gzip(tls_private_key.ssh.private_key_openssh),
+		tpl_priv_key = tls_private_key.ssh.private_key_openssh,
+//		tpl_node_scripts = base64gzip(data.local_file.node_scripts[each.key].content),
+//		tpl_env_scripts = base64gzip(data.local_file.env_script.content),
+		tpl_node_scripts = data.local_file.node_scripts[each.key].content,
+		tpl_env_scripts = data.local_file.env_script.content,
 		tpl_name = each.key
 		tpl_vpc = aws_vpc.vpc.id,
 		tpl_sg = aws_security_group.sg_px-deploy.id,

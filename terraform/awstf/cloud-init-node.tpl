@@ -24,4 +24,5 @@ runcmd:
 - export aws__ami="${tpl_ami}"
 - export cloud="aws"
 - export cluster="${tpl_cluster}"
+- export HOME=/root
 - /tmp/${tpl_name}_scripts.sh

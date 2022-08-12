@@ -1,13 +1,21 @@
 
 
-$cluster env variable must be set individually
 
 aws_ebs -> TODO (see vagrantfile, node vm definition)
+
+default 50GB /dev/sdb on each node
+
 
 post_script TODO
 
 get PXDUSER from container ENV -> maybe set a new env variable
 
 
+DONE add echo Started $(date) and echo Finished $(date) to all vagrant script runs
+
+-> copy assets from local px-deploy container (maintains local changeability)
+
 check this:
 // TODO if yaml['platform'] == "ocp4" or yaml['platform'] == "eks" or yaml['platform'] == "gke" or yaml['platform'] == "aks" then yaml['nodes'] = 0 end
+
+aws_keys from default.yml

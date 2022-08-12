@@ -30,4 +30,5 @@ runcmd:
 - export aws__ami="${tpl_ami}"
 - export cloud="aws"
 - export KUBECONFIG=/root/.kube/config
+- export HOME=/root
 - /tmp/${tpl_name}_scripts.sh
