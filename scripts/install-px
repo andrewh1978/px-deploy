@@ -13,8 +13,6 @@
 
 # If you select cloud=vsphere, clouddrives will be provisioned from vsphere_disks
 
-JQ="docker run -i --rm --name jq endeveit/docker-jq jq"
-
 if [ "$operator" != false ]; then
   namespace=portworx
   kubectl create namespace portworx
@@ -41,6 +39,7 @@ EOF
   done
 fi
 
+(dnf install -y epel-release ; dnf install -y jq) &
 docker pull $(curl -sk https://install.portworx.com/$px_version?comp=stork | awk '/image: openstorage.stork/{print$2}') &
 k8s_version=$(kubectl version --short | awk -Fv '/Server Version: / {print $3}')
 url="https://install.portworx.com/$px_version?kbver=$k8s_version&b=true&c=px-deploy-$cluster&stork=true&st=k8s&lh=true&mon=true&promop=true"
@@ -67,7 +66,7 @@ fi
 
 if [ "$platform" = ocp4 ]; then
   oc apply -f - <<EOF
-apiVersion: operators.coreos.com/v1alpha2
+apiVersion: operators.coreos.com/v1
 kind: OperatorGroup
 metadata:
   name: kube-system-og
@@ -80,16 +79,16 @@ apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
   name: portworx-certified
-  namespace: openshift-operators
+  namespace: kube-system
 spec:
   channel: stable
   installPlanApproval: Automatic
   name: portworx-certified
   source: certified-operators
   sourceNamespace: openshift-marketplace
-  startingCSV: portworx-operator.v1.4.3
+  startingCSV: portworx-operator.v1.6.1
 EOF
-  while ! oc get csv -n openshift-operators  | grep portworx-operator | grep -q Succeeded ; do
+  while ! oc get csv -n kube-system  | grep portworx-operator | grep -q Succeeded ; do
     sleep 2
   done
 fi
@@ -126,33 +125,36 @@ if [ "$operator" != false -a "$platform" != ocp4 ]; then
 fi
 kubectl apply -f /tmp/px.yml
 
+wait
 if [ "$storageless" = true ]; then
-  INDEX=$(kubectl get ds portworx -n kube-system -o json | $JQ '.spec.template.spec.containers[0].args | bsearch("-a")')
+  INDEX=$(kubectl get ds portworx -n kube-system -o json | jq '.spec.template.spec.containers[0].args | bsearch("-a")')
   kubectl patch ds portworx -n kube-system --type='json' -p '[{"op":"remove","path":"/spec/template/spec/containers/0/args/'$INDEX'"}]'
 fi
 
-curl -sL https://github.com/portworx/pxc/releases/download/v0.33.0/pxc-v0.33.0.linux.amd64.tar.gz | tar xvz -C /tmp/.
+curl -sL https://github.com/portworx/pxc/releases/download/v0.33.0/pxc-v0.33.0.linux.amd64.tar.gz | tar xvz -C /tmp
+curl -so /usr/local/bin/pxc-pxctl https://raw.githubusercontent.com/portworx/pxc/master/component/pxctl/pxc-pxctl
 mv /tmp/pxc/kubectl-pxc /usr/bin
+chmod +x /usr/local/bin/pxc-pxctl
+echo "alias pxctl='kubectl pxc pxctl'" >>/root/.bashrc
 [ "$operator" != false ] && kubectl-pxc config cluster set --portworx-service-namespace=portworx
 
 # Install storkctl
-wait
 stork_image=$(curl -sk https://install.portworx.com/$px_version?comp=stork | awk '/image: openstorage.stork/{print$2}')
 id=$(docker create $stork_image)
 docker cp $id:/storkctl/linux/storkctl /usr/bin
 
 # Install Grafana
 if [ "$operator" != false ]; then
-  cd /tmp
-  curl -sO https://docs.portworx.com/samples/k8s/pxc/grafana-dashboard-config.yaml
-  curl -sO https://docs.portworx.com/samples/k8s/pxc/grafana-datasource.yaml
-  curl -sO https://docs.portworx.com/samples/k8s/pxc/portworx-cluster-dashboard.json
-  curl -sO https://docs.portworx.com/samples/k8s/pxc/portworx-node-dashboard.json
-  curl -sO https://docs.portworx.com/samples/k8s/pxc/portworx-volume-dashboard.json
-  curl -sO https://docs.portworx.com/samples/k8s/pxc/portworx-etcd-dashboard.json
-  kubectl -n portworx create configmap grafana-dashboard-config --from-file=grafana-dashboard-config.yaml
-  kubectl -n portworx create configmap grafana-source-config --from-file=grafana-datasource.yaml
-  kubectl -n portworx create configmap grafana-dashboards --from-file=portworx-cluster-dashboard.json --from-file=portworx-node-dashboard.json --from-file=portworx-volume-dashboard.json --from-file=portworx-etcd-dashboard.json
-  curl -s https://docs.portworx.com/samples/k8s/pxc/grafana.yaml | sed 's/namespace: kube-system/namespace: portworx/' | kubectl apply -f -
-  kubectl patch svc grafana -n portworx -p '{"spec": { "type": "NodePort", "ports": [ { "nodePort": 30112, "port": 3000, "protocol": "TCP", "targetPort": 3000 } ] } }'
+  kubectl -n portworx create configmap grafana-dashboard-config --from-file=grafana-dashboard-config.yaml=<(curl -s https://docs.portworx.com/samples/k8s/pxc/grafana-dashboard-config.yaml)
+  kubectl -n portworx create configmap grafana-source-config --from-file=grafana-datasource.yaml=<(curl -s https://docs.portworx.com/samples/k8s/pxc/grafana-datasource.yaml)
+  kubectl -n portworx create configmap grafana-dashboards --from-file=portworx-cluster-dashboard.json=<(curl -s https://docs.portworx.com/samples/k8s/pxc/portworx-cluster-dashboard.json) --from-file=portworx-node-dashboard.json=<(curl -s https://docs.portworx.com/samples/k8s/pxc/portworx-node-dashboard.json) --from-file=portworx-volume-dashboard.json=<(curl -s https://docs.portworx.com/samples/k8s/pxc/portworx-volume-dashboard.json) --from-file=portworx-etcd-dashboard.json=<(curl -s https://docs.portworx.com/samples/k8s/pxc/portworx-etcd-dashboard.json)
+  kubectl apply -f <(curl -s https://docs.portworx.com/samples/k8s/pxc/grafana.yaml | sed s/kube-system/portworx/)
+  if [ $platform != eks ]; then
+    kubectl patch svc grafana -n portworx -p '{"spec": { "type": "NodePort", "ports": [ { "nodePort": 30112, "port": 3000, "protocol": "TCP", "targetPort": 3000 } ] } }'
+    while ! curl -m 1 -s -X POST -H "Content-Type: application/json" -d '{"Name":"portworx","type":"prometheus","access":"server","url":"http://px-prometheus:9090"}' http://admin:admin@localhost:30112/api/datasources; do
+      echo waiting for grafana
+      sleep 2
+    done
+    curl -s -X PUT -H "Content-Type: application/json" -d '{"oldPassword":"admin","newPassword":"admin","confirmNew":"admin"}' http://admin:admin@localhost:30112/api/user/password
+  fi
 fi

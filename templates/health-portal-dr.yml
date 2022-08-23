@@ -1,0 +1,16 @@
+description: Deploys 2 clusters with Portworx and health portal app configured (on AWS only), sets up and configures a cluster pairing, configures an async DR schedule with a loadbalancer in front of the setup.
+clusters: 2
+scripts: ["install-awscli", "install-px", "licenses", "health-portal-credentials"]
+cluster:
+  - id: 1
+    scripts: ["health-portal-backups"]
+  - id: 2
+    scripts: []
+post_script: "health-portal-app"
+env:
+  px_suffix: "mon=true"
+  # you can read how to configure the health-portal app here https://github.com/binocarlos/px-health-portal/tree/master/docs
+  healthportal_scenarios: "multiwriter,diskfull,backups,azoffline"
+  healthportal_jwt_secret: "somethingreallysecret"
+  healthportal_username: "admin"
+  healthportal_password: "password"

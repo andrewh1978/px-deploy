@@ -1,6 +1,6 @@
 EKS_CLUSTER_NAME=px-deploy-$name-$cluster
 curl -sL https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_Linux_amd64.tar.gz | tar xz -C /usr/bin
-curl -sL -o /usr/bin/kubectl "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+curl -sL -o /usr/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/v1.23.6/bin/linux/amd64/kubectl
 chmod 755 /usr/bin/kubectl
 
 while ! dnf install -y docker; do
@@ -13,7 +13,7 @@ dnf install -y python3-pip
 pip3 install awscli
 ln -s /usr/local/bin/aws /usr/bin/aws
 eksctl create cluster --region $aws_region --nodes $nodes --node-type $aws_type --name $EKS_CLUSTER_NAME
-vpc=$(eksctl utils describe-stacks --region $aws_region --cluster $EKS_CLUSTER_NAME | grep vpc- | cut -f 2 -d \")
+vpc=$(eksctl utils describe-stacks --region $aws_region --cluster $EKS_CLUSTER_NAME --output json | grep vpc- | cut -f 4 -d \")
 profile=$(aws ec2 describe-instances --filters "Name=vpc-id,Values=$vpc" --region $aws_region --query Reservations[0].Instances[0].IamInstanceProfile.Arn --output text | cut -f 2 -d /)
 role=$(aws iam get-instance-profile --instance-profile-name $profile --region $aws_region --query InstanceProfile.Roles[0].RoleName --output text)
 cat <<EOF >/tmp/role.json
@@ -45,3 +45,7 @@ cat <<EOF >/tmp/role.json
 }
 EOF
 aws iam put-role-policy --role-name $role --policy-name px-eks-policy --policy-document file:///tmp/role.json --region $aws_region
+
+curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
+chmod 700 get_helm.sh
+HELM_INSTALL_DIR=/usr/bin ./get_helm.sh

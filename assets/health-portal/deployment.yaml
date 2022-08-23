@@ -1,0 +1,148 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: healthportal
+  name: api
+spec:
+  selector:
+    matchLabels:
+      app: api
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+      - name: api
+        image: docker.io/binocarlos/px-health-portal-api:latest
+        imagePullPolicy: "Always"
+        ports:
+        - containerPort: 8080
+        envFrom:
+        - secretRef:
+            name: clusters
+        env:
+        - name: NODE_ENV
+          value: production
+        - name: SCENARIOS
+          value: "${healthportal_scenarios}"
+        - name: JWT_SECRET
+          value: "${healthportal_jwt_secret}"
+        - name: AUTH_USERNAME
+          value: "${healthportal_username}"
+        - name: AUTH_PASSWORD
+          value: "${healthportal_password}"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: healthportal
+  name: frontend
+spec:
+  selector:
+    matchLabels:
+      app: frontend
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: docker.io/binocarlos/px-health-portal-frontend:refactor
+        imagePullPolicy: "Always"
+        ports:
+        - containerPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: healthportal
+  name: ingress
+spec:
+  selector:
+    matchLabels:
+      app: ingress
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: ingress
+    spec:
+      containers:
+      - name: ingress
+        image: docker.io/binocarlos/noxy:latest
+        imagePullPolicy: "Always"
+        ports:
+        - containerPort: 80
+        env:
+        - name: NOXY_DEFAULT_HOST
+          value: frontend
+        - name: NOXY_DEFAULT_WS
+          value: "1"
+        - name: NOXY_API_FRONT
+          value: /api/v1
+        - name: NOXY_API_PORT
+          value: "8080"
+        - name: NOXY_API_HOST
+          value: api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: healthportal
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    protocol: TCP
+  selector:
+    app: api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: healthportal
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    protocol: TCP
+  selector:
+    app: frontend
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingress
+  namespace: healthportal
+spec:
+  type: NodePort
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 80
+    nodePort: 32384
+  selector:
+    app: ingress

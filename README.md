@@ -24,7 +24,7 @@ This will deploy one or more clusters in the cloud, with optional post-install t
 ## Getting started
 
 1. Install the CLI for your choice of cloud provider and ensure it is configured:
- * AWS: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html
+ * AWS: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
  * GCP: https://cloud.google.com/sdk/docs/quickstarts
  * Azure: https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest
 
@@ -45,25 +45,33 @@ This will:
  * create and populate `$HOME/.px-deploy`
  * provide instructions to configure `.bash_profile`/`.zshrc`
 
+It may take 10-20 minutes to complete.
+
+Update your `.bash_profile` or `.zshrc` as directed. Source them or login again. Validate it is complete with `px-deploy -h`.
+
+Review the various cloud settings in `~/.px-deploy/defaults.yml`.
+
 5. Deploy something:
+
+If you are using AWS and you have not accepted the CentOS terms, browse to https://aws.amazon.com/marketplace/pp?sku=aw0evgkw8e5c1q413zgy5pjce.
 ```
-px-deploy create --name=myDeployment --template=clusterpair
+px-deploy create --name=my-deployment --template=clusterpair
 ```
 This will provision a VPC and some other objects, and deploy into it from the template.
 
 6. Connect via SSH:
 ```
-px-deploy connect --name myDeployment
+px-deploy connect --name my-deployment
 ```
 
 7. Execute a command:
 ```
-px-deploy connect --name myDeployment "storkctl get clusterpair"
+px-deploy connect --name my-deployment "storkctl get clusterpair"
 ```
 
 8. Tear down the deployment:
 ```
-px-deploy destroy --name myDeployment
+px-deploy destroy --name my-deployment
 ```
 
 # NOTES
@@ -107,6 +115,17 @@ master-1 34.247.219.101 ec2-34-247-219-101.eu-west-1.compute.amazonaws.com
 master-2 34.254.155.6 ec2-34-254-155-6.eu-west-1.compute.amazonaws.com
 ```
 
+Generate kubeconfig files so you can run kubectl from your laptop:
+```
+$ px-deploy kubeconfig --name exampleDeployment
+$ kubectl get nodes --kubeconfig $HOME/.px-deploy/kubeconfig/exampleDeployment.1
+NAME                                           STATUS   ROLES    AGE   VERSION
+ip-192-168-5-19.eu-west-1.compute.internal     Ready    <none>   11m   v1.21.5-eks-9017834
+ip-192-168-56-14.eu-west-1.compute.internal    Ready    <none>   11m   v1.21.5-eks-9017834
+ip-192-168-74-141.eu-west-1.compute.internal   Ready    <none>   11m   v1.21.5-eks-9017834
+```
+Note this is currently only tested with EKS.
+
 The `defaults.yml` file sets a number of deployment variables:
  * `aws_ebs` - a list of EBS volumes to be attached to each worker node. This is a space-separated list of type:size pairs, for example: `"gp2:30 standard:20"` will provision a gp2 volume of 30 GB and a standard volume of 20GB
  * `aws_region` - AWS region
@@ -120,7 +139,7 @@ The `defaults.yml` file sets a number of deployment variables:
  * `quiet` - if "true", hide provisioning output
  * `auto_destroy` - if set to `true`, destroy deployment immediately after deploying (usually used with a `post_script` to output the results of a test or benchmark)
  * `nodes` - the number of worker nodes on each cluster
- * `platform` - can be set to either k8s, k3s, none, dockeree, ocp3, ocp3c (OCPv3 with CRI-O), ocp4, eks, gke or aks
+ * `platform` - can be set to either k8s, k3s, none, dockeree, ocp3, ocp3c (OCPv3 with CRI-O), ocp4, eks, gke, aks or nomad
  * `px_version` - the version of Portworx to install
  * `gcp_disks` - similar to aws_ebs, for example: `"pd-standard:20 pd-ssd:30"`
  * `gcp_region` - GCP region
@@ -145,9 +164,18 @@ The `defaults.yml` file sets a number of deployment variables:
 
 There are two ways to override these variables. The first is to specify a template with the `--template=...` parameter. For example:
 ```
-$ cat templates/clusterpair.yml
-clusters: 2
-scripts: ["install-px", "clusterpair"]
+$ cat templates/px-fio-example.yml
+description: An example fio benchmark on a gp2 disk and a Portworx volume on a gp2 disk
+scripts: ["install-px", "px-wait", "px-fio-example"]
+clusters: 1
+nodes: 3
+cloud: aws
+aws_ebs: "gp2:150 gp2:150"
+post_script: cat
+auto_destroy: true
+env:
+  px_suffix: "s=/dev/nvme1n1"
+  cat: "/tmp/output"
 ```
 
 More on `scripts` below.
@@ -202,7 +230,7 @@ env:
 ```
 Enviroment variables can also be defined on the command line:
 ```
-px-deploy create -n foo -t clusterpair -e install_apps=true,foo=bar
+px-deploy create -n foo -t migration -e install_apps=true,foo=bar
 ```
 
 The `install-px` script looks for an environment variable called `cloud_drive`. If it exists, it will deploy Portworx using a clouddrive rather than looking for all attached devices. Note that this is a requirement for Openshift 4. For example:

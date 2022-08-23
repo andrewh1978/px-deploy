@@ -96,7 +96,7 @@ var Yellow = "\033[33m"
 var Blue   = "\033[34m"
 
 func main() {
-	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createAwsTags, createGcpType, createGcpDisks, createGcpZone, createAzureType, createAzureDisks, createTemplate, createRegion, createCloud, createEnv, connectName, destroyName, statusName, historyNumber string
+	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createAwsTags, createGcpType, createGcpDisks, createGcpZone, createAzureType, createAzureDisks, createTemplate, createRegion, createCloud, createEnv, connectName, kubeconfigName, destroyName, statusName, historyNumber string
 	var createQuiet, createDryRun, destroyAll bool
 	os.Chdir("/px-deploy/.px-deploy")
 	rootCmd := &cobra.Command{Use: "px-deploy"}
@@ -165,7 +165,7 @@ func main() {
 				}
 			}
 			if createPlatform != "" {
-				if createPlatform != "k8s" && createPlatform != "k3s" && createPlatform != "none" && createPlatform != "dockeree" && createPlatform != "ocp3" && createPlatform != "ocp3c" && createPlatform != "ocp4" && createPlatform != "eks" && createPlatform != "gke" && createPlatform != "aks" {
+				if createPlatform != "k8s" && createPlatform != "k3s" && createPlatform != "none" && createPlatform != "dockeree" && createPlatform != "ocp3" && createPlatform != "ocp3c" && createPlatform != "ocp4" && createPlatform != "eks" && createPlatform != "gke" && createPlatform != "aks" && createPlatform != "nomad" {
 					die("Invalid platform '" + createPlatform + "'")
 				}
 				config.Platform = createPlatform
@@ -396,6 +396,28 @@ func main() {
 		},
 	}
 
+	cmdKubeconfig := &cobra.Command{
+		Use:   "kubeconfig -n name",
+		Short: "Downloads kubeconfigs from clusters",
+		Long:  "Downloads kubeconfigs from clusters",
+		Run: func(cmd *cobra.Command, args []string) {
+			config := parse_yaml("deployments/" + kubeconfigName + ".yml")
+			ip := get_ip(kubeconfigName)
+			clusters, _ := strconv.Atoi(config.Clusters)
+			for c := 1; c <= clusters; c++ {
+				cmd := exec.Command("bash", "-c", "ssh -oLoglevel=ERROR -oStrictHostKeyChecking=no -i keys/id_rsa." + config.Cloud + "." + config.Name + " root@" + ip + " ssh master-" + strconv.Itoa(c) + " cat /root/.kube/config")
+				kubeconfig, err := cmd.Output()
+				if err != nil {
+					die(err.Error())
+				}
+				err = ioutil.WriteFile("kubeconfig/" + config.Name + "." + strconv.Itoa(c), kubeconfig, 0644)
+				if err != nil {
+					die(err.Error())
+				}
+			}
+		},
+	}
+
 	cmdList := &cobra.Command{
 		Use:   "list",
 		Short: "Lists available deployments",
@@ -504,7 +526,7 @@ func main() {
 
 	defaults := parse_yaml("defaults.yml")
 	cmdCreate.Flags().StringVarP(&createName, "name", "n", "", "name of deployment to be created (if blank, generate UUID)")
-	cmdCreate.Flags().StringVarP(&createPlatform, "platform", "p", "", "k8s | dockeree | none | k3s | ocp3 | ocp3c | ocp4 | eks | gke | aks (default "+defaults.Platform+")")
+	cmdCreate.Flags().StringVarP(&createPlatform, "platform", "p", "", "k8s | dockeree | none | k3s | ocp3 | ocp3c | ocp4 | eks | gke | aks | nomad (default "+defaults.Platform+")")
 	cmdCreate.Flags().StringVarP(&createClusters, "clusters", "c", "", "number of clusters to be deployed (default "+defaults.Clusters+")")
 	cmdCreate.Flags().StringVarP(&createNodes, "nodes", "N", "", "number of nodes to be deployed in each cluster (default "+defaults.Nodes+")")
 	cmdCreate.Flags().StringVarP(&createK8sVer, "k8s_version", "k", "", "Kubernetes version to be deployed (default "+defaults.K8s_Version+")")
@@ -530,13 +552,15 @@ func main() {
 
 	cmdConnect.Flags().StringVarP(&connectName, "name", "n", "", "name of deployment to connect to")
 	cmdConnect.MarkFlagRequired("name")
+	cmdKubeconfig.Flags().StringVarP(&kubeconfigName, "name", "n", "", "name of deployment to connect to")
+	cmdKubeconfig.MarkFlagRequired("name")
 
 	cmdStatus.Flags().StringVarP(&statusName, "name", "n", "", "name of deployment")
 	cmdStatus.MarkFlagRequired("name")
 
 	cmdHistory.Flags().StringVarP(&historyNumber, "number", "n", "", "deployment ID")
 
-	rootCmd.AddCommand(cmdCreate, cmdDestroy, cmdConnect, cmdList, cmdTemplates, cmdStatus, cmdCompletion, cmdVsphereInit, cmdVersion, cmdHistory)
+	rootCmd.AddCommand(cmdCreate, cmdDestroy, cmdConnect, cmdKubeconfig, cmdList, cmdTemplates, cmdStatus, cmdCompletion, cmdVsphereInit, cmdVersion, cmdHistory)
 	rootCmd.Execute()
 }
 
@@ -577,7 +601,7 @@ func create_deployment(config Config) int {
         aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol all --cidr 192.168.0.0/16 &
         aws ec2 create-tags --resources $_AWS_vpc $_AWS_subnet $_AWS_gw $_AWS_routetable $_AWS_sg --tags Key=px-deploy_name,Value=`+config.Name+` &
         aws ec2 create-tags --resources $_AWS_vpc --tags Key=Name,Value=px-deploy.`+config.Name+` &
-        _AWS_ami=$(aws --output text ec2 describe-images --owners 679593333241 --filters Name=name,Values='CentOS Linux 7 x86_64 HVM EBS*' Name=architecture,Values=x86_64 Name=root-device-type,Values=ebs --query 'sort_by(Images, &Name)[-1].ImageId')
+        _AWS_ami=$(aws --output text ec2 describe-images --include-deprecated --owners 679593333241 --filters Name=name,Values='CentOS Linux 7 x86_64 HVM EBS*' Name=architecture,Values=x86_64 Name=root-device-type,Values=ebs --query 'sort_by(Images, &Name)[-1].ImageId')
         wait
         echo aws__vpc: $_AWS_vpc >>deployments/`+config.Name+`.yml
         echo aws__sg: $_AWS_sg >>deployments/`+config.Name+`.yml
@@ -721,7 +745,12 @@ EOF
       aws ec2 detach-internet-gateway --internet-gateway-id `+config.Aws__Gw+` --vpc-id `+config.Aws__Vpc+` &&
       aws ec2 delete-internet-gateway --internet-gateway-id `+config.Aws__Gw+` &&
       aws ec2 delete-route-table --route-table-id `+config.Aws__Routetable+` &&
-      aws ec2 delete-vpc --vpc-id `+config.Aws__Vpc+`
+      aws ec2 describe-vpcs --vpc-id `+config.Aws__Vpc+` >&/dev/null
+      if [ $? -eq 0 ]; then
+        aws ec2 delete-vpc --vpc-id `+config.Aws__Vpc+`
+      else
+        echo "VPC already destroyed"
+      fi
       wait
     `).CombinedOutput()
 	} else if config.Cloud == "gcp" {
@@ -756,6 +785,10 @@ EOF
 	os.Remove("deployments/" + name + ".yml")
 	os.Remove("keys/id_rsa." + config.Cloud + "." + name)
 	os.Remove("keys/id_rsa." + config.Cloud + "." + name + ".pub")
+	clusters, _ := strconv.Atoi(config.Clusters)
+	for c := 0; c <= clusters; c++ {
+		os.Remove("kubeconfig/" + name + "." + strconv.Itoa(c))
+	}
 	fmt.Println(White + "Destroyed." + Reset)
 }
 

@@ -11,6 +11,7 @@ env:
   #licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
   #DR_BUCKET: "<YOUR BUCKET NAME>"
 
+# NOTE: edit env.licenses above, or define in defaults.yml 
 # use `-e install_apps=true` to install the optional apps
 # deploy an application of your choice in the default namespace
 # check cluster 2 has the resources synced

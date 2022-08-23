@@ -1,0 +1,24 @@
+cat <<EOF >/etc/nomad.d/nomad.hcl
+# Full configuration options can be found at https://www.nomadproject.io/docs/configuration
+
+data_dir = "/opt/nomad/data"
+datacenter = "px-deploy-$cluster"
+
+client {
+  enabled = true
+  servers = ["192.168.$[$cluster+100].90"]
+}
+
+plugin "docker" {
+  config {
+    allow_privileged = true
+    volumes {
+      enabled      = true
+    }
+  }
+}
+EOF
+
+#while ! curl -s http://master-$cluster:4646 ; do sleep 1; echo waiting for nomad server; done
+systemctl start nomad
+systemctl enable nomad
