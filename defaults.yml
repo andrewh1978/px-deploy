@@ -24,18 +24,19 @@ azure_type: Standard_B2ms
 azure_disks: "50"
 #azure_disks: "100 200"
 
-vsphere_host: XXX
-vsphere_compute_resource: XXX
-vsphere_resource_pool: XXX
-vsphere_user: XXX
-vsphere_password: XXX
-vsphere_template: XXX
-vsphere_datastore: XXX
-vsphere_folder: XXX
-vsphere_disks: "64"
-vsphere_network: XXX
-vsphere_memory: 8
-vsphere_cpu: 2
+vsphere_host: 10.14.84.220
+vsphere_user: Administrator@vsphere.local
+vsphere_password: R00tr00t!
+vsphere_compute_resource: "PX-EE"
+#vsphere_resource_pool: "PtWx Cluster"
+vsphere_template: sen-template
+vsphere_datastore: lay-21
+#vsphere_folder: /Sen
+vsphere_disks: "150"
+vsphere_network: "VM Network"
+vsphere_memory: 16
+vsphere_cpu: 8
+
 
 ocp4_domain: openshift.portworx.com
 ocp4_version: 4.5.6
