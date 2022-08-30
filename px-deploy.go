@@ -754,7 +754,8 @@ EOF
       wait
     `).CombinedOutput()
 	} else if config.Cloud == "gcp" {
-		output, err = exec.Command("bash", "-c", "gcloud projects delete "+config.Gcp__Project+" --quiet").CombinedOutput()
+		output, err = exec.Command("bash", "-c", `gcloud projects delete `+config.Gcp__Project+` --quiet
+		gcloud alpha billing projects unlink `+config.Gcp__Project).CombinedOutput()
 		os.Remove("keys/px-deploy_gcp_" + config.Gcp__Project + ".json")
 	} else if config.Cloud == "azure" {
 		output, _ = exec.Command("bash", "-c", `
