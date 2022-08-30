@@ -15,6 +15,10 @@ AWS_SECRET_KEY=$(sed -n 's/aws_secret_access_key[ =]*//p' /root/.aws/credentials
 echo "Creating bucket '$DR_BUCKET' in region 'us-east-1', if it does not exist"
 aws s3 mb s3://$DR_BUCKET --region us-east-1
 BUCKET_REGION=$(aws s3api get-bucket-location --bucket $DR_BUCKET --output text)
+# Region us-east-1 returns "None" instead of the region name
+if [ "$BUCKET_REGION" = "None" ]; then
+  BUCKET_REGION="us-east-1"
+fi
 echo "Bucket region: $BUCKET_REGION"
 while : ; do
   kubectl exec $(kubectl get pod -n portworx -lname=portworx | tail -1 | cut -f 1 -d " ") -n portworx -c portworx -- /opt/pwx/bin/pxctl credentials delete clusterPair_$UUID
