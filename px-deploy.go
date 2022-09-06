@@ -583,6 +583,7 @@ func create_deployment(config Config) int {
 	var tf_var_nodes []string
 
 	var tf_common_master_script []byte
+	var tf_post_script []byte
 	var tf_node_script []byte
 	var tf_master_script []byte
 	
@@ -695,7 +696,21 @@ func create_deployment(config Config) int {
 				tf_common_master_script = append(tf_common_master_script,"\n) >&/var/log/px-deploy/"+filename+"\n"...)			
 			}
 		}
-
+		// add post_script if defined
+		if config.Post_Script != "" {
+			//fmt.Println("postscript: "+config.Post_Script)
+			content, err := ioutil.ReadFile("/px-deploy/.px-deploy/scripts/"+config.Post_Script)
+			if err == nil {
+				tf_post_script = append(tf_post_script,"(\n"...)
+				tf_post_script = append(tf_post_script,"echo \"Started $(date)\"\n"...)						
+				tf_post_script = append(tf_post_script,content...)
+				tf_post_script = append(tf_post_script,"echo \"Finished $(date)\"\n"...)			
+				tf_post_script = append(tf_post_script,"\n) >&/var/log/px-deploy/"+config.Post_Script+"\n"...)			
+			}
+		} else {
+			tf_post_script = nil
+		} 
+		
 		// TODO if yaml['platform'] == "ocp4" or yaml['platform'] == "eks" or yaml['platform'] == "gke" or yaml['platform'] == "aks" then yaml['nodes'] = 0 end
 		
 		Clusters, err := strconv.Atoi(config.Clusters)
@@ -722,14 +737,19 @@ func create_deployment(config Config) int {
 							tf_master_script = append(tf_master_script,content...)
 							tf_master_script = append(tf_master_script,"\n) >&/var/log/px-deploy/"+filename+"\n"...)			
 						}
-					}	
-				
+					}
+									
 					//is there a cluster specific aws_type override? if not, set from generic config
 					if clusterconf.Aws_Type != "" {
 						tf_cluster_aws_type = clusterconf.Aws_Type
 					} 
 				}
 			}
+
+			// add post_script if defined
+			if tf_post_script != nil {
+				tf_master_script = append(tf_master_script,tf_post_script...)
+			}	
 
 			//write master script for cluster
 			err := os.WriteFile("/px-deploy/.px-deploy/deployments/" + config.Name + "/master-" +masternum , tf_master_script, 0666)
