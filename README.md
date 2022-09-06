@@ -5,7 +5,7 @@ This will deploy one or more clusters in the cloud, with optional post-install t
 # Supported platforms
 
 ## Container
- * Kubernetes
+ * Kubernetes (choose a version < 1.24)
  * K3s
  * Docker EE
  * Openshift 3.11
