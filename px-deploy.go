@@ -574,6 +574,8 @@ func create_deployment(config Config) int {
 	var output []byte
 	var err error
 	var errapply error
+
+	var pxduser string
 	
 	var tf_node_scripts []string
 	var tf_master_scripts []string
@@ -613,13 +615,10 @@ func create_deployment(config Config) int {
 		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/cloud-init-master.tpl`,`/px-deploy/.px-deploy/deployments/`+ config.Name).Run()
 		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/cloud-init-node.tpl`,`/px-deploy/.px-deploy/deployments/`+ config.Name).Run()
 		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/aws-returns.tpl`,`/px-deploy/.px-deploy/deployments/`+ config.Name).Run()
-		// also copy terraform modules - these must be init'ed during px-deploy setup!!! use "terraform init"
+		// also copy terraform modules
 		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/.terraform`,`/px-deploy/.px-deploy/deployments/`+ config.Name).Run()
 		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/.terraform.lock.hcl`,`/px-deploy/.px-deploy/deployments/`+ config.Name).Run()
-	
 			
-		
-		
 		// prepare ENV variables for node/master scripts
 		// to maintain compatibility, create a env variable of everything from the yml spec which is from type string
 		e := reflect.ValueOf(&config).Elem()
@@ -783,6 +782,13 @@ func create_deployment(config Config) int {
 		// close ebs definition
 		tf_var_ebs = append(tf_var_ebs,"}\n")
 		
+		// get PXDUSER env and apply to tf_variables
+		pxduser = os.Getenv("PXDUSER")
+		if (pxduser != "") {
+			tf_variables = append (tf_variables, "PXDUSER = \"" + pxduser + "\"")	
+		}
+
+
 		// build terraform variable file
 		tf_variables = append (tf_variables, "config_name = \"" + config.Name + "\"")
 		tf_variables = append (tf_variables, "aws_region = \"" + config.Aws_Region + "\"")
@@ -805,13 +811,17 @@ func create_deployment(config Config) int {
 	
 		// now run terraform plan & terraform apply
 		fmt.Println(White+"running terraform PLAN"+Reset)
-		_, err = exec.Command("terraform","-chdir=/px-deploy/.px-deploy/deployments/"+config.Name, "plan", "-var-file",".tfvars").CombinedOutput()
+		_, err = exec.Command("terraform","-chdir=/px-deploy/.px-deploy/deployments/"+config.Name, "plan", "-input=false", "-out=tfplan", "-var-file",".tfvars").CombinedOutput()
 		if err != nil {
 			fmt.Println(Yellow+"ERROR: terraform plan failed. Check validity of terraform scripts"+Reset)
 			die(err.Error())
 		} else { 
 			fmt.Println(White+"running terraform APPLY"+Reset)
-			output, errapply = exec.Command("terraform","-chdir=/px-deploy/.px-deploy/deployments/"+config.Name, "apply", "-auto-approve", "-var-file",".tfvars").CombinedOutput()
+			//output, errapply = exec.Command("terraform","-chdir=/px-deploy/.px-deploy/deployments/"+config.Name, "apply", "-input=false", "-auto-approve", "tfplan").CombinedOutput()
+			cmd:=exec.Command("terraform","-chdir=/px-deploy/.px-deploy/deployments/"+config.Name, "apply", "-input=false", "-auto-approve", "tfplan")
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			errapply = cmd.Run()
 			if errapply != nil {
 				fmt.Println(Yellow+"ERROR: terraform apply failed. Check validity of terraform scripts"+Reset)
 				die(errapply.Error())
@@ -946,13 +956,18 @@ func destroy_deployment(name string) {
 	fmt.Println(White + "Destroying deployment '" + config.Name + "'..." + Reset)
 	if config.Cloud == "awstf" {
 		fmt.Println(White+"running Terraform PLAN"+ Reset)
-		_, err = exec.Command("terraform","-chdir=/px-deploy/.px-deploy/deployments/"+config.Name, "plan", "-var-file",".tfvars").CombinedOutput()
+		_, err = exec.Command("terraform","-chdir=/px-deploy/.px-deploy/deployments/"+config.Name, "plan","-destroy", "-input=false", "-out=tfplan", "-var-file",".tfvars").CombinedOutput()
 		if err != nil {
 			fmt.Println(Yellow+"ERROR: Terraform plan failed. Check validity of terraform scripts"+Reset)
 			die(err.Error())
 		} else {
 			fmt.Println(White+"running Terraform DESTROY"+ Reset)
-			output, errdestroy = exec.Command("terraform","-chdir=/px-deploy/.px-deploy/deployments/"+config.Name, "destroy", "-auto-approve","-var-file",".tfvars").CombinedOutput()
+			// output, errdestroy = exec.Command("terraform","-chdir=/px-deploy/.px-deploy/deployments/"+config.Name, "apply", "-input=false", "-auto-approve","tfplan").CombinedOutput()
+			cmd := exec.Command("terraform","-chdir=/px-deploy/.px-deploy/deployments/"+config.Name, "apply", "-input=false", "-auto-approve","tfplan")
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			errdestroy = cmd.Run()
+
 			if errdestroy != nil {
 				fmt.Println(Yellow+"ERROR: Terraform destroy failed. Check validity of terraform scripts"+Reset)
 				die(errdestroy.Error())

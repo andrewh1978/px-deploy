@@ -1,0 +1,56 @@
+
+#KUBECTL 1.24!!!!!
+#1.25 deprecates gauth. switching to new  binary module/mode seems to break stork authentication
+
+curl -sL -o /usr/bin/kubectl "https://dl.k8s.io/release/v1.24.0/bin/linux/amd64/kubectl"
+
+gcloud config set project $gcp__project
+gcloud iam service-accounts create stork-sa  --project $gcp__project
+gcloud iam service-accounts keys create /root/gcs-key.json  --iam-account=stork-sa@$gcp__project.iam.gserviceaccount.com
+kubectl create secret  generic --from-file=/root/gcs-key.json -n portworx gke-creds
+kubectl patch stc/px-deploy-1  --type merge  -n portworx -p '{"spec": {
+  "stork": {
+     "env": [
+       {
+         "name": "CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE",
+         "value": "/root/.gke/gcs-key.json"
+       }
+      ],
+      "volumes": [
+       {
+           "mountPath": "/root/.gke/gcs-key.json",
+           "name": "gke-creds",
+           "readOnly": true,
+           "secret": {
+           "secretName": "gke-creds"
+            }
+        }
+       ]
+     }
+}}'
+
+kubectl create clusterrolebinding stork-cluster-admin-binding --clusterrole=cluster-admin --user=stork-sa@$gcp__project.iam.gserviceaccount.com
+kubectl annotate stc px-deploy-1 -n portworx portworx.io/service-type="LoadBalancer" --overwrite
+
+while : ; do
+  token=$(kubectl exec -n portworx -it $(kubectl get pods -n portworx -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- /opt/pwx/bin/pxctl cluster token show 2>/dev/null | cut -f 3 -d " ")
+  echo $token | grep -Eq '\w{128}'
+  [ $? -eq 0 ] && break
+  sleep 5
+  echo waiting for portworx
+done
+
+UUID=$(kubectl get stc -n portworx -o jsonpath='{.items[].status.clusterUid}')
+
+while : ;do
+    host=$(kubectl get svc -n portworx portworx-service -o jsonpath='{.status.loadBalancer.ingress[].ip}')
+    [ "$host" ] && break
+    sleep 1
+done
+
+AWS_ACCESS_KEY=$(sed -n 's/aws_access_key_id[ =]*//p' /root/.aws/credentials 2>/dev/null | head -1)
+AWS_SECRET_KEY=$(sed -n 's/aws_secret_access_key[ =]*//p' /root/.aws/credentials 2>/dev/null | head -1)
+
+pxctl credentials create --provider s3 --s3-access-key $AWS_ACCESS_KEY --s3-secret-key $AWS_SECRET_KEY --s3-region eu-west-1 --s3-endpoint s3.amazonaws.com --s3-storage-class STANDARD --bucket dpaul-test clusterPair_$UUID
+storkctl generate clusterpair -n kube-system remotecluster-$cluster | sed "/insert_storage_options_here/c\    ip: $host\n    token: $token\n    mode: DisasterRecovery" >/var/tmp/cp.yaml
+

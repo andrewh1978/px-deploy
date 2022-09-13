@@ -200,6 +200,26 @@ resource "aws_instance" "master" {
 								px-deploy_name = var.config_name
 								px-deploy_username = var.PXDUSER
 	}
+ 
+  	connection {
+			type = "ssh"
+			user = "centos"
+			host = "${self.public_ip}"
+			private_key = tls_private_key.ssh.private_key_openssh
+	}
+
+	provisioner "remote-exec" {
+		inline = [
+			"sudo mkdir /assets",
+			"sudo chown centos.users /assets"
+		]
+	}
+
+	provisioner "file" {
+		source = "/px-deploy/.px-deploy/assets/"
+		destination = "/assets"
+	}
+
 }
 
 resource "aws_instance" "node" {
@@ -232,10 +252,10 @@ resource "aws_instance" "node" {
 resource "local_file" "cloud-init-master" {
 	for_each = var.masters
 	content = templatefile("${path.module}/cloud-init-master.tpl", { 
-		tpl_priv_key = tls_private_key.ssh.private_key_openssh,
+		tpl_priv_key = base64encode(tls_private_key.ssh.private_key_openssh),
 		tpl_credentials = local.aws_credentials_array,
-		tpl_master_scripts = data.local_file.master_scripts[each.key].content,
-		tpl_env_scripts = data.local_file.env_script.content,
+		tpl_master_scripts = base64encode(data.local_file.master_scripts[each.key].content),
+		tpl_env_scripts = base64encode(data.local_file.env_script.content),
 		tpl_name = each.key
 		tpl_vpc = aws_vpc.vpc.id,
 		tpl_sg = aws_security_group.sg_px-deploy.id,
@@ -252,9 +272,9 @@ resource "local_file" "cloud-init-master" {
 resource "local_file" "cloud-init-node" {
 	for_each = var.nodes
 	content = templatefile("${path.module}/cloud-init-node.tpl", { 
-		tpl_priv_key = tls_private_key.ssh.private_key_openssh,
-		tpl_node_scripts = data.local_file.node_scripts[each.key].content,
-		tpl_env_scripts = data.local_file.env_script.content,
+		tpl_priv_key = base64encode(tls_private_key.ssh.private_key_openssh),
+		tpl_node_scripts = base64encode(data.local_file.node_scripts[each.key].content),
+		tpl_env_scripts = base64encode(data.local_file.env_script.content),
 		tpl_name = each.key
 		tpl_vpc = aws_vpc.vpc.id,
 		tpl_sg = aws_security_group.sg_px-deploy.id,

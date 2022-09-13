@@ -1,16 +1,13 @@
 
 DONE: post_script implementation
 
-DONE: already commit to master: get PXDUSER from container ENV -> maybe set a new env variable
+DONE: read from env, add to .tfvars: get PXDUSER from container ENV
 
 DONE add echo Started $(date) and echo Finished $(date) to all vagrant script runs
 
--> copy assets from local px-deploy container (maintains local changeability)
+DONE copy assets from local px-deploy container (maintains local changeability)
 
 check this:
 // TODO if yaml['platform'] == "ocp4" or yaml['platform'] == "eks" or yaml['platform'] == "gke" or yaml['platform'] == "aks" then yaml['nodes'] = 0 end
-
-check terraform in automation:
-https://learn.hashicorp.com/tutorials/terraform/automate-terraform?in=terraform/automation&utm_source=WEBSITE&utm_medium=WEB_IO&utm_offer=ARTICLE_PAGE&utm_content=DOCS
 
 aws_keys from default.yml

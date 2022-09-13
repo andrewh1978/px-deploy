@@ -1,0 +1,2 @@
+description: Install portworx on GKE Cluster, prepare as DR Remote site
+scripts: ["install-px", "licenses", "gke-dr-remote"]
