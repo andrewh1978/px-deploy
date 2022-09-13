@@ -145,8 +145,8 @@ func main() {
 			}
 			config.Name = createName
 			if createCloud != "" {
-				if createCloud != "aws" && createCloud != "gcp" && createCloud != "azure" && createCloud != "vsphere" {
-					die("Cloud must be 'aws', 'gcp', 'azure' or 'vsphere' (not '" + createCloud + "')")
+				if createCloud != "aws" && createCloud != "awstf" && createCloud != "gcp" && createCloud != "azure" && createCloud != "vsphere" {
+					die("Cloud must be 'awstf', 'aws', 'gcp', 'azure' or 'vsphere' (not '" + createCloud + "')")
 				}
 				config.Cloud = createCloud
 			}
@@ -156,6 +156,8 @@ func main() {
 				}
 				switch config.Cloud {
 				case "aws":
+					config.Aws_Region = createRegion
+				case "awstf":
 					config.Aws_Region = createRegion
 				case "gcp":
 					config.Gcp_Region = createRegion
@@ -296,8 +298,11 @@ func main() {
 					die("Postscript '" + config.Post_Script + "' is not valid Bash")
 				}
 			}
+			// enable when ocp4/eks destroy is fixed for awstf
+			//if config.Platform == "ocp4" && !(config.Cloud == "aws" || config.Cloud == "awstf") { die("Openshift 4 only supported on AWS (not " + config.Cloud + ")") }
+			//if config.Platform == "eks" && !(config.Cloud == "aws" || config.Cloud == "awstf") { die("EKS only makes sense with AWS (not " + config.Cloud + ")") }
 			if config.Platform == "ocp4" && config.Cloud != "aws" { die("Openshift 4 only supported on AWS (not " + config.Cloud + ")") }
-			if config.Platform == "eks" && config.Cloud != "aws" { die("EKS only makes sense with AWS (not " + config.Cloud + ")") }
+			if config.Platform == "eks" && config.Cloud != "aws"  { die("EKS only makes sense with AWS (not " + config.Cloud + ")") }
 			if config.Platform == "gke" && config.Cloud != "gcp" { die("GKE only makes sense with GCP (not " + config.Cloud + ")") }
 			if config.Platform == "aks" && config.Cloud != "azure" { die("AKS only makes sense with Azure (not " + config.Cloud + ")") }
 			y, _ := yaml.Marshal(config)
@@ -669,7 +674,7 @@ func create_deployment(config Config) int {
 
 		// prepare common base script for all master nodes
 		// prepare common cloud-init script for all master nodes
-		tf_master_scripts = []string{"all-common","awstf",config.Platform+"-common","all-master",config.Platform+"-master"}
+		tf_master_scripts = []string{"all-common",config.Platform+"-common","all-master",config.Platform+"-master"}
 		tf_common_master_script = append(tf_common_master_script,"#!/bin/bash\n"...)
 		tf_common_master_script = append(tf_common_master_script,"mkdir /var/log/px-deploy\n"...)
 
@@ -711,7 +716,12 @@ func create_deployment(config Config) int {
 		} 
 		
 		// TODO if yaml['platform'] == "ocp4" or yaml['platform'] == "eks" or yaml['platform'] == "gke" or yaml['platform'] == "aks" then yaml['nodes'] = 0 end
-		
+		if config.Platform == "ocp4" {
+			config.Nodes="0"
+		} else if config.Platform == "eks" {
+			config.Nodes="0"
+		}
+
 		Clusters, err := strconv.Atoi(config.Clusters)
 		Nodes, err := strconv.Atoi(config.Nodes)
 		
