@@ -1,4 +1,0 @@
-description: Install and run Portworx on gke cluster
-platform: gke
-cloud: gcp
-scripts: ["install-px"]
