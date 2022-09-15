@@ -1,4 +1,4 @@
-cloud: awstf
+cloud: aws
 platform: k8s
 clusters: 1
 nodes: 3
