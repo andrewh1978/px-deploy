@@ -1,3 +1,8 @@
+# 4.13.4
+
+## Improvements
+ * Bump Flannel to 0.19.2
+
 # 4.13.3
 
 ## Improvements
