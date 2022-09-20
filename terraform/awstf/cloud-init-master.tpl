@@ -29,6 +29,7 @@ runcmd:
 - export aws__routetable="${tpl_routetable}"
 - export aws__ami="${tpl_ami}"
 - export cloud="aws"
+- export cluster="${tpl_cluster}"
 - export KUBECONFIG=/root/.kube/config
 - export HOME=/root
 - /tmp/${tpl_name}_scripts.sh
