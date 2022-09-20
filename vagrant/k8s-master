@@ -3,7 +3,8 @@ kubeadm config images list --kubernetes-version $k8s_version | xargs -n1 -P0 doc
 kubeadm init --apiserver-advertise-address=$(hostname -i) --pod-network-cidr=10.244.0.0/16 --kubernetes-version $k8s_version
 mkdir /root/.kube
 cp /etc/kubernetes/admin.conf /root/.kube/config
-kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/release/v0.14.1/Documentation/kube-flannel.yml
+kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/v0.19.2/Documentation/kube-flannel.yml
 curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
+https://raw.githubusercontent.com/flannel-io/flannel/v0.19.2/Documentation/kube-flannel.yml
 chmod 700 get_helm.sh
 HELM_INSTALL_DIR=/usr/bin ./get_helm.sh
