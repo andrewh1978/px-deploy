@@ -17,6 +17,7 @@ import (
 	"unicode/utf8"
 	"net/http"
 	"encoding/base64"
+	"reflect"
 
 
 	"github.com/go-yaml/yaml"
@@ -144,8 +145,8 @@ func main() {
 			}
 			config.Name = createName
 			if createCloud != "" {
-				if createCloud != "aws" && createCloud != "gcp" && createCloud != "azure" && createCloud != "vsphere" {
-					die("Cloud must be 'aws', 'gcp', 'azure' or 'vsphere' (not '" + createCloud + "')")
+				if createCloud != "aws" && createCloud != "awstf" && createCloud != "gcp" && createCloud != "azure" && createCloud != "vsphere" {
+					die("Cloud must be 'awstf', 'aws', 'gcp', 'azure' or 'vsphere' (not '" + createCloud + "')")
 				}
 				config.Cloud = createCloud
 			}
@@ -155,6 +156,8 @@ func main() {
 				}
 				switch config.Cloud {
 				case "aws":
+					config.Aws_Region = createRegion
+				case "awstf":
 					config.Aws_Region = createRegion
 				case "gcp":
 					config.Gcp_Region = createRegion
@@ -295,8 +298,11 @@ func main() {
 					die("Postscript '" + config.Post_Script + "' is not valid Bash")
 				}
 			}
+			// enable when ocp4/eks destroy is fixed for awstf
+			//if config.Platform == "ocp4" && !(config.Cloud == "aws" || config.Cloud == "awstf") { die("Openshift 4 only supported on AWS (not " + config.Cloud + ")") }
+			//if config.Platform == "eks" && !(config.Cloud == "aws" || config.Cloud == "awstf") { die("EKS only makes sense with AWS (not " + config.Cloud + ")") }
 			if config.Platform == "ocp4" && config.Cloud != "aws" { die("Openshift 4 only supported on AWS (not " + config.Cloud + ")") }
-			if config.Platform == "eks" && config.Cloud != "aws" { die("EKS only makes sense with AWS (not " + config.Cloud + ")") }
+			if config.Platform == "eks" && config.Cloud != "aws"  { die("EKS only makes sense with AWS (not " + config.Cloud + ")") }
 			if config.Platform == "gke" && config.Cloud != "gcp" { die("GKE only makes sense with GCP (not " + config.Cloud + ")") }
 			if config.Platform == "aks" && config.Cloud != "azure" { die("AKS only makes sense with Azure (not " + config.Cloud + ")") }
 			y, _ := yaml.Marshal(config)
@@ -315,39 +321,44 @@ func main() {
 			}
 			os.Chdir("/px-deploy/vagrant")
 			os.Setenv("deployment", config.Name)
+			
+			// when using awstf everything should be up and running. other clouds now run vagrant
+			if config.Cloud != "awstf" {
+	
 			var provider string
-			switch config.Cloud {
-			case "aws":
-				provider = "aws"
-			case "gcp":
-				provider = "google"
-			case "azure":
-				provider = "azure"
-			case "vsphere":
-				provider = "vsphere"
-			}
-			fmt.Println(White + "Provisioning VMs..." + Reset)
-			vcmd := exec.Command("sh", "-c", "vagrant up --provider " + provider + " 2>&1")
-			stdout, err := vcmd.StdoutPipe()
-			if err != nil {
-				die(err.Error())
-			}
-			if err := vcmd.Start(); err != nil {
-				die(err.Error())
-			}
-			reader := bufio.NewReader(stdout)
-			for {
-				data := make([]byte, 4<<20)
-				_, err := reader.Read(data)
-				if (config.Quiet != "true") {
-					fmt.Print(string(data))
+				switch config.Cloud {
+				case "aws":
+					provider = "aws"
+				case "gcp":
+					provider = "google"
+				case "azure":
+					provider = "azure"
+				case "vsphere":
+					provider = "vsphere"
 				}
-				if err == io.EOF {
-					break
+				fmt.Println(White + "Provisioning VMs..." + Reset)
+				vcmd := exec.Command("sh", "-c", "vagrant up --provider " + provider + " 2>&1")
+				stdout, err := vcmd.StdoutPipe()
+				if err != nil {
+					die(err.Error())
 				}
-			}
-			if err := vcmd.Wait(); err != nil {
-				die(err.Error())
+				if err := vcmd.Start(); err != nil {
+					die(err.Error())
+				}
+				reader := bufio.NewReader(stdout)
+				for {
+					data := make([]byte, 4<<20)
+					_, err := reader.Read(data)
+					if (config.Quiet != "true") {
+						fmt.Print(string(data))
+					}
+					if err == io.EOF {
+						break
+					}
+				}
+				if err := vcmd.Wait(); err != nil {
+					die(err.Error())
+				}
 			}
 			if config.Auto_Destroy == "true" {
 				destroy_deployment(config.Name)
@@ -567,8 +578,279 @@ func main() {
 func create_deployment(config Config) int {
 	var output []byte
 	var err error
+	var errapply error
+
+	var pxduser string
+	
+	var tf_node_scripts []string
+	var tf_master_scripts []string
+	var tf_variables []string
+	
+	var tf_var_masters []string 
+	var tf_var_nodes []string
+
+	var tf_common_master_script []byte
+	var tf_post_script []byte
+	var tf_node_script []byte
+	var tf_master_script []byte
+	
+	var tf_cluster_aws_type string
+	var tf_env_script []byte
+
+	var tf_var_ebs_common []string
+	var tf_var_ebs []string
+	
 	fmt.Println(White + "Provisioning infrastructure..." + Reset)
 	switch config.Cloud {
+	case "awstf":
+	{
+		if _, err = os.Stat("/px-deploy/.px-deploy/terraform/awstf/.terraform"); os.IsNotExist(err) {
+			fmt.Println(White + "Running first time terraform initpx" + Reset)
+			_, err = exec.Command("terraform","-chdir=/px-deploy/.px-deploy/terraform/awstf", "init").CombinedOutput()
+		}
+	
+		// create directory for deployment and copy terraform scripts 
+		err := os.Mkdir("/px-deploy/.px-deploy/deployments/" + config.Name, 0755)
+		if err != nil {
+			die(err.Error())
+		}
+		//maybe there is a better way to copy templates to working dir ?
+		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/main.tf`,`/px-deploy/.px-deploy/deployments/`+ config.Name).Run()
+		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/variables.tf`,`/px-deploy/.px-deploy/deployments/`+ config.Name).Run()
+		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/cloud-init-master.tpl`,`/px-deploy/.px-deploy/deployments/`+ config.Name).Run()
+		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/cloud-init-node.tpl`,`/px-deploy/.px-deploy/deployments/`+ config.Name).Run()
+		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/aws-returns.tpl`,`/px-deploy/.px-deploy/deployments/`+ config.Name).Run()
+		// also copy terraform modules
+		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/.terraform`,`/px-deploy/.px-deploy/deployments/`+ config.Name).Run()
+		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/.terraform.lock.hcl`,`/px-deploy/.px-deploy/deployments/`+ config.Name).Run()
+			
+		// prepare ENV variables for node/master scripts
+		// to maintain compatibility, create a env variable of everything from the yml spec which is from type string
+		e := reflect.ValueOf(&config).Elem()
+		for i:=0; i < e.NumField(); i++ {
+			if e.Type().Field(i).Type.Name() == "string" {
+				tf_env_script = append(tf_env_script,"export "+strings.ToLower(strings.TrimSpace(e.Type().Field(i).Name))+"=\""+strings.ToLower(strings.TrimSpace(e.Field(i).Interface().(string)))+"\"\n"...)
+			}
+		}
+		
+		// set env variables from env spec
+		for key,val := range config.Env {
+			tf_env_script = append(tf_env_script,"export "+key+"=\""+val+"\"\n"...)
+		}
+		err = os.WriteFile("/px-deploy/.px-deploy/deployments/" + config.Name + "/env.sh", tf_env_script, 0666)
+		if err != nil {
+			die(err.Error())
+		}
+
+		// create EBS definitions
+		// split ebs definition by spaces and range the results
+		tf_var_ebs = append(tf_var_ebs,"node_ebs_devices ={")
+		ebs := strings.Fields(config.Aws_Ebs)
+		for i,val := range ebs {
+			// split by : and create common .tfvars entry for all nodes
+			entry := strings.Split(val,":")
+			tf_var_ebs_common = append(tf_var_ebs_common, "    ebs_type = \""+entry[0]+"\"\n    ebs_size = \""+entry[1]+"\"\n    ebs_device_name = \"/dev/sd"+string(i+98)+"\"")
+		}
+		// other node ebs processing happens in cluster/node loop
+
+		subnet := "192.168."
+		// use aws vagrant scripts as awstf is just the tf implementation of aws
+		// prepare (single) cloud-init script for all nodes			
+		tf_node_scripts = []string{"all-common",config.Platform+"-common",config.Platform+"-node"}
+		tf_node_script = append(tf_node_script,"#!/bin/bash\n"...)
+		
+		tf_node_script = append(tf_node_script,"mkdir /var/log/px-deploy\n"...)
+
+		for _,filename := range tf_node_scripts {
+			content, err := ioutil.ReadFile("/px-deploy/vagrant/"+filename)
+			if err == nil {
+				tf_node_script = append(tf_node_script,"(\n"...)			
+				tf_node_script = append(tf_node_script,"echo \"Started ($date)\"\n"...)			
+				tf_node_script = append(tf_node_script,content...)
+				tf_node_script = append(tf_node_script,"echo \"Finished ($date)\"\n"...)			
+				tf_node_script = append(tf_node_script,"\n) >&/var/log/px-deploy/"+filename+"\n"...)			
+			}
+		}
+
+		// prepare common base script for all master nodes
+		// prepare common cloud-init script for all master nodes
+		tf_master_scripts = []string{"all-common",config.Platform+"-common","all-master",config.Platform+"-master"}
+		tf_common_master_script = append(tf_common_master_script,"#!/bin/bash\n"...)
+		tf_common_master_script = append(tf_common_master_script,"mkdir /var/log/px-deploy\n"...)
+
+		for _,filename := range tf_master_scripts {
+			content, err := ioutil.ReadFile("/px-deploy/vagrant/"+filename)
+			if err == nil {
+				tf_common_master_script = append(tf_common_master_script,"(\n"...)			
+				tf_common_master_script = append(tf_common_master_script,"echo \"Started $(date)\"\n"...)			
+				tf_common_master_script = append(tf_common_master_script,content...)
+				tf_common_master_script = append(tf_common_master_script,"echo \"Finished $(date)\"\n"...)			
+				tf_common_master_script = append(tf_common_master_script,"\n) >&/var/log/px-deploy/"+filename+"\n"...)			
+			}
+		}
+		
+		// add scripts from the "scripts" section of config.yaml to common master node script
+		for _,filename := range config.Scripts {
+			content, err := ioutil.ReadFile("/px-deploy/.px-deploy/scripts/"+filename)
+			if err == nil {
+				tf_common_master_script = append(tf_common_master_script,"(\n"...)
+				tf_common_master_script = append(tf_common_master_script,"echo \"Started $(date)\"\n"...)						
+				tf_common_master_script = append(tf_common_master_script,content...)
+				tf_common_master_script = append(tf_common_master_script,"echo \"Finished $(date)\"\n"...)			
+				tf_common_master_script = append(tf_common_master_script,"\n) >&/var/log/px-deploy/"+filename+"\n"...)			
+			}
+		}
+		// add post_script if defined
+		if config.Post_Script != "" {
+			//fmt.Println("postscript: "+config.Post_Script)
+			content, err := ioutil.ReadFile("/px-deploy/.px-deploy/scripts/"+config.Post_Script)
+			if err == nil {
+				tf_post_script = append(tf_post_script,"(\n"...)
+				tf_post_script = append(tf_post_script,"echo \"Started $(date)\"\n"...)						
+				tf_post_script = append(tf_post_script,content...)
+				tf_post_script = append(tf_post_script,"echo \"Finished $(date)\"\n"...)			
+				tf_post_script = append(tf_post_script,"\n) >&/var/log/px-deploy/"+config.Post_Script+"\n"...)			
+			}
+		} else {
+			tf_post_script = nil
+		} 
+		
+		// TODO if yaml['platform'] == "ocp4" or yaml['platform'] == "eks" or yaml['platform'] == "gke" or yaml['platform'] == "aks" then yaml['nodes'] = 0 end
+		if config.Platform == "ocp4" {
+			config.Nodes="0"
+		} else if config.Platform == "eks" {
+			config.Nodes="0"
+		}
+
+		Clusters, err := strconv.Atoi(config.Clusters)
+		Nodes, err := strconv.Atoi(config.Nodes)
+		
+		// loop clusters and add master name/ip to tf var
+		for c := 1; c <= Clusters ; c++ {
+			masternum := strconv.Itoa(c)
+			net := strconv.Itoa(c+100)
+			tf_var_masters = append(tf_var_masters,"  master-"+masternum+" = {")
+			tf_var_masters = append(tf_var_masters,"    ip_address= \""+subnet+net+".90\"")
+			tf_var_masters = append(tf_var_masters,"    cluster= \""+masternum+"\"")
+			tf_var_masters = append(tf_var_masters,"  }")
+			tf_master_script = tf_common_master_script
+			tf_cluster_aws_type = config.Aws_Type
+
+			// if exist, apply individual scripts/aws_type settings for nodes of a cluster
+			for _, clusterconf := range config.Cluster {
+				if clusterconf.Id == c {
+					for _,filename := range clusterconf.Scripts {
+						content, err := ioutil.ReadFile("/px-deploy/.px-deploy/scripts/"+filename)
+						if err == nil {
+							tf_master_script = append(tf_master_script,"(\n"...)			
+							tf_master_script = append(tf_master_script,content...)
+							tf_master_script = append(tf_master_script,"\n) >&/var/log/px-deploy/"+filename+"\n"...)			
+						}
+					}
+									
+					//is there a cluster specific aws_type override? if not, set from generic config
+					if clusterconf.Aws_Type != "" {
+						tf_cluster_aws_type = clusterconf.Aws_Type
+					} 
+				}
+			}
+
+			// add post_script if defined
+			if tf_post_script != nil {
+				tf_master_script = append(tf_master_script,tf_post_script...)
+			}	
+
+			//write master script for cluster
+			err := os.WriteFile("/px-deploy/.px-deploy/deployments/" + config.Name + "/master-" +masternum , tf_master_script, 0666)
+			if err != nil {
+				die(err.Error())
+			}
+
+			// loop nodes of cluster, add node name/ip to tf var and write individual cloud-init scripts file
+			for n :=1; n <= Nodes ; n++ {
+				nodenum := strconv.Itoa(n)
+				nodeip := strconv.Itoa(n+100)
+				tf_var_nodes = append(tf_var_nodes,"  node-"+masternum+"-"+nodenum+" = { ")
+				tf_var_nodes = append(tf_var_nodes,"    ip_address    = \""+subnet+net+"."+nodeip+"\"")
+				tf_var_nodes = append(tf_var_nodes,"    instance_type = \""+tf_cluster_aws_type+"\"")
+				tf_var_nodes = append(tf_var_nodes,"    cluster = \""+masternum+"\"")
+				tf_var_nodes = append(tf_var_nodes,"  }")
+				err := os.WriteFile("/px-deploy/.px-deploy/deployments/" + config.Name + "/node-" +masternum+"-"+nodenum , tf_node_script, 0666)
+				if err != nil {
+					die(err.Error())
+				}
+				
+				// create EBS definition for each single node
+				for i,val := range tf_var_ebs_common {
+					tf_var_ebs = append(tf_var_ebs,"  node-"+masternum+"-"+nodenum+"-ebs-"+strconv.Itoa(i)+" = {")
+					tf_var_ebs = append(tf_var_ebs,"    node = \"node-"+masternum+"-"+nodenum+"\"")
+					tf_var_ebs = append(tf_var_ebs,val)
+					tf_var_ebs = append(tf_var_ebs,"  }")
+				}
+			}
+		}
+		// close ebs definition
+		tf_var_ebs = append(tf_var_ebs,"}\n")
+		
+		// get PXDUSER env and apply to tf_variables
+		pxduser = os.Getenv("PXDUSER")
+		if (pxduser != "") {
+			tf_variables = append (tf_variables, "PXDUSER = \"" + pxduser + "\"")	
+		}
+
+
+		// build terraform variable file
+		tf_variables = append (tf_variables, "config_name = \"" + config.Name + "\"")
+		tf_variables = append (tf_variables, "aws_region = \"" + config.Aws_Region + "\"")
+		tf_variables = append (tf_variables, "aws_instance_type = \"" + config.Aws_Type + "\"")
+		tf_variables = append (tf_variables, "masters = {")
+		for _, value := range tf_var_masters {
+			tf_variables = append (tf_variables, value)	
+		}
+		tf_variables = append (tf_variables, "}")
+		tf_variables = append (tf_variables, "nodes = {")
+		for _, value := range tf_var_nodes {
+			tf_variables = append (tf_variables, value)	
+		}
+		tf_variables = append (tf_variables, "}")
+		
+		// last item of variables is node ebs definition
+		tf_variables = append (tf_variables,tf_var_ebs...)
+
+		write_tf_file(config.Name, ".tfvars",tf_variables)
+	
+		// now run terraform plan & terraform apply
+		fmt.Println(White+"running terraform PLAN"+Reset)
+		_, err = exec.Command("terraform","-chdir=/px-deploy/.px-deploy/deployments/"+config.Name, "plan", "-input=false", "-out=tfplan", "-var-file",".tfvars").CombinedOutput()
+		if err != nil {
+			fmt.Println(Yellow+"ERROR: terraform plan failed. Check validity of terraform scripts"+Reset)
+			die(err.Error())
+		} else { 
+			fmt.Println(White+"running terraform APPLY"+Reset)
+			//output, errapply = exec.Command("terraform","-chdir=/px-deploy/.px-deploy/deployments/"+config.Name, "apply", "-input=false", "-auto-approve", "tfplan").CombinedOutput()
+			cmd:=exec.Command("terraform","-chdir=/px-deploy/.px-deploy/deployments/"+config.Name, "apply", "-input=false", "-auto-approve", "tfplan")
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			errapply = cmd.Run()
+			if errapply != nil {
+				fmt.Println(Yellow+"ERROR: terraform apply failed. Check validity of terraform scripts"+Reset)
+				die(errapply.Error())
+			}
+		
+			// apply the terraform aws-returns-generated to deployment yml file (maintains compatibility to px-deploy behaviour, maybe not needed any longer)
+			content, err := ioutil.ReadFile("/px-deploy/.px-deploy/deployments/"+config.Name+"/aws-returns-generated.yaml")
+			file,err := os.OpenFile("/px-deploy/.px-deploy/deployments/" + config.Name+".yml", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+    		if err != nil {
+				die(err.Error())
+	  		}
+	  		defer file.Close()
+	    	_, err = file.WriteString(string(content))
+	  		if err != nil {
+				die(err.Error())
+        	}
+		
+		}
+	}
 	case "aws":
 		{
 			output, err = exec.Command("bash", "-c", `
@@ -678,9 +960,31 @@ func destroy_deployment(name string) {
 	config := parse_yaml("deployments/" + name + ".yml")
 	var output []byte
 	var err error
+	var errdestroy error
+
 	ip := get_ip(config.Name)
 	fmt.Println(White + "Destroying deployment '" + config.Name + "'..." + Reset)
-	if config.Cloud == "aws" {
+	if config.Cloud == "awstf" {
+		fmt.Println(White+"running Terraform PLAN"+ Reset)
+		_, err = exec.Command("terraform","-chdir=/px-deploy/.px-deploy/deployments/"+config.Name, "plan","-destroy", "-input=false", "-out=tfplan", "-var-file",".tfvars").CombinedOutput()
+		if err != nil {
+			fmt.Println(Yellow+"ERROR: Terraform plan failed. Check validity of terraform scripts"+Reset)
+			die(err.Error())
+		} else {
+			fmt.Println(White+"running Terraform DESTROY"+ Reset)
+			// output, errdestroy = exec.Command("terraform","-chdir=/px-deploy/.px-deploy/deployments/"+config.Name, "apply", "-input=false", "-auto-approve","tfplan").CombinedOutput()
+			cmd := exec.Command("terraform","-chdir=/px-deploy/.px-deploy/deployments/"+config.Name, "apply", "-input=false", "-auto-approve","tfplan")
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			errdestroy = cmd.Run()
+
+			if errdestroy != nil {
+				fmt.Println(Yellow+"ERROR: Terraform destroy failed. Check validity of terraform scripts"+Reset)
+				die(errdestroy.Error())
+			}
+		}
+		os.RemoveAll("deployments/" + name)
+	} else if config.Cloud == "aws" {
 		if config.Platform == "ocp4" {
 			fmt.Println(White + "Destroying OCP4, wait about 5 minutes (per cluster)..." + Reset)
 			err := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, `
@@ -797,6 +1101,8 @@ func get_ip(deployment string) string {
 	config := parse_yaml("/px-deploy/.px-deploy/deployments/" + deployment + ".yml")
 	var output []byte
 	if config.Cloud == "aws" {
+		output, _ = exec.Command("bash", "-c", `aws ec2 describe-instances --region `+config.Aws_Region+` --filters "Name=network-interface.vpc-id,Values=`+config.Aws__Vpc+`" "Name=tag:Name,Values=master-1" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PublicIpAddress" --output text`).Output()
+	} else if config.Cloud == "awstf" { 
 		output, _ = exec.Command("bash", "-c", `aws ec2 describe-instances --region `+config.Aws_Region+` --filters "Name=network-interface.vpc-id,Values=`+config.Aws__Vpc+`" "Name=tag:Name,Values=master-1" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PublicIpAddress" --output text`).Output()
 	} else if config.Cloud == "gcp" {
 		output, _ = exec.Command("bash", "-c", `gcloud compute instances list --project `+config.Gcp__Project+` --filter="name=('master-1')" --format 'flattened(networkInterfaces[0].accessConfigs[0].natIP)' | tail -1 | cut -f 2 -d " "`).Output()
@@ -953,6 +1259,19 @@ func print_table(header []string, data [][]string) {
 	table.SetNoWhiteSpace(true)
 	table.AppendBulk(data)
 	table.Render()
+}
+
+func write_tf_file (deployment string, filename string, data []string) {
+	file, err := os.OpenFile("/px-deploy/.px-deploy/deployments/" + deployment + "/" + filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		die("Cannot open file: " + err.Error())
+	}
+	defer file.Close()
+	for _,value := range data {
+		if _, err := file.WriteString(value + "\n"); err != nil {
+			die("Cannot write file: " + err.Error())
+		}
+	}
 }
 
 func get_version_current() string {

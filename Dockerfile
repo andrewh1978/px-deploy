@@ -23,6 +23,8 @@ RUN vagrant box add azure https://github.com/azure/vagrant-azure/raw/v2.0/dummy.
 RUN pip3 install awscli
 RUN curl -Ls https://github.com/vmware/govmomi/releases/download/v0.23.0/govc_linux_amd64.gz | zcat >/usr/bin/govc
 RUN mkdir -p /root/go/src/px-deploy
+RUN curl -s https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo >/etc/yum.repos.d/terraform-repo.repo
+RUN yum install -y terraform
 COPY go.mod go.sum px-deploy.go /root/go/src/px-deploy/
 COPY vagrant /px-deploy/vagrant
 COPY vsphere-init.sh VERSION /
