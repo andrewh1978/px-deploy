@@ -1,2 +1,0 @@
-curl -L https://github.com/andrewh1978/px-deploy/archive/master.tar.gz | tar -xzf -  --strip-components=1 -C/ px-deploy-master/assets
-
