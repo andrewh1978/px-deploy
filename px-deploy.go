@@ -592,6 +592,7 @@ func create_deployment(config Config) int {
 	var tf_common_master_script []byte
 	var tf_post_script []byte
 	var tf_node_script []byte
+	var tf_individual_node_script []byte
 	var tf_master_script []byte
 	
 	var tf_cluster_aws_type string
@@ -677,6 +678,7 @@ func create_deployment(config Config) int {
 		tf_master_scripts = []string{"all-common",config.Platform+"-common","all-master",config.Platform+"-master"}
 		tf_common_master_script = append(tf_common_master_script,"#!/bin/bash\n"...)
 		tf_common_master_script = append(tf_common_master_script,"mkdir /var/log/px-deploy\n"...)
+		tf_common_master_script = append(tf_common_master_script,"mkdir /var/log/px-deploy/completed\n"...)
 
 		for _,filename := range tf_master_scripts {
 			content, err := ioutil.ReadFile("/px-deploy/vagrant/"+filename)
@@ -702,7 +704,6 @@ func create_deployment(config Config) int {
 		}
 		// add post_script if defined
 		if config.Post_Script != "" {
-			//fmt.Println("postscript: "+config.Post_Script)
 			content, err := ioutil.ReadFile("/px-deploy/.px-deploy/scripts/"+config.Post_Script)
 			if err == nil {
 				tf_post_script = append(tf_post_script,"(\n"...)
@@ -759,7 +760,10 @@ func create_deployment(config Config) int {
 			if tf_post_script != nil {
 				tf_master_script = append(tf_master_script,tf_post_script...)
 			}	
-
+			
+			// after running all scripts create file in /var/log/px-deploy/completed 
+			tf_master_script = append(tf_master_script,"curl -s https://ipinfo.io/ip > /var/log/px-deploy/completed/master-"+masternum+"\n"...)
+			
 			//write master script for cluster
 			err := os.WriteFile("/px-deploy/.px-deploy/deployments/" + config.Name + "/master-" +masternum , tf_master_script, 0666)
 			if err != nil {
@@ -775,7 +779,12 @@ func create_deployment(config Config) int {
 				tf_var_nodes = append(tf_var_nodes,"    instance_type = \""+tf_cluster_aws_type+"\"")
 				tf_var_nodes = append(tf_var_nodes,"    cluster = \""+masternum+"\"")
 				tf_var_nodes = append(tf_var_nodes,"  }")
-				err := os.WriteFile("/px-deploy/.px-deploy/deployments/" + config.Name + "/node-" +masternum+"-"+nodenum , tf_node_script, 0666)
+				
+				tf_individual_node_script = append(tf_individual_node_script,tf_node_script...)
+				tf_individual_node_script = append(tf_individual_node_script, "export IP=$(curl -s https://ipinfo.io/ip)\n"...)
+				tf_individual_node_script = append(tf_individual_node_script, "ssh root@master-"+masternum+" 'echo $IP > /var/log/px-deploy/completed/node-"+masternum+"-"+nodenum+"'\n"...)
+
+				err := os.WriteFile("/px-deploy/.px-deploy/deployments/" + config.Name + "/node-" +masternum+"-"+nodenum , tf_individual_node_script, 0666)
 				if err != nil {
 					die(err.Error())
 				}
