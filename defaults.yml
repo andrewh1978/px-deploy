@@ -3,7 +3,7 @@ platform: k8s
 clusters: 1
 nodes: 3
 k8s_version: 1.21.11
-px_version: 2.10.3
+px_version: 2.11.3
 stop_after: 6
 post_script: show-ip
 quiet: false
