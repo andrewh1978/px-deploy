@@ -1,3 +1,9 @@
+## Improvements
+ * Bump PX-Central to 2.3.0
+ * Bump Portworx to 2.11.3
+ * Add new cloud awstf - migrate AWS support to Terraform (testing)
+ * Add nginx asset
+
 # 4.13.4
 
 ## Improvements
