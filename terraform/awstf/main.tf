@@ -174,6 +174,7 @@ resource "aws_volume_attachment" "pwx_data_ebs_att1" {
 	device_name 	= each.value.ebs_device_name
 	volume_id   	= aws_ebs_volume.ebs_node[each.key].id
 	instance_id 	= aws_instance.node[each.value.node].id
+	stop_instance_before_detaching  = true
 }
 
 resource "aws_instance" "master" {
