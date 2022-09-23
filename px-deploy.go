@@ -494,11 +494,34 @@ func main() {
 				{
 					// loop clusters and add master name/ip to tf var
 					for c := 1; c <= Clusters ; c++ {
-						fmt.Printf("master-%v \n",c)
-						for n := 1; n <= Nodes; n++ {
-							fmt.Printf(" node-%v-%v\n",c,n)
+						ip = get_node_ip(statusName,fmt.Sprintf("master-%v",c))
+						// get content of node tracking file (-> each node will add its entry when finished cloud-init/vagrant scripts)
+						cmd := exec.Command("ssh", "-q", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa." + config.Cloud + "." + config.Name, "root@" + ip, "cat /var/log/px-deploy/completed/tracking")
+    					out, err := cmd.CombinedOutput()
+						if err != nil{
+							die (err.Error())
+						} else {
+							scanner := bufio.NewScanner(strings.NewReader(string(out)))
+							ready_nodes := make(map[string]string)
+							for scanner.Scan() {
+    							entry := strings.Fields(scanner.Text())
+								ready_nodes[entry[0]] = entry[1]
+							}
+
+							if ready_nodes[fmt.Sprintf("master-%v",c)] != "" {
+								fmt.Printf("master-%v \t %v \n",c, ready_nodes[fmt.Sprintf("master-%v",c)] )
+								} else {
+								fmt.Printf("master-%v \t NotReady \n",c)
+							}
+							
+							for n := 1; n <= Nodes; n++ {
+								if ready_nodes[fmt.Sprintf("node-%v-%v",c,n)] != "" {
+									fmt.Printf(" node-%v-%v \t %v \n",c,n, ready_nodes[fmt.Sprintf("node-%v-%v",c,n)] )
+								} else {
+									fmt.Printf(" node-%v-%v \t NotReady \n",c,n)
+								}
+							}
 						}
-						
 					}
 				}
 			default:
@@ -705,6 +728,7 @@ func create_deployment(config Config) int {
 		tf_common_master_script = append(tf_common_master_script,"#!/bin/bash\n"...)
 		tf_common_master_script = append(tf_common_master_script,"mkdir /var/log/px-deploy\n"...)
 		tf_common_master_script = append(tf_common_master_script,"mkdir /var/log/px-deploy/completed\n"...)
+		tf_common_master_script = append(tf_common_master_script,"touch /var/log/px-deploy/completed/tracking\n"...)
 
 		for _,filename := range tf_master_scripts {
 			content, err := ioutil.ReadFile("/px-deploy/vagrant/"+filename)
