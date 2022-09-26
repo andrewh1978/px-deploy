@@ -648,17 +648,6 @@ func create_deployment(config Config) int {
 	switch config.Cloud {
 	case "awstf":
 	{
-		//if _, err = os.Stat("/px-deploy/.px-deploy/terraform/awstf/.terraform"); os.IsNotExist(err) {
-		//	fmt.Println(White + "Running first time terraform init" + Reset)
-		//	_, err = exec.Command("terraform","-chdir=/px-deploy/.px-deploy/terraform/awstf", "init").CombinedOutput()
-		//}
-	
-		// create directory for tf-deployments
-		//err = os.Mkdir("/px-deploy/.px-deploy/tf-deployments/", 0755)
-		//if err != nil && !os.IsExist(err) {
-		//	die(err.Error())
-		//}
-		
 		// create directory for deployment and copy terraform scripts 
 		err = os.Mkdir("/px-deploy/.px-deploy/tf-deployments/" + config.Name, 0755)
 		if err != nil {
