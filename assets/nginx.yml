@@ -25,6 +25,15 @@ spec:
     requests:
       storage: 50Gi
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: html
+  namespace: nginx
+data:
+  index.html: |-
+    Hello world!
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -48,7 +57,37 @@ spec:
         volumeMounts:
         - mountPath: /usr/share/nginx/html
           name: nginx-pvc
+      initContainers:
+      - name: nginx-init
+        image: nginx:latest
+        command: [ 'sh', '-c', "cp -r /html/* /usr/share/nginx/html/" ]
+        volumeMounts:
+        - mountPath: /usr/share/nginx/html
+          name: nginx-pvc
+        - mountPath: /html/index.html
+          name: nginx-html
+          subPath: index.html
       volumes:
       - name: nginx-pvc
         persistentVolumeClaim:
           claimName: nginx-pvc
+      - name: nginx-html
+        configMap:
+          name: html
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  namespace: nginx
+  labels:
+    app: nginx
+spec:
+  type: NodePort
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    nodePort: 30080
+  selector:
+    app: nginx
