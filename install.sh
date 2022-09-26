@@ -8,6 +8,7 @@ WHITE='\033[0;37m'
 NC='\033[0m'
 
 echo -e ${BLUE}Setting up installation container
+curl -s https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo >/etc/yum.repos.d/terraform-repo.repo
 yum install -y git docker terraform >&/dev/null
 echo Cloning repo
 git clone https://github.com/andrewh1978/px-deploy >&/dev/null
