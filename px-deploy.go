@@ -870,8 +870,11 @@ func create_deployment(config Config) int {
 	
 		// now run terraform plan & terraform apply
 		fmt.Println(White+"running terraform PLAN"+Reset)
-		_, err = exec.Command("terraform","-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-input=false", "-out=tfplan", "-var-file",".tfvars").CombinedOutput()
+		cmd := exec.Command("terraform","-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-input=false", "-out=tfplan", "-var-file",".tfvars")
+		err = cmd.Run()
 		if err != nil {
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
 			fmt.Println(Yellow+"ERROR: terraform plan failed. Check validity of terraform scripts"+Reset)
 			die(err.Error())
 		} else { 
@@ -1025,8 +1028,8 @@ func destroy_deployment(name string) {
 		volumes=$(aws ec2 describe-volumes --filters "Name=attachment.instance-id,Values=$instancelist" "Name=tag:pxtype,Values=data,kvdb,journal" --query "Volumes[*].VolumeId" --output json)
 		
 		[[ "$instances" ]] && {
-			aws ec2 terminate-instances --instance-ids $instances >/dev/null
-			aws ec2 wait instance-terminated --instance-ids $instances
+			aws ec2 stop-instances --instance-ids $instances >/dev/null
+			aws ec2 wait instance-stopped --instance-ids $instances
 		}
 		
 		echo $volumes |jq -c '.[]' | sed "s/\"//g" | while read i; do
