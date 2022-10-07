@@ -509,14 +509,14 @@ func main() {
 							}
 
 							if ready_nodes[fmt.Sprintf("master-%v",c)] != "" {
-								fmt.Printf("Ready\tmaster-%v \t  %v\n",c, ready_nodes[fmt.Sprintf("master-%v",c)] )
+								fmt.Printf("Ready\tmaster-%v \t  %v\n",c, ip )
 								} else {
 								fmt.Printf("NotReady\tmaster-%v \t (%v)\n",c,ip)
 							}
 							
 							for n := 1; n <= Nodes; n++ {
 								if ready_nodes[fmt.Sprintf("node-%v-%v",c,n)] != "" {
-									fmt.Printf("Ready\t node-%v-%v \t %v\n",c,n, ready_nodes[fmt.Sprintf("node-%v-%v",c,n)] )
+									fmt.Printf("Ready\t node-%v-%v\n",c,n)
 								} else {
 									fmt.Printf("NotReady\t node-%v-%v\n",c,n)
 								}
@@ -622,6 +622,7 @@ func create_deployment(config Config) int {
 	var output []byte
 	var err error
 	var errapply error
+	
 
 	var pxduser string
 	
@@ -870,7 +871,9 @@ func create_deployment(config Config) int {
 	
 		// now run terraform plan & terraform apply
 		fmt.Println(White+"running terraform PLAN"+Reset)
-		_, err = exec.Command("terraform","-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-input=false", "-out=tfplan", "-var-file",".tfvars").CombinedOutput()
+		cmd := exec.Command("terraform","-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-input=false", "-out=tfplan", "-var-file",".tfvars")
+		cmd.Stderr = os.Stderr
+		err = cmd.Run()
 		if err != nil {
 			fmt.Println(Yellow+"ERROR: terraform plan failed. Check validity of terraform scripts"+Reset)
 			die(err.Error())
@@ -1013,27 +1016,47 @@ func destroy_deployment(name string) {
 	ip := get_ip(config.Name)
 	fmt.Println(White + "Destroying deployment '" + config.Name + "'..." + Reset)
 	if config.Cloud == "awstf" {
+		
+		// Delete any ELB and Clouddrive not being created by Terraform
+		// ELB creation will be moved to TF later
+		fmt.Println(White+"Stopping Instances, Deleting ELB & CloudDrive EBS"+ Reset)
+		cmd := exec.Command("bash", "-c", `
+		aws configure set default.region `+config.Aws_Region+`
+		instances=$(aws ec2 describe-instances --filters "Name=network-interface.vpc-id,Values=`+config.Aws__Vpc+`" --query "Reservations[*].Instances[*].InstanceId" --output text)
+
+		instancelist=$(echo $instances | sed -e "s/ /,/g")
+		volumes=$(aws ec2 describe-volumes --filters "Name=attachment.instance-id,Values=$instancelist" "Name=tag:pxtype,Values=data,kvdb,journal" --query "Volumes[*].VolumeId" --output json)
+		
+		[[ "$instances" ]] && {
+			aws ec2 stop-instances --instance-ids $instances >/dev/null
+			aws ec2 wait instance-stopped --instance-ids $instances
+		}
+		
+		echo $volumes |jq -c '.[]' | sed "s/\"//g" | while read i; do
+			aws ec2 delete-volume --volume-id $i &
+		done
+
+		[ "`+config.Aws__Vpc+`" ] || exit
+		for i in $(aws elb describe-load-balancers --query "LoadBalancerDescriptions[].{a:VPCId,b:LoadBalancerName}" --output text | awk '/`+config.Aws__Vpc+`/{print$2}'); do
+		  aws elb delete-load-balancer --load-balancer-name $i
+		done
+		while [ "$(aws elb describe-load-balancers --query "LoadBalancerDescriptions[].VPCId" --output text | grep `+config.Aws__Vpc+`)" ]; do
+		  echo "waiting for ELB to disappear"
+		  sleep 2
+		done
+		`)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		err = cmd.Run()
+		
 		fmt.Println(White+"running Terraform PLAN"+ Reset)
-		_, err = exec.Command("terraform","-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan","-destroy", "-input=false", "-out=tfplan", "-var-file",".tfvars").CombinedOutput()
+		cmd = exec.Command("terraform","-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan","-destroy", "-input=false", "-out=tfplan", "-var-file",".tfvars")
+		cmd.Stderr = os.Stderr
+		err = cmd.Run()
 		if err != nil {
 			fmt.Println(Yellow+"ERROR: Terraform plan failed. Check validity of terraform scripts"+Reset)
 			die(err.Error())
 		} else {
-			// Delete any ELB not being created by Terraform
-			// ELB creation will be moved to TF later
-			output, err = exec.Command("bash", "-c", `
-			aws configure set default.region `+config.Aws_Region+`
-			aws ec2 delete-key-pair --key-name px-deploy.`+config.Name+` >&/dev/null || exit 1
-			[ "`+config.Aws__Vpc+`" ] || exit
-			for i in $(aws elb describe-load-balancers --query "LoadBalancerDescriptions[].{a:VPCId,b:LoadBalancerName}" --output text | awk '/`+config.Aws__Vpc+`/{print$2}'); do
-			  aws elb delete-load-balancer --load-balancer-name $i
-			done
-			while [ "$(aws elb describe-load-balancers --query "LoadBalancerDescriptions[].VPCId" --output text | grep `+config.Aws__Vpc+`)" ]; do
-			  echo "waiting for ELB to disappear"
-			  sleep 2
-			done
-		    `).CombinedOutput()
-
 			fmt.Println(White+"running Terraform DESTROY"+ Reset)
 			cmd := exec.Command("terraform","-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "apply", "-input=false", "-auto-approve","tfplan")
 			cmd.Stdout = os.Stdout
