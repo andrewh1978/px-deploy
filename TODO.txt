@@ -1,6 +1,0 @@
-terrform plan during create
--> rework to show errors
-
-test terraform plan error display create / destroy
-
-rework variable structure
