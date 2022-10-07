@@ -622,6 +622,7 @@ func create_deployment(config Config) int {
 	var output []byte
 	var err error
 	var errapply error
+	
 
 	var pxduser string
 	
@@ -871,10 +872,9 @@ func create_deployment(config Config) int {
 		// now run terraform plan & terraform apply
 		fmt.Println(White+"running terraform PLAN"+Reset)
 		cmd := exec.Command("terraform","-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-input=false", "-out=tfplan", "-var-file",".tfvars")
+		cmd.Stderr = os.Stderr
 		err = cmd.Run()
 		if err != nil {
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
 			fmt.Println(Yellow+"ERROR: terraform plan failed. Check validity of terraform scripts"+Reset)
 			die(err.Error())
 		} else { 
@@ -1019,7 +1019,7 @@ func destroy_deployment(name string) {
 		
 		// Delete any ELB and Clouddrive not being created by Terraform
 		// ELB creation will be moved to TF later
-		fmt.Println(White+"Terminating Instances, Deleting ELB & CloudDrive EBS"+ Reset)
+		fmt.Println(White+"Stopping Instances, Deleting ELB & CloudDrive EBS"+ Reset)
 		cmd := exec.Command("bash", "-c", `
 		aws configure set default.region `+config.Aws_Region+`
 		instances=$(aws ec2 describe-instances --filters "Name=network-interface.vpc-id,Values=`+config.Aws__Vpc+`" --query "Reservations[*].Instances[*].InstanceId" --output text)
@@ -1051,10 +1051,9 @@ func destroy_deployment(name string) {
 		
 		fmt.Println(White+"running Terraform PLAN"+ Reset)
 		cmd = exec.Command("terraform","-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan","-destroy", "-input=false", "-out=tfplan", "-var-file",".tfvars")
+		cmd.Stderr = os.Stderr
 		err = cmd.Run()
 		if err != nil {
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
 			fmt.Println(Yellow+"ERROR: Terraform plan failed. Check validity of terraform scripts"+Reset)
 			die(err.Error())
 		} else {
