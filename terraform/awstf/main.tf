@@ -40,16 +40,18 @@ resource "aws_vpc" "vpc" {
 	tags = {
 		Name = format("%s.%s-%s",var.name_prefix,var.config_name,"vpc")
         px-deploy_name = var.config_name
+		px-deploy_username = var.PXDUSER
 	}
 }
 
 resource "aws_subnet" "subnet" {
+	count					= 	var.clusters
 	vpc_id 					=	aws_vpc.vpc.id
-	cidr_block 				= 	var.aws_cidr_sn
-	#availability_zone 		= 	var.aws_az
+	cidr_block 				= 	"192.168.${count.index + 101}.0/24"
 	tags = {
-		Name = format("%s-%s-%s",var.name_prefix,var.config_name,"subnet")
+		Name = format("%s-%s-subnet-%s",var.name_prefix,var.config_name, count.index + 1)
         px-deploy_name = var.config_name
+		px-deploy_username = var.PXDUSER
 		}
 }
 
@@ -58,6 +60,7 @@ resource "aws_internet_gateway" "igw" {
 	tags = {
 		Name = format("%s-%s-%s",var.name_prefix,var.config_name,"igw")
         px-deploy_name = var.config_name
+		px-deploy_username = var.PXDUSER
 	}
 }
 
@@ -69,12 +72,15 @@ resource "aws_route_table" "rt" {
 	}
 	tags = {
 		Name = format("%s-%s-%s",var.name_prefix,var.config_name,"rt")
+		px-deploy_name = var.config_name
+		px-deploy_username = var.PXDUSER
 	}  
 }
 
 resource "aws_route_table_association" "rt" {
-	subnet_id = aws_subnet.subnet.id
-	route_table_id = aws_route_table.rt.id
+	count			= var.clusters
+	subnet_id 		= aws_subnet.subnet[count.index].id
+	route_table_id 	= aws_route_table.rt.id
 }
 
 resource "aws_security_group" "sg_px-deploy" {
@@ -154,6 +160,7 @@ resource "aws_security_group" "sg_px-deploy" {
 		}
 	tags = {
 		  px-deploy_name = var.config_name
+		  px-deploy_username = var.PXDUSER
 		}
 }
 
@@ -182,7 +189,7 @@ resource "aws_instance" "master" {
 	ami 						= 	var.aws_ami_image
 	instance_type				=	var.aws_instance_type
 	vpc_security_group_ids 		=	[aws_security_group.sg_px-deploy.id]
-	subnet_id					=	aws_subnet.subnet.id
+	subnet_id					=	aws_subnet.subnet[each.value.cluster - 1].id
 	private_ip 					= 	each.value.ip_address
 	associate_public_ip_address = true
 	key_name 					= 	aws_key_pair.deploy_key.key_name
@@ -228,7 +235,7 @@ resource "aws_instance" "node" {
 	ami 						= 	var.aws_ami_image
 	instance_type				=	each.value.instance_type
 	vpc_security_group_ids 		=	[aws_security_group.sg_px-deploy.id]
-	subnet_id					=	aws_subnet.subnet.id
+	subnet_id					=	aws_subnet.subnet[each.value.cluster - 1].id
 	private_ip 					= 	each.value.ip_address
 	associate_public_ip_address = true
 	key_name 					= 	aws_key_pair.deploy_key.key_name
@@ -260,7 +267,7 @@ resource "local_file" "cloud-init-master" {
 		tpl_name = each.key
 		tpl_vpc = aws_vpc.vpc.id,
 		tpl_sg = aws_security_group.sg_px-deploy.id,
-		tpl_subnet = aws_subnet.subnet.id,
+		tpl_subnet = aws_subnet.subnet[each.value.cluster - 1].id,
 		tpl_gw = aws_internet_gateway.igw.id,
 		tpl_routetable = aws_route_table.rt.id,
 		tpl_ami = 	var.aws_ami_image,
@@ -279,7 +286,7 @@ resource "local_file" "cloud-init-node" {
 		tpl_name = each.key
 		tpl_vpc = aws_vpc.vpc.id,
 		tpl_sg = aws_security_group.sg_px-deploy.id,
-		tpl_subnet = aws_subnet.subnet.id,
+		tpl_subnet = aws_subnet.subnet[each.value.cluster - 1].id,
 		tpl_gw = aws_internet_gateway.igw.id,
 		tpl_routetable = aws_route_table.rt.id,
 		tpl_ami = 	var.aws_ami_image,
@@ -293,7 +300,6 @@ resource "local_file" "aws-returns" {
 	content = templatefile("${path.module}/aws-returns.tpl", { 
 		tpl_vpc = aws_vpc.vpc.id,
 		tpl_sg = aws_security_group.sg_px-deploy.id,
-		tpl_subnet = aws_subnet.subnet.id,
 		tpl_gw = aws_internet_gateway.igw.id,
 		tpl_routetable = aws_route_table.rt.id,
 		tpl_ami = 	var.aws_ami_image,

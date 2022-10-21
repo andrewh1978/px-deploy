@@ -15,6 +15,11 @@ variable "config_name" {
 	type 		= string
 }
 
+variable "clusters" {
+	description 	= "number of clusters to create"
+	type			= number
+}
+
 variable "aws_instance_type" {
 	description = "aws instance type for vm"
 	type 		= string
@@ -30,7 +35,7 @@ variable "masters" {
 	description 	=  "master names , IPs cluster"
 	type 			= map( object({
 			ip_address 	= string
-			cluster 	= string
+			cluster 	= number
 	}))
 }
 
@@ -39,7 +44,7 @@ variable "nodes" {
 	type 			= map( object({
 		ip_address 		= string
 		instance_type 	= string
-		cluster			= string
+		cluster			= number
 	}))
 }
 
