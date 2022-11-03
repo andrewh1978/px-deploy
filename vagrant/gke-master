@@ -16,6 +16,7 @@ gcloud container clusters create $GKE_CLUSTER_NAME \
      --zone=$gcp_region-$gcp_zone \
      --image-type ubuntu \
      --scopes compute-rw,storage-ro \
-     --project $gcp__project
+     --project $gcp__project \
+     --cluster-version 1.22.12-gke.2300
 
 # FIXME disks
