@@ -1,10 +1,13 @@
 GKE_CLUSTER_NAME=px-deploy-$name-$cluster
 
-dnf install -y docker
+dnf install -y docker google-cloud-sdk-gke-gcloud-auth-plugin
 systemctl enable docker
 systemctl start docker
 curl -sL -o /usr/bin/kubectl "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
 chmod 755 /usr/bin/kubectl
+
+echo "export USE_GKE_GCLOUD_AUTH_PLUGIN=True" >> /root/.bashrc
+source /root/.bashrc
 
 gcloud services enable container.googleapis.com --project $gcp__project
 gcloud container clusters create $GKE_CLUSTER_NAME \
@@ -14,9 +17,12 @@ gcloud container clusters create $GKE_CLUSTER_NAME \
      --machine-type=$gcp_type \
      --num-nodes=$nodes \
      --zone=$gcp_region-$gcp_zone \
-     --image-type ubuntu \
+     --image-type ubuntu_containerd \
      --scopes compute-rw,storage-ro \
      --project $gcp__project \
-     --cluster-version 1.22.12-gke.2300
+     --cluster-version=$gke_version
+
+gcloud config set project $gcp__project
+gcloud --project $gcp__project container clusters get-credentials $GKE_CLUSTER_NAME --zone $gcp_region-$gcp_zone
 
 # FIXME disks
