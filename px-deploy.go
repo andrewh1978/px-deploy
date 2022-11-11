@@ -50,6 +50,7 @@ type Config struct {
 	Gcp_Type                 string
 	Gcp_Disks                string
 	Gcp_Zone                 string
+	Gke_Version              string	
 	Azure_Type               string
 	Azure_Disks              string
 	Vsphere_Host             string
@@ -97,7 +98,7 @@ var Yellow = "\033[33m"
 var Blue   = "\033[34m"
 
 func main() {
-	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createAwsTags, createGcpType, createGcpDisks, createGcpZone, createAzureType, createAzureDisks, createTemplate, createRegion, createCloud, createEnv, connectName, kubeconfigName, destroyName, statusName, historyNumber string
+	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createAwsTags, createGcpType, createGcpDisks, createGcpZone, createGkeVersion, createAzureType, createAzureDisks, createTemplate, createRegion, createCloud, createEnv, connectName, kubeconfigName, destroyName, statusName, historyNumber string
 	var createQuiet, createDryRun, destroyAll bool
 	os.Chdir("/px-deploy/.px-deploy")
 	rootCmd := &cobra.Command{Use: "px-deploy"}
@@ -253,6 +254,12 @@ func main() {
 					die("Invalid GCP zone '" + createGcpZone + "'")
 				}
 				config.Gcp_Zone = createGcpZone
+			}
+			if createGkeVersion != "" {
+				if !regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+$`).MatchString(createGkeVersion) {
+					die("Invalid GKE version '" + createGkeVersion + "'")
+				}
+				config.Gke_Version = createGkeVersion
 			}
 			if createAzureType != "" {
 				if !regexp.MustCompile(`^[0-9a-z\-]+$`).MatchString(createAzureType) {

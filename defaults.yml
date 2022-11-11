@@ -17,6 +17,7 @@ gcp_region: europe-west1
 gcp_zone: b
 gcp_type: n1-standard-2
 gcp_disks: "pd-standard:50"
+gke_version: "1.24.5-gke.600"
 #gcp_disks: "pd-standard:20 pd-ssd:30"
 
 azure_region: uksouth
