@@ -1,0 +1,75 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+ name: pgadmin
+---
+apiVersion: v1
+kind: Service
+metadata:
+ name: pgadmin-service
+ namespace: pgadmin
+spec:
+ ports:
+ - protocol: TCP
+   port: 80
+   targetPort: http
+ selector:
+   app: pgadmin
+ type: NodePort
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+ name: pgadmin
+ namespace: pgadmin
+spec:
+ serviceName: pgadmin-service
+ podManagementPolicy: Parallel
+ replicas: 1
+ updateStrategy:
+   type: RollingUpdate
+ selector:
+   matchLabels:
+     app: pgadmin
+ template:
+   metadata:
+     labels:
+       app: pgadmin
+   spec:
+     terminationGracePeriodSeconds: 10
+     initContainers:
+       - name: pgadmin-chown
+         image: busybox:1.28
+         command: ["sh", "-c", "mkdir -p /var/lib/pgadmin ; chown 5050 /var/lib/pgadmin"]
+         volumeMounts:
+         - name: pgadmin-data
+           mountPath: /var/lib/pgadmin
+     containers:
+       - name: pgadmin
+         image: dpage/pgadmin4:5.4
+         imagePullPolicy: Always
+         env:
+         - name: PGADMIN_DEFAULT_EMAIL
+           value: admin@portworx.com
+         - name: PGADMIN_DEFAULT_PASSWORD
+           value: admin
+         ports:
+         - name: http
+           containerPort: 80
+           protocol: TCP
+         volumeMounts:
+         - name: pgadmin-data
+           mountPath: /var/lib/pgadmin
+     volumes:
+     - name: pgadmin-config
+       configMap:
+         name: pgadmin-config
+ volumeClaimTemplates:
+ - metadata:
+     name: pgadmin-data
+   spec:
+     storageClassName: px-replicated
+     accessModes: [ "ReadWriteOnce" ]
+     resources:
+       requests:
+         storage: 3Gi
