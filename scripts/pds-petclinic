@@ -1,0 +1,181 @@
+#!/bin/bash
+
+#
+# creates a deployment on PDS and a spring-petclinic instance accessing it
+# 
+# will also create a /assets/pds-petclinc/delete_deployment.sh script to remove everything being created by this script
+#
+# currently tested only on aws ec2 instances
+# 
+# TODO: React on disabled Versions (14.4)
+# TODO: validate/modify to run on EKS / GKE / OCP
+#
+# when running standalone ensure the following variables are set properly
+# and  /assets/pds-petclinic/pds-petclinic.tpl exists & is accessible
+#
+# name="pds-demo"
+# PDS_ENDPOINT="https://prod.pds.portworx.com/api"
+# PDS_NAMESPACE="pds-petclinic"
+# PDS_DATASERVICE="pg"
+# PDS_DATASERVICE_VERSION="13.7"
+# PDS_APP_CONFIG_TEMPLATE="Default"
+# PDS_APP_RESOURCE_TEMPLATE="Tiny"
+# PDS_APP_STORAGE_TEMPLATE="Volume%20replication%20(best-effort%20spread)"
+# PDS_TOKEN="[your pds user api key]"
+# PDS_ACCOUNT="Sales"
+# PDS_TENANT="Default"
+# PDS_PROJECT="Default"
+#
+
+kubectl create ns $PDS_NAMESPACE
+kubectl label ns $PDS_NAMESPACE pds.portworx.com/available=true
+
+TGT_NAME="px-deploy-$name"
+
+
+PDS_ACCOUNT_ID=$(curl -s -X "GET"   "$PDS_ENDPOINT/accounts?Name=$PDS_ACCOUNT"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN" | jq -r '.data[0].id')
+[[ -z $PDS_ACCOUNT_ID ]] && { echo "Account ID not found"; exit 1; }
+echo "PDS ACCOUNT ID:		$PDS_ACCOUNT_ID"
+
+PDS_TENANT_ID=$(curl -s -X "GET"   "$PDS_ENDPOINT/accounts/$PDS_ACCOUNT_ID/tenants?Name=$PDS_TENANT"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.data[0].id')
+[[ -z $PDS_TENANT_ID ]] && { echo "Tenant ID not found"; exit 1; }
+echo "PDS TENANT ID:		$PDS_TENANT_ID"
+
+PDS_PROJECT_ID=$(curl -s -X "GET"   "$PDS_ENDPOINT/tenants/$PDS_TENANT_ID/projects?Name=$PDS_PROJECT"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.data[0].id')
+[[ -z $PDS_PROJECT_ID ]] && { echo "Project ID not found"; exit 1; }
+echo "PDS PROJECT ID:		$PDS_PROJECT_ID"
+
+PDS_SERVICE_ACCOUNT_ID=$(curl -s -X "GET"   "$PDS_ENDPOINT/tenants/$PDS_TENANT_ID/service-accounts?Name=Default-AgentWriter"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.data[0].id')
+[[ -z $PDS_SERVICE_ACCOUNT_ID ]] && { echo "Service Account ID not found"; exit 1; }
+echo "SVC ACCT ID: 		$PDS_SERVICE_ACCOUNT_ID"
+
+PDS_SERVICE_ACCOUNT_TOKEN=$(curl -s -X "GET"   "$PDS_ENDPOINT/service-accounts/$PDS_SERVICE_ACCOUNT_ID/token"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.token')
+[[ -z $PDS_SERVICE_ACCOUNT_TOKEN ]] && { echo "Service Account Token not found"; exit 1; }
+echo "SVC ACCT TOKEN: $PDS_SERVICE_ACCOUNT_TOKEN"
+
+PDS_DATASERVICE_ID=$(curl -s -X "GET"   "$PDS_ENDPOINT/data-services?short_name=$PDS_DATASERVICE"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.data[0].id')
+[[ -z $PDS_DATASERVICE_ID ]] && { echo "Dataservice ID not found"; exit 1; }
+echo "PDS DS ID: 		$PDS_DATASERVICE_ID"
+
+PDS_DATASERVICE_VERSION_ID=$(curl -s -X "GET"   "$PDS_ENDPOINT/data-services/$PDS_DATASERVICE_ID/versions?name=$PDS_DATASERVICE_VERSION&enabled=true"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.data[0].id')
+[[ -z $PDS_DATASERVICE_VERSION_ID ]] && { echo "Dataservice Version ID not found"; exit 1; }
+echo "PDS DS VERS ID:		$PDS_DATASERVICE_VERSION_ID"
+
+PDS_DATASERVICE_IMAGE_ID=$(curl -s -X "GET"   "$PDS_ENDPOINT/images?data_service_id=$PDS_DATASERVICE_ID&version_id=$PDS_DATASERVICE_VERSION_ID&latest=true"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.data[0].id')
+[[ -z $PDS_DATASERVICE_IMAGE_ID ]] && { echo "Dataservice Image ID not found"; exit 1; }
+echo "PDS DS IMG ID:		$PDS_DATASERVICE_IMAGE_ID"
+
+PDS_APP_CONFIG_TEMPLATE_ID=$(curl -s -X "GET"   "$PDS_ENDPOINT/tenants/$PDS_TENANT_ID/application-configuration-templates?name=$PDS_APP_CONFIG_TEMPLATE&data_service_id=$PDS_DATASERVICE_ID"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.data[0].id')
+[[ -z $PDS_APP_CONFIG_TEMPLATE_ID ]] && { echo "Application Config Template ID not found"; exit 1; }
+echo "PDS APP CONF TEMP ID:	$PDS_APP_CONFIG_TEMPLATE_ID"
+
+PDS_APP_RESOURCE_TEMPLATE_ID=$(curl -s -X "GET"  "$PDS_ENDPOINT/tenants/$PDS_TENANT_ID/resource-settings-templates?name=$PDS_APP_RESOURCE_TEMPLATE&data_service_id=$PDS_DATASERVICE_ID"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.data[0].id')
+[[ -z $PDS_APP_RESOURCE_TEMPLATE_ID ]] && { echo "Application Resource Template ID not found"; exit 1; }
+echo "PDS APP RES TEMP ID:	$PDS_APP_RESOURCE_TEMPLATE_ID"
+
+PDS_APP_STORAGE_TEMPLATE_ID=$(curl -s -X "GET"  "$PDS_ENDPOINT/tenants/$PDS_TENANT_ID/storage-options-templates?name=$PDS_APP_STORAGE_TEMPLATE&provisioner=auto"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.data[0].id')
+[[ -z $PDS_APP_STORAGE_TEMPLATE_ID ]] && { echo "Application Storage Template ID not found"; exit 1; }
+echo "PDS APP STO TEMP ID:	$PDS_APP_STORAGE_TEMPLATE_ID"
+
+
+helm install --create-namespace --namespace=pds-system pds pds-target --repo=https://portworx.github.io/pds-charts --version=1.9.1 --set tenantId=$PDS_TENANT_ID --set bearerToken=$PDS_SERVICE_ACCOUNT_TOKEN --set apiEndpoint=$PDS_ENDPOINT
+
+echo "Waiting for pds-agent to get ready"
+kubectl wait pods -n pds-system -l app=pds-agent  --for condition=Ready --timeout -1s
+
+PDS_DEPLOYMENT_TARGET_NAME=$(kubectl get ns kube-system -o json |jq -r ".metadata.uid")
+echo "DEPL TGT NAME:		$PDS_DEPLOYMENT_TARGET_NAME"
+
+PDS_DEPLOYMENT_TARGET_ID=$(curl -s -X "GET"   "$PDS_ENDPOINT/tenants/$PDS_TENANT_ID/deployment-targets?cluster_id=$PDS_DEPLOYMENT_TARGET_NAME"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.data[0].id')
+[[ -z $PDS_DEPLOYMENT_TARGET_ID ]] && { echo "PDS Deployment Target ID not found"; exit 1; }
+echo "DEPL TGT ID:		$PDS_DEPLOYMENT_TARGET_ID"
+
+PDS_NAMESPACE_ID=$(curl -s -X "GET"   "$PDS_ENDPOINT/deployment-targets/$PDS_DEPLOYMENT_TARGET_ID/namespaces?name=$PDS_NAMESPACE"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.data[0].id')
+[[ -z $PDS_NAMESPACE_ID ]] && { echo "PDS Namespace ID not found"; exit 1; }
+echo "PDS NS ID:		$PDS_NAMESPACE_ID"
+
+# rename deployment target from kube-system uuid to project name
+curl -s -X "PUT" "$PDS_ENDPOINT/deployment-targets/$PDS_DEPLOYMENT_TARGET_ID" -H "accept: application/json" -H "Authorization: Bearer $PDS_TOKEN" -H "Content-Type: application/json" -d "{ \"name\": \"$TGT_NAME\"}" 
+
+echo "Creating Deployment"
+
+PDS_DEPLOYMENT_ID=$(curl -s -X "POST" "$PDS_ENDPOINT/projects/$PDS_PROJECT_ID/deployments" -H "accept: application/json" -H "Authorization: Bearer $PDS_TOKEN" -H "Content-Type: application/json" -d '{ 
+"node_count":1, 
+"name":"'$TGT_NAME'", 
+"data_service_id":"'$PDS_DATASERVICE_ID'", 
+"project_id":"'$PDS_PROJECT_ID'", 
+"tenant_id":"'$PDS_TENANT_ID'", 
+"account_id":"'$PDS_ACCOUNT_ID'", 
+"deployment_target_id":"'$PDS_DEPLOYMENT_TARGET_ID'", 
+"namespace_id":"'$PDS_NAMESPACE_ID'", 
+"service_type":"NodePort",
+"dns_zone":"pds-petclinic.svc.cluster.local",
+"image_id":"'$PDS_DATASERVICE_IMAGE_ID'",
+"application_configuration_template_id":"'$PDS_APP_CONFIG_TEMPLATE_ID'",
+"resource_settings_template_id":"'$PDS_APP_RESOURCE_TEMPLATE_ID'",
+"storage_options_template_id":"'$PDS_APP_STORAGE_TEMPLATE_ID'"
+}' | jq -r '.id')
+
+[[ -z $PDS_DEPLOYMENT_ID ]] && { echo "PDS Deployment ID not found"; exit 1; }
+echo "PDS DEPL ID:		$PDS_DEPLOYMENT_ID"
+
+PDS_DEPLOYMENT_STATUS=""
+
+while [ "$PDS_DEPLOYMENT_STATUS" != "Available" ]; do
+	sleep 5
+	PDS_DEPLOYMENT_STATUS=$(curl -s -X "GET"   "$PDS_ENDPOINT/deployments/$PDS_DEPLOYMENT_ID/status"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.status')
+	echo "Current Depl Status:	$PDS_DEPLOYMENT_STATUS		$(date)"
+done
+
+
+PDS_DEPLOYMENT_CLUSTER_RESOURCE_NAME=$(curl -s -X "GET"   "$PDS_ENDPOINT/deployments/$PDS_DEPLOYMENT_ID"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.cluster_resource_name')
+[[ -z $PDS_DEPLOYMENT_CLUSTER_RESOURCE_NAME ]] && { echo "PDS Cluster Resource Name not found"; exit 1; }
+echo "DEPL CLUST RES Name:		$PDS_DEPLOYMENT_CLUSTER_RESOURCE_NAME"
+
+
+PDS_CONNECTION=$(curl -s -X "GET"   "$PDS_ENDPOINT/deployments/$PDS_DEPLOYMENT_ID/connection-info"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN")
+
+PDS_VIP=$(echo $PDS_CONNECTION | jq -r '.clusterDetails.host')
+
+PDS_PORT=$(echo $PDS_CONNECTION | jq -r '.clusterDetails.port')
+
+echo "Creating deletion script in /assets/pds-petclinic/delete_deployment.sh"
+mkdir -p /assets/pds-petclinic
+
+cat <<EOF > /assets/pds-petclinic/delete_deployment.sh
+#!/bin/bash
+echo "Deleting Deployment"
+curl -X "DELETE"   "$PDS_ENDPOINT/deployments/$PDS_DEPLOYMENT_ID"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN" 
+
+echo "Deleting Namespace $PDS_NAMESPACE"
+kubectl delete namespace $PDS_NAMESPACE
+
+echo "Deleting pds-system helm deployment and Namespace"
+
+helm delete pds -n pds-system
+
+kubectl delete namespace pds-system
+
+DEPLOY_STAT=""
+echo "Waiting for Deployment Target to become unhealthy (can take 5min)"
+
+while [ "\$DEPLOY_STAT" != "unhealthy" ]; do
+	sleep 5
+	echo "Current State	\$DEPLOY_STAT	\$(date)"
+	DEPLOY_STAT=\$(curl -s -X "GET"   "$PDS_ENDPOINT/deployment-targets/$PDS_DEPLOYMENT_TARGET_ID"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.status')
+
+done
+
+echo "Deleting Deployment Target"
+
+curl -s -X "DELETE"   "$PDS_ENDPOINT/deployment-targets/$PDS_DEPLOYMENT_TARGET_ID"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"
+
+EOF
+
+echo "PDS Deployment Ready"
+echo "Creating Petclinic Application"
+
+sed -e "s/(NAMESPACE)/$PDS_NAMESPACE/g" -e "s/(VIP)/$PDS_VIP/g" -e "s/(PORT)/$PDS_PORT/g" -e "s/(CREDS)/$PDS_DEPLOYMENT_CLUSTER_RESOURCE_NAME-creds/g" /assets/pds-petclinic/pds-petclinic.tpl > /assets/pds-petclinic/pds-petclinic.yaml
+
+kubectl apply -f /assets/pds-petclinic/pds-petclinic.yaml
+
