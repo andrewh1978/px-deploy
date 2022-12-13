@@ -5,16 +5,10 @@ write_files:
     content: ${tpl_priv_key}
     path: /tmp/id_rsa
     permissions: '0600'
-  - encoding: b64
-    content: ${tpl_node_scripts}
-    path: /tmp/${tpl_name}_scripts.sh
-    permissions: '0700'
-  - encoding: b64
-    content: ${tpl_env_scripts}
-    path: /tmp/env.sh
-    permissions: '0700'
  
 runcmd:
+- while [ ! -f "/tmp/env.sh" ]; do sleep 5; done
+- sleep 5
 - source /tmp/env.sh
 - export aws__vpc="${tpl_vpc}"
 - export aws__sg="${tpl_sg}"
@@ -25,4 +19,7 @@ runcmd:
 - export cloud="aws"
 - export cluster="${tpl_cluster}"
 - export HOME=/root
+- while [ ! -f "/tmp/${tpl_name}_scripts.sh" ]; do sleep 5; done
+- sleep 5
+- chmod +x /tmp/${tpl_name}_scripts.sh
 - /tmp/${tpl_name}_scripts.sh

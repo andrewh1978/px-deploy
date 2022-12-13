@@ -11,16 +11,10 @@ write_files:
 %{ endfor ~}
     path: /tmp/credentials
     permissions: '0600'
-  - encoding: b64
-    content: ${tpl_master_scripts}
-    path: /tmp/${tpl_name}_scripts.sh
-    permissions: '0700'
-  - encoding: b64
-    content: ${tpl_env_scripts}
-    path: /tmp/env.sh
-    permissions: '0700'
   
 runcmd:
+- while [ ! -f "/tmp/env.sh" ]; do sleep 5; done
+- sleep 5
 - source /tmp/env.sh
 - export aws__vpc="${tpl_vpc}"
 - export aws__sg="${tpl_sg}"
@@ -32,4 +26,7 @@ runcmd:
 - export cluster="${tpl_cluster}"
 - export KUBECONFIG=/root/.kube/config
 - export HOME=/root
+- while [ ! -f "/tmp/${tpl_name}_scripts.sh" ]; do sleep 5; done
+- sleep 5
+- chmod +x /tmp/${tpl_name}_scripts.sh
 - /tmp/${tpl_name}_scripts.sh
