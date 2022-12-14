@@ -2,7 +2,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "4.25.0"
+      version = "4.46.0"
     }
   }
 }
@@ -84,7 +84,7 @@ resource "aws_route_table_association" "rt" {
 }
 
 resource "aws_security_group" "sg_px-deploy" {
-	name 		= 	"px-deploy"
+	name 		= 	format("px-deploy-%s",var.config_name)
 	description = 	"Security group for px-deploy (tf-created)"
 	vpc_id = aws_vpc.vpc.id
 	ingress {
@@ -147,7 +147,7 @@ resource "aws_security_group" "sg_px-deploy" {
     ingress {
 		description = "all ingress from within vpc"
 		from_port 	= 0
-		to_port 	= 65535
+		to_port 	= 0 
 		protocol	= "all"
 		cidr_blocks = [aws_vpc.vpc.cidr_block]
 		}
@@ -159,8 +159,9 @@ resource "aws_security_group" "sg_px-deploy" {
 		cidr_blocks = ["0.0.0.0/0"]
 		}
 	tags = {
-		  px-deploy_name = var.config_name
-		  px-deploy_username = var.PXDUSER
+		px-deploy_name = var.config_name
+		px-deploy_username = var.PXDUSER
+		Name=format("px-deploy-%s",var.config_name)
 		}
 }
 
