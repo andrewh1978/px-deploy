@@ -143,6 +143,7 @@ The `defaults.yml` file sets a number of deployment variables:
  * `gcp_region` - GCP region
  * `gcp_type` - the GCP machine type for each node
  * `gcp_zone` - GCP zone
+ * `gke_version` - GKE k8s Version
  * `azure_disks` - similar to aws_ebs, for example: `"20 30"`
  * `azure_type` - the Azure machine type for each node
  * `vsphere_host` - endpoint
