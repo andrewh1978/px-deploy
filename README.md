@@ -137,7 +137,7 @@ The `defaults.yml` file sets a number of deployment variables:
  * `quiet` - if "true", hide provisioning output
  * `auto_destroy` - if set to `true`, destroy deployment immediately after deploying (usually used with a `post_script` to output the results of a test or benchmark)
  * `nodes` - the number of worker nodes on each cluster
- * `platform` - can be set to either k8s, k3s, none, dockeree, eks, gke, aks or nomad
+ * `platform` - can be set to either k8s, k3s, none, dockeree, ocp4, eks, gke, aks or nomad
  * `px_version` - the version of Portworx to install
  * `gcp_disks` - similar to aws_ebs, for example: `"pd-standard:20 pd-ssd:30"`
  * `gcp_region` - GCP region
