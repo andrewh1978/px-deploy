@@ -256,7 +256,7 @@ func main() {
 				config.Gcp_Zone = createGcpZone
 			}
 			if createGkeVersion != "" {
-				if !regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+$`).MatchString(createGkeVersion) {
+				if !regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+-gke\.[0-9]+$`).MatchString(createGkeVersion) {
 					die("Invalid GKE version '" + createGkeVersion + "'")
 				}
 				config.Gke_Version = createGkeVersion
