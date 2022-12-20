@@ -169,7 +169,7 @@ func main() {
 				}
 			}
 			if createPlatform != "" {
-				if createPlatform != "k8s" && createPlatform != "k3s" && createPlatform != "none" && createPlatform != "dockeree" && createPlatform != "ocp3" && createPlatform != "ocp3c" && createPlatform != "ocp4" && createPlatform != "eks" && createPlatform != "gke" && createPlatform != "aks" && createPlatform != "nomad" {
+				if createPlatform != "k8s" && createPlatform != "k3s" && createPlatform != "none" && createPlatform != "dockeree" && createPlatform != "ocp4" && createPlatform != "eks" && createPlatform != "gke" && createPlatform != "aks" && createPlatform != "nomad" {
 					die("Invalid platform '" + createPlatform + "'")
 				}
 				config.Platform = createPlatform
@@ -256,7 +256,7 @@ func main() {
 				config.Gcp_Zone = createGcpZone
 			}
 			if createGkeVersion != "" {
-				if !regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+$`).MatchString(createGkeVersion) {
+				if !regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+-gke\.[0-9]+$`).MatchString(createGkeVersion) {
 					die("Invalid GKE version '" + createGkeVersion + "'")
 				}
 				config.Gke_Version = createGkeVersion
@@ -587,7 +587,7 @@ func main() {
 
 	defaults := parse_yaml("defaults.yml")
 	cmdCreate.Flags().StringVarP(&createName, "name", "n", "", "name of deployment to be created (if blank, generate UUID)")
-	cmdCreate.Flags().StringVarP(&createPlatform, "platform", "p", "", "k8s | dockeree | none | k3s | ocp3 | ocp3c | ocp4 | eks | gke | aks | nomad (default "+defaults.Platform+")")
+	cmdCreate.Flags().StringVarP(&createPlatform, "platform", "p", "", "k8s | dockeree | none | k3s | ocp4 | eks | gke | aks | nomad (default "+defaults.Platform+")")
 	cmdCreate.Flags().StringVarP(&createClusters, "clusters", "c", "", "number of clusters to be deployed (default "+defaults.Clusters+")")
 	cmdCreate.Flags().StringVarP(&createNodes, "nodes", "N", "", "number of nodes to be deployed in each cluster (default "+defaults.Nodes+")")
 	cmdCreate.Flags().StringVarP(&createK8sVer, "k8s_version", "k", "", "Kubernetes version to be deployed (default "+defaults.K8s_Version+")")

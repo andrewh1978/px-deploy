@@ -8,8 +8,6 @@ This will deploy one or more clusters in the cloud, with optional post-install t
  * Kubernetes (choose a version < 1.24)
  * K3s
  * Docker EE
- * Openshift 3.11
- * Openshift 3.11 with CRI-O
  * Openshift 4 (only on AWS at this time)
  * EKS (only makes sense on AWS)
  * GKE (only makes sense on GCP)
@@ -139,12 +137,13 @@ The `defaults.yml` file sets a number of deployment variables:
  * `quiet` - if "true", hide provisioning output
  * `auto_destroy` - if set to `true`, destroy deployment immediately after deploying (usually used with a `post_script` to output the results of a test or benchmark)
  * `nodes` - the number of worker nodes on each cluster
- * `platform` - can be set to either k8s, k3s, none, dockeree, ocp3, ocp3c (OCPv3 with CRI-O), ocp4, eks, gke, aks or nomad
+ * `platform` - can be set to either k8s, k3s, none, dockeree, ocp4, eks, gke, aks or nomad
  * `px_version` - the version of Portworx to install
  * `gcp_disks` - similar to aws_ebs, for example: `"pd-standard:20 pd-ssd:30"`
  * `gcp_region` - GCP region
  * `gcp_type` - the GCP machine type for each node
  * `gcp_zone` - GCP zone
+ * `gke_version` - GKE k8s Version
  * `azure_disks` - similar to aws_ebs, for example: `"20 30"`
  * `azure_type` - the Azure machine type for each node
  * `vsphere_host` - endpoint
