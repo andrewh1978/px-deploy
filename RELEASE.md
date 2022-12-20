@@ -1,3 +1,12 @@
+# 4.15
+
+## Improvements
+ * Lots of awstf updates
+ * Refactor training
+ * Remove OCP3 support
+ * Add performance Grafana dashboard
+ * Add gke_version parameter
+
 # 4.14
 
 ## Improvements
