@@ -165,100 +165,59 @@ resource "aws_security_group" "sg_px-deploy" {
 		}
 }
 
-resource "aws_ebs_volume" "ebs_node" {
-  	for_each			= var.node_ebs_devices
-  	availability_zone   = aws_instance.node[each.value.node].availability_zone
-	size	= each.value.ebs_size
-  	type	= each.value.ebs_type	
-   	tags = {
-		Name = format("%s.%s-%s",var.name_prefix,var.config_name,each.key)
-		px-deploy_name = var.config_name
-		px-deploy_username = var.PXDUSER
-	}  
+locals {
+  nodeconfig = [
+    for vm in var.nodeconfig : [
+      for i in range(1, vm.nodecount+1) : {
+        instance_name 	= "${vm.role}-${vm.cluster}-${i}"
+        instance_type 	= vm.instance_type
+		nodenum			= i
+		cluster 		= vm.cluster
+        blockdisks 		= vm.ebs_block_devices
+		ip_start 		= vm.ip_start
+      }
+    ]
+  ]
 }
 
-resource "aws_volume_attachment" "pwx_data_ebs_att1" {
-	for_each 		= var.node_ebs_devices
-	device_name 	= each.value.ebs_device_name
-	volume_id   	= aws_ebs_volume.ebs_node[each.key].id
-	instance_id 	= aws_instance.node[each.value.node].id
-	stop_instance_before_detaching  = true
-}
-
-resource "aws_instance" "master" {
-	for_each 					=	var.masters
-	ami 						= 	var.aws_ami_image
-	instance_type				=	var.aws_instance_type
-	vpc_security_group_ids 		=	[aws_security_group.sg_px-deploy.id]
-	subnet_id					=	aws_subnet.subnet[each.value.cluster - 1].id
-	private_ip 					= 	each.value.ip_address
-	associate_public_ip_address = true
-	key_name 					= 	aws_key_pair.deploy_key.key_name
-	root_block_device {
-	  volume_size				=	50
-	  delete_on_termination 	= true
-	  tags 					= {
-								Name = format("%s.%s-%s-%s",var.name_prefix,var.config_name,each.key,"root")
-								px-deploy_name = var.config_name
-								px-deploy_username = var.PXDUSER
-	  }
-	}
-	user_data_base64			= 	base64gzip(local_file.cloud-init-master[each.key].content)
-	tags 					= {
-								Name = each.key
-								px-deploy_name = var.config_name
-								px-deploy_username = var.PXDUSER
-	}
- 
-  	connection {
-			type = "ssh"
-			user = "centos"
-			host = "${self.public_ip}"
-			private_key = tls_private_key.ssh.private_key_openssh
-	}
-
-	provisioner "remote-exec" {
-		inline = [
-			"sudo mkdir /assets",
-			"sudo chown centos.users /assets"
-		]
-	}
-
-	provisioner "file" {
-		source = format("%s%s",path.module,"/env.sh")
-		destination = "/tmp/env.sh"
-	}
-
-	provisioner "file" {
-		source = format("%s/%s",path.module,each.key)
-		destination = format("%s%s%s","/tmp/",each.key,"_scripts.sh")
-	}
-
-	provisioner "file" {
-		source = "/px-deploy/.px-deploy/assets/"
-		destination = "/assets"
-	}
+locals {
+  instances = flatten(local.nodeconfig)
 }
 
 resource "aws_instance" "node" {
-	for_each 					=	var.nodes
+	for_each 					=	{for server in local.instances: server.instance_name =>  server}
 	ami 						= 	var.aws_ami_image
 	instance_type				=	each.value.instance_type
 	vpc_security_group_ids 		=	[aws_security_group.sg_px-deploy.id]
 	subnet_id					=	aws_subnet.subnet[each.value.cluster - 1].id
-	private_ip 					= 	each.value.ip_address
-	associate_public_ip_address = true
+	private_ip 					= 	format("%s.%s.%s",var.ip_base,each.value.cluster+100, each.value.ip_start + each.value.nodenum)
+	associate_public_ip_address = 	true
 	key_name 					= 	aws_key_pair.deploy_key.key_name
+	
 	root_block_device {
-	  volume_size				=	50
-	  delete_on_termination 	= true
-	  tags 					= {
-								Name = format("%s.%s-%s-%s",var.name_prefix,var.config_name,each.key,"root")
-								px-deploy_name = var.config_name
-								px-deploy_username = var.PXDUSER
-	  }
+	  	volume_size				=	50
+	  	delete_on_termination 	= 	true
+	  	tags					=  	{
+			Name 					= format("%s.%s.%s.%s",var.name_prefix,var.config_name,each.key,"root")
+			px-deploy_name 			= var.config_name
+			px-deploy_username 		= var.PXDUSER
+	  	}
 	}
-	user_data_base64			= 	base64gzip(local_file.cloud-init-node[each.key].content)
+	
+	dynamic "ebs_block_device"{
+    	for_each 				= each.value.blockdisks
+    	content {
+      		volume_type 		= ebs_block_device.value.ebs_type
+      		volume_size 		= ebs_block_device.value.ebs_size
+      		tags 				= {
+				Name 				= format("%s.%s.%s.ebs%s",var.name_prefix,var.config_name,each.key,ebs_block_device.key)
+				px-deploy_name 		= var.config_name
+				px-deploy_username 	= var.PXDUSER
+			}
+      		device_name 		= ebs_block_device.value.ebs_device_name
+    	}
+	}
+	user_data_base64			= 	base64gzip(local_file.cloud-init[each.key].content)
 	tags 					= {
 								Name = each.key
 								px-deploy_name = var.config_name
@@ -271,8 +230,15 @@ resource "aws_instance" "node" {
                         host = "${self.public_ip}"
                         private_key = tls_private_key.ssh.private_key_openssh
         }
+		
+		provisioner "remote-exec" {
+            inline = [
+        		"sudo mkdir /assets",
+                "sudo chown centos.users /assets"
+            ]
+        }
 
-        provisioner "file" {
+	    provisioner "file" {
                 source = format("%s%s",path.module,"/env.sh")
                 destination = "/tmp/env.sh"
         }
@@ -281,13 +247,16 @@ resource "aws_instance" "node" {
                 source = format("%s/%s",path.module,each.key)
                 destination = format("%s%s%s","/tmp/",each.key,"_scripts.sh")
         }
-
+	
+		provisioner "file" {
+				source = "/px-deploy/.px-deploy/assets/"
+				destination = "/assets"
+		}
 }
 
-
-resource "local_file" "cloud-init-master" {
-	for_each = var.masters
-	content = templatefile("${path.module}/cloud-init-master.tpl", { 
+resource "local_file" "cloud-init" {
+	for_each 					=	{for server in local.instances: server.instance_name =>  server}
+	content = templatefile("${path.module}/cloud-init.tpl", {
 		tpl_priv_key = base64encode(tls_private_key.ssh.private_key_openssh),
 		tpl_credentials = local.aws_credentials_array,
 		tpl_name = each.key
@@ -298,27 +267,11 @@ resource "local_file" "cloud-init-master" {
 		tpl_routetable = aws_route_table.rt.id,
 		tpl_ami = 	var.aws_ami_image,
 		tpl_cluster = each.value.cluster
-		}
+		}	
 	)
 	filename = "${path.module}/cloud-init-${each.key}-generated.yaml"
 }
 
-resource "local_file" "cloud-init-node" {
-	for_each = var.nodes
-	content = templatefile("${path.module}/cloud-init-node.tpl", { 
-		tpl_priv_key = base64encode(tls_private_key.ssh.private_key_openssh),
-		tpl_name = each.key
-		tpl_vpc = aws_vpc.vpc.id,
-		tpl_sg = aws_security_group.sg_px-deploy.id,
-		tpl_subnet = aws_subnet.subnet[each.value.cluster - 1].id,
-		tpl_gw = aws_internet_gateway.igw.id,
-		tpl_routetable = aws_route_table.rt.id,
-		tpl_ami = 	var.aws_ami_image,
-		tpl_cluster = each.value.cluster
-		}
-	)
-	filename = "${path.module}/cloud-init-${each.key}-generated.yaml"
-}
 
 resource "local_file" "aws-returns" {
 	content = templatefile("${path.module}/aws-returns.tpl", { 

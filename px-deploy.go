@@ -306,9 +306,9 @@ func main() {
 				}
 			}
 			// enable when ocp4/eks destroy is fixed for awstf
-			//if config.Platform == "ocp4" && !(config.Cloud == "aws" || config.Cloud == "awstf") { die("Openshift 4 only supported on AWS (not " + config.Cloud + ")") }
+			if config.Platform == "ocp4" && !(config.Cloud == "aws" || config.Cloud == "awstf") { die("Openshift 4 only supported on AWS (not " + config.Cloud + ")") }
 			//if config.Platform == "eks" && !(config.Cloud == "aws" || config.Cloud == "awstf") { die("EKS only makes sense with AWS (not " + config.Cloud + ")") }
-			if config.Platform == "ocp4" && config.Cloud != "aws" { die("Openshift 4 only supported on AWS (not " + config.Cloud + ")") }
+			//if config.Platform == "ocp4" && config.Cloud != "aws" { die("Openshift 4 only supported on AWS (not " + config.Cloud + ")") }
 			if config.Platform == "eks" && config.Cloud != "aws"  { die("EKS only makes sense with AWS (not " + config.Cloud + ")") }
 			if config.Platform == "gke" && config.Cloud != "gcp" { die("GKE only makes sense with GCP (not " + config.Cloud + ")") }
 			if config.Platform == "aks" && config.Cloud != "azure" { die("AKS only makes sense with Azure (not " + config.Cloud + ")") }
@@ -876,7 +876,7 @@ func create_deployment(config Config) int {
 		tf_variables = append (tf_variables,tf_var_ebs...)
 
 		write_tf_file(config.Name, ".tfvars",tf_variables)
-	
+	die("ENDE")
 		// now run terraform plan & terraform apply
 		fmt.Println(White+"running terraform PLAN"+Reset)
 		cmd := exec.Command("terraform","-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-input=false", "-out=tfplan", "-var-file",".tfvars")
