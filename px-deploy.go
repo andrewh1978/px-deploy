@@ -501,7 +501,7 @@ func main() {
 				{
 					// loop clusters and add master name/ip to tf var
 					for c := 1; c <= Clusters ; c++ {
-						ip = get_node_ip(statusName,fmt.Sprintf("master-%v",c))
+						ip = get_node_ip(statusName,fmt.Sprintf("master-%v-1",c))
 						// get content of node tracking file (-> each node will add its entry when finished cloud-init/vagrant scripts)
 						cmd := exec.Command("ssh", "-q", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa." + config.Cloud + "." + config.Name, "root@" + ip, "cat /var/log/px-deploy/completed/tracking")
     					out, err := cmd.CombinedOutput()
