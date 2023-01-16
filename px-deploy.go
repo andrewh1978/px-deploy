@@ -818,7 +818,7 @@ func create_deployment(config Config) int {
 			tf_master_script = append(tf_master_script,"echo \"master-"+masternum+" $IP \" >> /var/log/px-deploy/completed/tracking \n"...)
 			
 			//write master script for cluster
-			err := os.WriteFile("/px-deploy/.px-deploy/tf-deployments/" + config.Name + "/master-" +masternum , tf_master_script, 0666)
+			err := os.WriteFile("/px-deploy/.px-deploy/tf-deployments/" + config.Name + "/master-" +masternum+"-1" , tf_master_script, 0666)
 			if err != nil {
 				die(err.Error())
 			}
