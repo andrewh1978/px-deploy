@@ -637,8 +637,8 @@ func create_deployment(config Config) int {
 	var tf_master_scripts []string
 	var tf_variables []string
 	
-	var tf_var_masters []string 
-	var tf_var_nodes []string
+	//var tf_var_masters []string 
+	//var tf_var_nodes []string
 
 	var tf_common_master_script []byte
 	var tf_post_script []byte
@@ -649,7 +649,6 @@ func create_deployment(config Config) int {
 	var tf_cluster_aws_type string
 	var tf_env_script []byte
 
-	var tf_var_ebs_common []string
 	var tf_var_ebs []string
 	
 	fmt.Println(White + "Provisioning infrastructure..." + Reset)
@@ -664,8 +663,7 @@ func create_deployment(config Config) int {
 		//maybe there is a better way to copy templates to working dir ?
 		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/main.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
 		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/variables.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
-		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/cloud-init-master.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
-		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/cloud-init-node.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/cloud-init.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
 		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/aws-returns.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
 		// also copy terraform modules
 		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/.terraform`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
@@ -691,16 +689,15 @@ func create_deployment(config Config) int {
 
 		// create EBS definitions
 		// split ebs definition by spaces and range the results
-		tf_var_ebs = append(tf_var_ebs,"node_ebs_devices ={")
+		
 		ebs := strings.Fields(config.Aws_Ebs)
 		for i,val := range ebs {
 			// split by : and create common .tfvars entry for all nodes
 			entry := strings.Split(val,":")
-			tf_var_ebs_common = append(tf_var_ebs_common, "    ebs_type = \""+entry[0]+"\"\n    ebs_size = \""+entry[1]+"\"\n    ebs_device_name = \"/dev/sd"+string(i+98)+"\"")
+			tf_var_ebs = append(tf_var_ebs, "      {\n        ebs_type = \""+entry[0]+"\"\n        ebs_size = \""+entry[1]+"\"\n        ebs_device_name = \"/dev/sd"+string(i+98)+"\"\n      },")
 		}
 		// other node ebs processing happens in cluster/node loop
 
-		subnet := "192.168."
 		// use aws vagrant scripts as awstf is just the tf implementation of aws
 		// prepare (single) cloud-init script for all nodes			
 		tf_node_scripts = []string{"all-common",config.Platform+"-common",config.Platform+"-node"}
@@ -773,14 +770,22 @@ func create_deployment(config Config) int {
 		Clusters, err := strconv.Atoi(config.Clusters)
 		Nodes, err := strconv.Atoi(config.Nodes)
 		
-		// loop clusters and add master name/ip to tf var
+		// build terraform variable file
+		tf_variables = append (tf_variables, "config_name = \"" + config.Name + "\"")
+		tf_variables = append (tf_variables, "clusters = " + config.Clusters)
+		tf_variables = append (tf_variables, "aws_region = \"" + config.Aws_Region + "\"")
+		tf_variables = append (tf_variables, "nodeconfig = [")
+		
+		// get PXDUSER env and apply to tf_variables
+		pxduser = os.Getenv("PXDUSER")
+		if (pxduser != "") {
+			tf_variables = append (tf_variables, "PXDUSER = \"" + pxduser + "\"")	
+		}
+
+		// loop clusters (masters and nodes) to build tfvars and master/node scripts		
 		for c := 1; c <= Clusters ; c++ {
 			masternum := strconv.Itoa(c)
-			net := strconv.Itoa(c+100)
-			tf_var_masters = append(tf_var_masters,"  master-"+masternum+" = {")
-			tf_var_masters = append(tf_var_masters,"    ip_address = \""+subnet+net+".90\"")
-			tf_var_masters = append(tf_var_masters,"    cluster = "+masternum)
-			tf_var_masters = append(tf_var_masters,"  }")
+			
 			tf_master_script = tf_common_master_script
 			tf_cluster_aws_type = config.Aws_Type
 
@@ -817,17 +822,30 @@ func create_deployment(config Config) int {
 			if err != nil {
 				die(err.Error())
 			}
+			
+			// process .tfvars file for deployment
+			tf_variables = append(tf_variables,"  {")  
+			tf_variables = append(tf_variables,"    role = \"master\"")
+			tf_variables = append(tf_variables,"    ip_start = 89")
+			tf_variables = append(tf_variables,"    nodecount = 1")
+			tf_variables = append(tf_variables,"    instance_type = \""+config.Aws_Type+"\"")
+			tf_variables = append(tf_variables,"    cluster = "+masternum)
+			tf_variables = append(tf_variables,"    ebs_block_devices = [] ")
+			tf_variables = append(tf_variables,"  },")
+
+			tf_variables = append(tf_variables,"  {")
+			tf_variables = append(tf_variables,"    role = \"node\"")
+			tf_variables = append(tf_variables,"    ip_start = 100")
+			tf_variables = append(tf_variables,"    nodecount = "+strconv.Itoa(Nodes))
+			tf_variables = append(tf_variables,"    instance_type = \""+tf_cluster_aws_type+"\"")
+			tf_variables = append(tf_variables,"    cluster = "+masternum)
+			tf_variables = append(tf_variables,"    ebs_block_devices = [")
+			tf_variables = append(tf_variables,tf_var_ebs...)
+			tf_variables = append(tf_variables,"    ]\n  },")
 
 			// loop nodes of cluster, add node name/ip to tf var and write individual cloud-init scripts file
 			for n :=1; n <= Nodes ; n++ {
 				nodenum := strconv.Itoa(n)
-				nodeip := strconv.Itoa(n+100)
-				tf_var_nodes = append(tf_var_nodes,"  node-"+masternum+"-"+nodenum+" = { ")
-				tf_var_nodes = append(tf_var_nodes,"    ip_address    = \""+subnet+net+"."+nodeip+"\"")
-				tf_var_nodes = append(tf_var_nodes,"    instance_type = \""+tf_cluster_aws_type+"\"")
-				tf_var_nodes = append(tf_var_nodes,"    cluster = "+masternum)
-				tf_var_nodes = append(tf_var_nodes,"  }")
-				
 				tf_individual_node_script = tf_node_script
 				tf_individual_node_script = append(tf_individual_node_script, "export IP=$(curl -s https://ipinfo.io/ip)\n"...)
 				tf_individual_node_script = append(tf_individual_node_script, "echo \"echo 'node-"+masternum+"-"+nodenum+" $IP' >> /var/log/px-deploy/completed/tracking \" | ssh root@master-"+masternum+" \n"...)
@@ -836,47 +854,10 @@ func create_deployment(config Config) int {
 				if err != nil {
 					die(err.Error())
 				}
-				
-				// create EBS definition for each single node
-				for i,val := range tf_var_ebs_common {
-					tf_var_ebs = append(tf_var_ebs,"  node-"+masternum+"-"+nodenum+"-ebs-"+strconv.Itoa(i)+" = {")
-					tf_var_ebs = append(tf_var_ebs,"    node = \"node-"+masternum+"-"+nodenum+"\"")
-					tf_var_ebs = append(tf_var_ebs,val)
-					tf_var_ebs = append(tf_var_ebs,"  }")
-				}
 			}
 		}
-		// close ebs definition
-		tf_var_ebs = append(tf_var_ebs,"}\n")
-		
-		// get PXDUSER env and apply to tf_variables
-		pxduser = os.Getenv("PXDUSER")
-		if (pxduser != "") {
-			tf_variables = append (tf_variables, "PXDUSER = \"" + pxduser + "\"")	
-		}
-
-
-		// build terraform variable file
-		tf_variables = append (tf_variables, "config_name = \"" + config.Name + "\"")
-		tf_variables = append (tf_variables, "clusters = " + config.Clusters)
-		tf_variables = append (tf_variables, "aws_region = \"" + config.Aws_Region + "\"")
-		tf_variables = append (tf_variables, "aws_instance_type = \"" + config.Aws_Type + "\"")
-		tf_variables = append (tf_variables, "masters = {")
-		for _, value := range tf_var_masters {
-			tf_variables = append (tf_variables, value)	
-		}
-		tf_variables = append (tf_variables, "}")
-		tf_variables = append (tf_variables, "nodes = {")
-		for _, value := range tf_var_nodes {
-			tf_variables = append (tf_variables, value)	
-		}
-		tf_variables = append (tf_variables, "}")
-		
-		// last item of variables is node ebs definition
-		tf_variables = append (tf_variables,tf_var_ebs...)
-
+		tf_variables = append(tf_variables,"]")
 		write_tf_file(config.Name, ".tfvars",tf_variables)
-	die("ENDE")
 		// now run terraform plan & terraform apply
 		fmt.Println(White+"running terraform PLAN"+Reset)
 		cmd := exec.Command("terraform","-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-input=false", "-out=tfplan", "-var-file",".tfvars")
