@@ -1193,7 +1193,7 @@ func get_ip(deployment string) string {
 	if config.Cloud == "aws" {
 		output, _ = exec.Command("bash", "-c", `aws ec2 describe-instances --region `+config.Aws_Region+` --filters "Name=network-interface.vpc-id,Values=`+config.Aws__Vpc+`" "Name=tag:Name,Values=master-1" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PublicIpAddress" --output text`).Output()
 	} else if config.Cloud == "awstf" { 
-		output, _ = exec.Command("bash", "-c", `aws ec2 describe-instances --region `+config.Aws_Region+` --filters "Name=network-interface.vpc-id,Values=`+config.Aws__Vpc+`" "Name=tag:Name,Values=master-1" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PublicIpAddress" --output text`).Output()
+		output, _ = exec.Command("bash", "-c", `aws ec2 describe-instances --region `+config.Aws_Region+` --filters "Name=network-interface.vpc-id,Values=`+config.Aws__Vpc+`" "Name=tag:Name,Values=master-1-1" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PublicIpAddress" --output text`).Output()
 	} else if config.Cloud == "gcp" {
 		output, _ = exec.Command("bash", "-c", `gcloud compute instances list --project `+config.Gcp__Project+` --filter="name=('master-1')" --format 'flattened(networkInterfaces[0].accessConfigs[0].natIP)' | tail -1 | cut -f 2 -d " "`).Output()
 	} else if config.Cloud == "azure" {
