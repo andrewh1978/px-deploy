@@ -774,13 +774,12 @@ func create_deployment(config Config) int {
 		tf_variables = append (tf_variables, "config_name = \"" + config.Name + "\"")
 		tf_variables = append (tf_variables, "clusters = " + config.Clusters)
 		tf_variables = append (tf_variables, "aws_region = \"" + config.Aws_Region + "\"")
-		tf_variables = append (tf_variables, "nodeconfig = [")
-		
 		// get PXDUSER env and apply to tf_variables
 		pxduser = os.Getenv("PXDUSER")
 		if (pxduser != "") {
 			tf_variables = append (tf_variables, "PXDUSER = \"" + pxduser + "\"")	
 		}
+		tf_variables = append (tf_variables, "nodeconfig = [")
 
 		// loop clusters (masters and nodes) to build tfvars and master/node scripts		
 		for c := 1; c <= Clusters ; c++ {
