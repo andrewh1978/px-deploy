@@ -8,5 +8,4 @@ server {
 }
 EOF
 
-systemctl start nomad
-systemctl enable nomad
+systemctl enable --now nomad

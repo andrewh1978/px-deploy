@@ -13,8 +13,7 @@ EOF
 while ! dnf install -y docker azure-cli; do
   sleep 2
 done
-systemctl enable docker
-systemctl start docker
+systemctl enable --now docker
 curl -sL -o /usr/bin/kubectl "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
 chmod 755 /usr/bin/kubectl
 

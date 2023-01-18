@@ -11,8 +11,7 @@ cat <<EOF >/etc/exports
 / 192.168.0.0/16(rw,no_root_squash)
 / 172.16.0.0/12(rw,no_root_squash)
 EOF
-systemctl start nfs-server
-systemctl enable nfs-server
+systemctl enable --now nfs-server
 
 ETCD_VER=v3.4.14
 curl -L https://storage.googleapis.com/etcd/${ETCD_VER}/etcd-${ETCD_VER}-linux-amd64.tar.gz -o /tmp/etcd-${ETCD_VER}-linux-amd64.tar.gz

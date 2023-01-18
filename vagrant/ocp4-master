@@ -1,7 +1,6 @@
 dnf install -y docker python3-pip epel-release
 dnf install -y jq
-systemctl start docker
-systemctl enable docker
+systemctl enable --now docker
 pip3 install awscli
 ln -s /usr/local/bin/aws /usr/bin/aws
 eval $(ssh-agent)

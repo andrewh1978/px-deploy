@@ -6,8 +6,7 @@ chmod 755 /usr/bin/kubectl
 while ! dnf install -y docker; do
   sleep 2
 done
-systemctl enable docker
-systemctl start docker
+systemctl enable --now docker
 
 dnf install -y python3-pip
 pip3 install awscli

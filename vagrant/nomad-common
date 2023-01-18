@@ -15,5 +15,4 @@ gpgkey=https://rpm.releases.hashicorp.com/gpg
 EOF
 
 while ! dnf install -y nomad-1.1.6-1.x86_64 docker; do sleep 1; done
-systemctl enable docker
-systemctl restart docker
+systemctl enable --now docker
