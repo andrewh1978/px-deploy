@@ -1,4 +1,3 @@
-exec &>/var/log/px-deploy/k8s-master
 kubeadm config images list --kubernetes-version $k8s_version | xargs -n1 -P0 docker pull
 kubeadm init --apiserver-advertise-address=$(hostname -i) --pod-network-cidr=10.244.0.0/16 --kubernetes-version $k8s_version
 mkdir /root/.kube
