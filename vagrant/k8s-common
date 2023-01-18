@@ -9,5 +9,4 @@ repo_gpgcheck=0
 EOF
 while ! dnf install -y kubelet-$k8s_version-0 docker; do sleep 1; done
 while ! dnf install -y kubeadm-$k8s_version-0 kubectl-$k8s_version-0; do sleep 1; done
-systemctl enable docker kubelet
-systemctl restart docker kubelet
+systemctl enable --now docker kubelet

@@ -20,5 +20,4 @@ plugin "docker" {
 EOF
 
 #while ! curl -s http://master-$cluster:4646 ; do sleep 1; echo waiting for nomad server; done
-systemctl start nomad
-systemctl enable nomad
+systemctl enable --now nomad

@@ -82,8 +82,7 @@ done
 while ! dnf install -y at bash-completion nfs-utils chrony unzip; do
   sleep 1
 done
-systemctl start atd chronyd
-systemctl enable atd chronyd
+systemctl enable --now atd chronyd
 [ "$stop_after" != 0 ] && echo /usr/sbin/shutdown -h now | at now + $stop_after hours
 modprobe br_netfilter
 sysctl -w net.bridge.bridge-nf-call-iptables=1 >/etc/sysctl.conf
