@@ -1,3 +1,2 @@
-exec &>/var/log/px-deploy/k3s-common
 yum install -y container-selinux selinux-policy-base
 rpm -i https://rpm.rancher.io/k3s-selinux-0.1.1-rc1.el7.noarch.rpm

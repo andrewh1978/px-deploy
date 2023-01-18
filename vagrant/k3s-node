@@ -1,4 +1,3 @@
-exec &>/var/log/px-deploy/k3s-node
 while : ; do
   token=$(ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no master-$cluster cat /var/lib/rancher/k3s/server/node-token)
   [ $? -eq 0 ] && break

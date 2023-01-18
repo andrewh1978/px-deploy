@@ -1,4 +1,3 @@
-exec &>/var/log/px-deploy/k8s-common
 cat <<EOF >/etc/yum.repos.d/kubernetes.repo
 [kubernetes]
 name=Kubernetes
@@ -9,4 +8,9 @@ repo_gpgcheck=0
 EOF
 while ! dnf install -y kubelet-$k8s_version-0 docker; do sleep 1; done
 while ! dnf install -y kubeadm-$k8s_version-0 kubectl-$k8s_version-0; do sleep 1; done
-systemctl enable --now docker kubelet
+curl -L https://github.com/containerd/containerd/releases/download/v1.6.15/containerd-1.6.15-linux-amd64.tar.gz | tar Cxzvf /usr/local -
+curl -o /etc/systemd/system/containerd.service https://raw.githubusercontent.com/containerd/containerd/main/containerd.service
+curl -Lo /usr/sbin/runc https://github.com/opencontainers/runc/releases/download/v1.1.4/runc.amd64
+chmod 755 /usr/sbin/runc
+systemctl daemon-reload
+systemctl enable --now containerd docker kubelet
