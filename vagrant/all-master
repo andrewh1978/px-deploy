@@ -1,4 +1,3 @@
-exec &>/var/log/px-deploy/all-master
 [ -f /tmp/credentials ] && mkdir /root/.aws && mv /tmp/credentials /root/.aws
 [ -d /tmp/gcloud ] && mkdir /root/.config && mv /tmp/gcloud /root/.config
 [ -d /tmp/azure ] && mv /tmp/azure /root/.azure

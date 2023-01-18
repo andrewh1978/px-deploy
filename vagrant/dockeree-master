@@ -1,4 +1,3 @@
-exec &>/var/log/px-deploy/dockeree-master
 docker container run --rm --name ucp -v /var/run/docker.sock:/var/run/docker.sock docker/ucp:3.2.6 install --pod-cidr 10.0.0.0/16 --admin-username=admin --admin-password=portworx
 cat <<EOF > /etc/yum.repos.d/kubernetes.repo
 [kubernetes]

@@ -1,4 +1,3 @@
-exec &>/var/log/px-deploy/k8s-node
 (echo portworx/{px-enterprise,oci-monitor}:$px_version ; curl -sk "https://install.portworx.com/$px_version?kb_ver=$k8s_version&comp=stork" | awk '/image:/{print$2}' ; kubeadm config images list --kubernetes-version $k8s_version 2>/dev/null) | xargs -n1 -P0 docker pull
 while : ; do
   command=$(ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no master-$cluster kubeadm token create --print-join-command)
