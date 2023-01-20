@@ -19,13 +19,18 @@ networking:
   clusterNetwork:
   - cidr: 10.128.0.0/14
     hostPrefix: 23
-  machineCIDR: 10.0.0.0/16
+  machineCIDR: ${tpl_cidr}
   networkType: OpenShiftSDN
   serviceNetwork:
   - 172.30.0.0/16
 platform:
   aws:
     region: ${tpl_aws_region}
+    userTags:
+      px-deploy_name: ${tpl_configname}-${tpl_cluster}
+    subnets:
+    - ${tpl_privsubnet}
+    - ${tpl_pubsubnet}
 pullSecret: '${tpl_ocp4pullsecret}'
 sshKey: '${tpl_sshkey}'
 

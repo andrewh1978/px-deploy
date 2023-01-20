@@ -35,7 +35,7 @@ resource "aws_key_pair" "deploy_key" {
 
 resource "aws_vpc" "vpc" {
 	cidr_block	= var.aws_cidr_vpc
-	enable_dns_hostnames	= false
+	enable_dns_hostnames	= true
 	enable_dns_support		= true
 	tags = {
 		Name = format("%s.%s-%s",var.name_prefix,var.config_name,"vpc")

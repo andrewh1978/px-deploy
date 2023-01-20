@@ -14,48 +14,18 @@ rm -f openshift-install-linux-$ocp4_version.tar.gz openshift-client-linux-$ocp4_
 
 mkdir /root/ocp4
 cd /root/ocp4
-cat <<EOF >install-config.yaml
-apiVersion: v1
-baseDomain: $ocp4_domain
-compute:
-- hyperthreading: Enabled
-  name: worker
-  platform:
-    aws:
-      type: $aws_type
-  replicas: $nodes
-controlPlane:
-  hyperthreading: Enabled
-  name: master
-  platform: {}
-  replicas: 3
-metadata:
-  creationTimestamp: null
-  name: px-deploy-$name-$cluster
-networking:
-  clusterNetwork:
-  - cidr: 10.128.0.0/14
-    hostPrefix: 23
-  machineCIDR: 10.0.0.0/16
-  networkType: OpenShiftSDN
-  serviceNetwork:
-  - 172.30.0.0/16
-platform:
-  aws:
-    region: $aws_region
-pullSecret: '$ocp4_pull_secret'
-sshKey: |
-EOF
-echo -n "  " >>install-config.yaml
-ssh-keygen -y -f /root/.ssh/id_rsa >>install-config.yaml
-#openshift-install create cluster --log-level=debug
-#if [ $? -ne 0 ]; then
-#  echo Failed to deploy Openshift
-#  exit 1
-#fi
+
+while [ ! -f "/tmp/ocp4-install-config.yaml" ]; do sleep 5; done
+cp /tmp/ocp4-install-config.yaml /root/ocp4/install-config.yaml
+
+openshift-install create cluster --log-level=debug
+if [ $? -ne 0 ]; then
+  echo Failed to deploy Openshift
+  exit 1
+fi
 mkdir /root/.kube
-#cp /root/ocp4/auth/kubeconfig /root/.kube/config
-sg=$(cat terraform.tfstate | jq -r '.resources[] | select(.name==("worker") and .type==("aws_security_group")).instances[0].attributes.id')
+cp /root/ocp4/auth/kubeconfig /root/.kube/config
+sg=$(cat terraform.cluster.tfstate | jq -r '.resources[] | select(.name==("worker") and .type==("aws_security_group")).instances[0].attributes.id')
 aws configure set default.region $aws_region
 aws ec2 authorize-security-group-ingress --group-id $sg --protocol tcp --port 17001-17022 --cidr 0.0.0.0/0
 aws ec2 authorize-security-group-ingress --group-id $sg --protocol udp --port 17001-17022 --cidr 0.0.0.0/0

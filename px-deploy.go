@@ -499,6 +499,9 @@ func main() {
 			switch config.Cloud {
 			case "awstf":
 				{
+					if config.Platform == "ocp4" {
+						Nodes = 0
+					}
 					// loop clusters and add master name/ip to tf var
 					for c := 1; c <= Clusters ; c++ {
 						ip = get_node_ip(statusName,fmt.Sprintf("master-%v-1",c))
@@ -872,10 +875,7 @@ func create_deployment(config Config) int {
 			tf_variables_ocp4 = append(tf_variables_ocp4, "}")
 			tf_variables = append(tf_variables,tf_variables_ocp4...)
 		}
-		
 		write_tf_file(config.Name, ".tfvars",tf_variables)
-		die("ende")
-
 		// now run terraform plan & terraform apply
 		fmt.Println(White+"running terraform PLAN"+Reset)
 		cmd := exec.Command("terraform","-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-input=false", "-out=tfplan", "-var-file",".tfvars")
@@ -1023,7 +1023,18 @@ func destroy_deployment(name string) {
 	ip := get_ip(config.Name)
 	fmt.Println(White + "Destroying deployment '" + config.Name + "'..." + Reset)
 	if config.Cloud == "awstf" {
-		
+		if config.Platform == "ocp4" {
+			fmt.Println(White + "Destroying OCP4, wait about 5 minutes (per cluster)..." + Reset)
+			cmd := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, `
+				for i in $(seq 1 ` + config.Clusters + `); do
+				  ssh master-$i "cd /root/ocp4 ; openshift-install destroy cluster"
+				done
+			`)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			err = cmd.Run()
+			if (err != nil) { fmt.Println(Yellow + "Failed to destroy OCP4 - please clean up VMs manually: " + err.Error() + Reset) }
+		}
 		// Delete any ELB and Clouddrive not being created by Terraform
 		// ELB creation will be moved to TF later
 		fmt.Println(White+"Stopping Instances, Deleting ELB & CloudDrive EBS"+ Reset)
