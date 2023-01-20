@@ -5,8 +5,8 @@ compute:
   name: worker
   platform:
     aws:
-      type: $aws_type
-  replicas: $nodes
+      type: ${tpl_awstype}
+  replicas: ${tpl_nodes}
 controlPlane:
   hyperthreading: Enabled
   name: master
@@ -28,3 +28,4 @@ platform:
     region: ${tpl_aws_region}
 pullSecret: '${tpl_ocp4pullsecret}'
 sshKey: '${tpl_sshkey}'
+

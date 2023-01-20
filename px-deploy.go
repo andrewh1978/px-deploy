@@ -763,6 +763,7 @@ func create_deployment(config Config) int {
 		
 		// TODO if yaml['platform'] == "ocp4" or yaml['platform'] == "eks" or yaml['platform'] == "gke" or yaml['platform'] == "aks" then yaml['nodes'] = 0 end
 		if config.Platform == "ocp4" {
+			tf_variables = append (tf_variables, "ocp4_nodes = \"" + config.Nodes + "\"")
 			config.Nodes="0"
 		} else if config.Platform == "eks" {
 			config.Nodes="0"
@@ -783,7 +784,7 @@ func create_deployment(config Config) int {
 		if config.Platform == "ocp4" {		
 			tf_variables = append (tf_variables, "ocp4_domain = \"" + config.Ocp4_Domain + "\"")
 			tf_variables = append (tf_variables, "ocp4_pull_secret = \"" + base64.StdEncoding.EncodeToString([]byte(config.Ocp4_Pull_Secret)) + "\"")
-			tf_variables_ocp4 = append(tf_variables_ocp4,"ocp4clusters = [\n")
+			tf_variables_ocp4 = append(tf_variables_ocp4,"ocp4clusters = {")
 		}
 		
 		tf_variables = append (tf_variables, "nodeconfig = [")
@@ -850,7 +851,7 @@ func create_deployment(config Config) int {
 			tf_variables = append(tf_variables,"    ]\n  },")
 
 			if config.Platform == "ocp4" {		
-				tf_variables_ocp4 = append(tf_variables_ocp4, "{ \""+masternum+"\" = \""+tf_cluster_aws_type+"\"},\n")
+				tf_variables_ocp4 = append(tf_variables_ocp4, "  \""+masternum+"\" = \""+tf_cluster_aws_type+"\",")
 			}
 			// loop nodes of cluster, add node name/ip to tf var and write individual cloud-init scripts file
 			for n :=1; n <= Nodes ; n++ {
@@ -868,7 +869,7 @@ func create_deployment(config Config) int {
 		tf_variables = append(tf_variables,"]")
 		
 		if config.Platform == "ocp4" {		
-			tf_variables_ocp4 = append(tf_variables_ocp4, "]\n")
+			tf_variables_ocp4 = append(tf_variables_ocp4, "}")
 			tf_variables = append(tf_variables,tf_variables_ocp4...)
 		}
 		
