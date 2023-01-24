@@ -520,8 +520,21 @@ func main() {
 
 							if ready_nodes[fmt.Sprintf("master-%v",c)] != "" {
 								fmt.Printf("Ready\tmaster-%v \t  %v\n",c, ip )
-								} else {
+							} else {
 								fmt.Printf("NotReady\tmaster-%v \t (%v)\n",c,ip)
+							}
+							
+							if config.Platform == "ocp4" {
+								if ready_nodes["url"] != "" {
+									fmt.Printf("  URL: %v \n", ready_nodes["url"] )
+								} else {
+									fmt.Printf("  OCP4 URL not yet available\n")
+								}
+								if ready_nodes["cred"] != "" {
+									fmt.Printf("  Credentials: kubeadmin / %v \n", ready_nodes["cred"] )
+								} else {
+									fmt.Printf("  OCP4 credentials not yet available\n")
+								}
 							}
 							
 							for n := 1; n <= Nodes; n++ {
@@ -727,6 +740,7 @@ func create_deployment(config Config) int {
 		tf_common_master_script = append(tf_common_master_script,"mkdir /var/log/px-deploy\n"...)
 		tf_common_master_script = append(tf_common_master_script,"mkdir /var/log/px-deploy/completed\n"...)
 		tf_common_master_script = append(tf_common_master_script,"touch /var/log/px-deploy/completed/tracking\n"...)
+		tf_common_master_script = append(tf_common_master_script,"touch /var/log/px-deploy/completed/credentials\n"...)
 
 		for _,filename := range tf_master_scripts {
 			content, err := ioutil.ReadFile("/px-deploy/vagrant/"+filename)
@@ -906,7 +920,7 @@ func create_deployment(config Config) int {
 	  		if err != nil {
 				die(err.Error())
         	}
-			fmt.Println(Yellow + "Terraform infrastructure creation done. Please check master/node readiness using: px-deploy status -n "+config.Name+Reset)
+			fmt.Println(Yellow + "Terraform infrastructure creation done. Please check master/node readiness/credentials using: px-deploy status -n "+config.Name+Reset)
 		}
 	}
 	case "aws":

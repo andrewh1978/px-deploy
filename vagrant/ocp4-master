@@ -29,3 +29,9 @@ sg=$(cat terraform.cluster.tfstate | jq -r '.resources[] | select(.name==("worke
 aws configure set default.region $aws_region
 aws ec2 authorize-security-group-ingress --group-id $sg --protocol tcp --port 17001-17022 --cidr 0.0.0.0/0
 aws ec2 authorize-security-group-ingress --group-id $sg --protocol udp --port 17001-17022 --cidr 0.0.0.0/0
+
+URL=$(grep 'Access the OpenShift web-console' /root/ocp4/.openshift_install.log |cut -d\" -f4 | cut -d: -f2-)
+echo "url $URL" >> /var/log/px-deploy/completed/tracking
+
+CRED=$(grep 'Login to the console' /root/ocp4/.openshift_install.log | cut -d\\ -f4 | cut -d\" -f2)
+echo "cred $CRED" >> /var/log/px-deploy/completed/tracking
