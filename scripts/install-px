@@ -145,7 +145,7 @@ stork_image=$(curl -sk https://install.portworx.com/$px_version?comp=stork | awk
 id=$(docker create $stork_image)
 docker cp $id:/storkctl/linux/storkctl /usr/bin
 
-# Install Grafana
+# Install Grafana / wait for storagecluster readiness
 if [ "$operator" != false ]; then
   kubectl -n portworx create configmap grafana-dashboard-config --from-file=grafana-dashboard-config.yaml=<(curl -s https://docs.portworx.com/samples/k8s/pxc/grafana-dashboard-config.yaml)
   kubectl -n portworx create configmap grafana-source-config --from-file=grafana-datasource.yaml=<(curl -s https://docs.portworx.com/samples/k8s/pxc/grafana-datasource.yaml)
@@ -159,4 +159,8 @@ if [ "$operator" != false ]; then
     done
     curl -s -X PUT -H "Content-Type: application/json" -d '{"oldPassword":"admin","newPassword":"admin","confirmNew":"admin"}' http://admin:admin@localhost:30112/api/user/password
   fi
+  
+  while ! kubectl wait storageclusters.core.libopenstorage.org/px-deploy-$cluster -n portworx --for=jsonpath='{status.phase}'=Online --timeout=60s; do
+    echo "Waiting for PX Storagecluster px-deploy-$cluster status online"
+  done
 fi

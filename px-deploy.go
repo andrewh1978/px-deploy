@@ -306,7 +306,7 @@ func main() {
 				}
 			}
 			// enable when ocp4/eks destroy is fixed for awstf
-			if config.Platform == "ocp4" && !(config.Cloud == "aws" || config.Cloud == "awstf") { die("Openshift 4 only supported on AWS (not " + config.Cloud + ")") }
+			if config.Platform == "ocp4" && !(config.Cloud == "awstf") { die("Openshift 4 only supported on AWSTF (not " + config.Cloud + ")") }
 			//if config.Platform == "eks" && !(config.Cloud == "aws" || config.Cloud == "awstf") { die("EKS only makes sense with AWS (not " + config.Cloud + ")") }
 			//if config.Platform == "ocp4" && config.Cloud != "aws" { die("Openshift 4 only supported on AWS (not " + config.Cloud + ")") }
 			if config.Platform == "eks" && config.Cloud != "aws"  { die("EKS only makes sense with AWS (not " + config.Cloud + ")") }
