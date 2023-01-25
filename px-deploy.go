@@ -740,7 +740,6 @@ func create_deployment(config Config) int {
 		tf_common_master_script = append(tf_common_master_script,"mkdir /var/log/px-deploy\n"...)
 		tf_common_master_script = append(tf_common_master_script,"mkdir /var/log/px-deploy/completed\n"...)
 		tf_common_master_script = append(tf_common_master_script,"touch /var/log/px-deploy/completed/tracking\n"...)
-		tf_common_master_script = append(tf_common_master_script,"touch /var/log/px-deploy/completed/credentials\n"...)
 
 		for _,filename := range tf_master_scripts {
 			content, err := ioutil.ReadFile("/px-deploy/vagrant/"+filename)
