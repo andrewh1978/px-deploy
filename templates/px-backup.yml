@@ -5,7 +5,7 @@ cluster:
     scripts: ["install-px", "helm-backup"]
     aws_type: t3.2xlarge
   - id: 2
-    scripts: ["install-px", "sock-shop", "petclinic-with-namespace"]
+    scripts: ["install-px", "sock-shop", "petclinic"]
   - id: 3
     scripts: ["install-px"]
 aws_ebs: "gp2:80 gp2:100"
