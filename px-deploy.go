@@ -18,7 +18,7 @@ import (
 	"net/http"
 	"encoding/base64"
 	"reflect"
-
+	
 
 	"github.com/go-yaml/yaml"
 	"github.com/google/uuid"
@@ -306,7 +306,7 @@ func main() {
 				}
 			}
 			// enable when ocp4/eks destroy is fixed for awstf
-			if config.Platform == "ocp4" && !(config.Cloud == "aws" || config.Cloud == "awstf") { die("Openshift 4 only supported on AWS (not " + config.Cloud + ")") }
+			if config.Platform == "ocp4" && !(config.Cloud == "awstf") { die("Openshift 4 only supported on AWSTF (not " + config.Cloud + ")") }
 			//if config.Platform == "eks" && !(config.Cloud == "aws" || config.Cloud == "awstf") { die("EKS only makes sense with AWS (not " + config.Cloud + ")") }
 			//if config.Platform == "ocp4" && config.Cloud != "aws" { die("Openshift 4 only supported on AWS (not " + config.Cloud + ")") }
 			if config.Platform == "eks" && config.Cloud != "aws"  { die("EKS only makes sense with AWS (not " + config.Cloud + ")") }
@@ -499,6 +499,9 @@ func main() {
 			switch config.Cloud {
 			case "awstf":
 				{
+					if config.Platform == "ocp4" {
+						Nodes = 0
+					}
 					// loop clusters and add master name/ip to tf var
 					for c := 1; c <= Clusters ; c++ {
 						ip = get_node_ip(statusName,fmt.Sprintf("master-%v-1",c))
@@ -517,8 +520,21 @@ func main() {
 
 							if ready_nodes[fmt.Sprintf("master-%v",c)] != "" {
 								fmt.Printf("Ready\tmaster-%v \t  %v\n",c, ip )
-								} else {
+							} else {
 								fmt.Printf("NotReady\tmaster-%v \t (%v)\n",c,ip)
+							}
+							
+							if config.Platform == "ocp4" {
+								if ready_nodes["url"] != "" {
+									fmt.Printf("  URL: %v \n", ready_nodes["url"] )
+								} else {
+									fmt.Printf("  OCP4 URL not yet available\n")
+								}
+								if ready_nodes["cred"] != "" {
+									fmt.Printf("  Credentials: kubeadmin / %v \n", ready_nodes["cred"] )
+								} else {
+									fmt.Printf("  OCP4 credentials not yet available\n")
+								}
 							}
 							
 							for n := 1; n <= Nodes; n++ {
@@ -636,9 +652,7 @@ func create_deployment(config Config) int {
 	var tf_node_scripts []string
 	var tf_master_scripts []string
 	var tf_variables []string
-	
-	//var tf_var_masters []string 
-	//var tf_var_nodes []string
+	var tf_variables_ocp4 []string
 
 	var tf_common_master_script []byte
 	var tf_post_script []byte
@@ -668,7 +682,10 @@ func create_deployment(config Config) int {
 		// also copy terraform modules
 		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/.terraform`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
 		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/.terraform.lock.hcl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
-			
+		if config.Platform == "ocp4" {
+			exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/ocp4.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+			exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/ocp4-install-config.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+		}			
 		// prepare ENV variables for node/master scripts
 		// to maintain compatibility, create a env variable of everything from the yml spec which is from type string
 		e := reflect.ValueOf(&config).Elem()
@@ -762,6 +779,7 @@ func create_deployment(config Config) int {
 		
 		// TODO if yaml['platform'] == "ocp4" or yaml['platform'] == "eks" or yaml['platform'] == "gke" or yaml['platform'] == "aks" then yaml['nodes'] = 0 end
 		if config.Platform == "ocp4" {
+			tf_variables = append (tf_variables, "ocp4_nodes = \"" + config.Nodes + "\"")
 			config.Nodes="0"
 		} else if config.Platform == "eks" {
 			config.Nodes="0"
@@ -779,6 +797,12 @@ func create_deployment(config Config) int {
 		if (pxduser != "") {
 			tf_variables = append (tf_variables, "PXDUSER = \"" + pxduser + "\"")	
 		}
+		if config.Platform == "ocp4" {		
+			tf_variables = append (tf_variables, "ocp4_domain = \"" + config.Ocp4_Domain + "\"")
+			tf_variables = append (tf_variables, "ocp4_pull_secret = \"" + base64.StdEncoding.EncodeToString([]byte(config.Ocp4_Pull_Secret)) + "\"")
+			tf_variables_ocp4 = append(tf_variables_ocp4,"ocp4clusters = {")
+		}
+		
 		tf_variables = append (tf_variables, "nodeconfig = [")
 
 		// loop clusters (masters and nodes) to build tfvars and master/node scripts		
@@ -842,6 +866,9 @@ func create_deployment(config Config) int {
 			tf_variables = append(tf_variables,tf_var_ebs...)
 			tf_variables = append(tf_variables,"    ]\n  },")
 
+			if config.Platform == "ocp4" {		
+				tf_variables_ocp4 = append(tf_variables_ocp4, "  \""+masternum+"\" = \""+tf_cluster_aws_type+"\",")
+			}
 			// loop nodes of cluster, add node name/ip to tf var and write individual cloud-init scripts file
 			for n :=1; n <= Nodes ; n++ {
 				nodenum := strconv.Itoa(n)
@@ -856,6 +883,11 @@ func create_deployment(config Config) int {
 			}
 		}
 		tf_variables = append(tf_variables,"]")
+		
+		if config.Platform == "ocp4" {		
+			tf_variables_ocp4 = append(tf_variables_ocp4, "}")
+			tf_variables = append(tf_variables,tf_variables_ocp4...)
+		} 
 		write_tf_file(config.Name, ".tfvars",tf_variables)
 		// now run terraform plan & terraform apply
 		fmt.Println(White+"running terraform PLAN"+Reset)
@@ -887,7 +919,7 @@ func create_deployment(config Config) int {
 	  		if err != nil {
 				die(err.Error())
         	}
-			fmt.Println(Yellow + "Terraform infrastructure creation done. Please check master/node readiness using: px-deploy status -n "+config.Name+Reset)
+			fmt.Println(Yellow + "Terraform infrastructure creation done. Please check master/node readiness/credentials using: px-deploy status -n "+config.Name+Reset)
 		}
 	}
 	case "aws":
@@ -1004,7 +1036,18 @@ func destroy_deployment(name string) {
 	ip := get_ip(config.Name)
 	fmt.Println(White + "Destroying deployment '" + config.Name + "'..." + Reset)
 	if config.Cloud == "awstf" {
-		
+		if config.Platform == "ocp4" {
+			fmt.Println(White + "Destroying OCP4, wait about 5 minutes (per cluster)..." + Reset)
+			cmd := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, `
+				for i in $(seq 1 ` + config.Clusters + `); do
+				  ssh master-$i "cd /root/ocp4 ; openshift-install destroy cluster"
+				done
+			`)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			err = cmd.Run()
+			if (err != nil) { fmt.Println(Yellow + "Failed to destroy OCP4 - please clean up VMs manually: " + err.Error() + Reset) }
+		}
 		// Delete any ELB and Clouddrive not being created by Terraform
 		// ELB creation will be moved to TF later
 		fmt.Println(White+"Stopping Instances, Deleting ELB & CloudDrive EBS"+ Reset)

@@ -11,6 +11,10 @@ provider "aws" {
 	region 	= var.aws_region
 }
 
+data "aws_availability_zones" "available" {
+	state = "available"
+}
+
 resource "tls_private_key" "ssh" {
 	algorithm = "RSA" 
 	rsa_bits  = 2048
@@ -35,7 +39,7 @@ resource "aws_key_pair" "deploy_key" {
 
 resource "aws_vpc" "vpc" {
 	cidr_block	= var.aws_cidr_vpc
-	enable_dns_hostnames	= false
+	enable_dns_hostnames	= true
 	enable_dns_support		= true
 	tags = {
 		Name = format("%s.%s-%s",var.name_prefix,var.config_name,"vpc")
@@ -46,12 +50,15 @@ resource "aws_vpc" "vpc" {
 
 resource "aws_subnet" "subnet" {
 	count					= 	var.clusters
+	availability_zone 		= 	data.aws_availability_zones.available.names[0]
+	map_public_ip_on_launch =   true
 	vpc_id 					=	aws_vpc.vpc.id
 	cidr_block 				= 	"192.168.${count.index + 101}.0/24"
 	tags = {
 		Name = format("%s-%s-subnet-%s",var.name_prefix,var.config_name, count.index + 1)
         px-deploy_name = var.config_name
 		px-deploy_username = var.PXDUSER
+		"kubernetes.io/role/elb" = 1
 		}
 }
 
