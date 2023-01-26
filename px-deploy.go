@@ -887,7 +887,7 @@ func create_deployment(config Config) int {
 		if config.Platform == "ocp4" {		
 			tf_variables_ocp4 = append(tf_variables_ocp4, "}")
 			tf_variables = append(tf_variables,tf_variables_ocp4...)
-		}
+		} 
 		write_tf_file(config.Name, ".tfvars",tf_variables)
 		// now run terraform plan & terraform apply
 		fmt.Println(White+"running terraform PLAN"+Reset)
