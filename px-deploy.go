@@ -653,6 +653,7 @@ func create_deployment(config Config) int {
 	var tf_master_scripts []string
 	var tf_variables []string
 	var tf_variables_ocp4 []string
+	var tf_variables_eks []string
 
 	var tf_common_master_script []byte
 	var tf_post_script []byte
@@ -682,10 +683,18 @@ func create_deployment(config Config) int {
 		// also copy terraform modules
 		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/.terraform`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
 		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/.terraform.lock.hcl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
-		if config.Platform == "ocp4" {
-			exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/ocp4.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
-			exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/ocp4-install-config.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
-		}			
+		
+		switch config.Platform {
+		  	case "ocp4": 
+		  	{
+		  	  exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/ocp4.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+			  exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/ocp4-install-config.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+		  	}
+		  	case "eks": 
+		  	{
+			  exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/eks.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+		  	} 			
+		}
 		// prepare ENV variables for node/master scripts
 		// to maintain compatibility, create a env variable of everything from the yml spec which is from type string
 		e := reflect.ValueOf(&config).Elem()
@@ -776,13 +785,18 @@ func create_deployment(config Config) int {
 		} else {
 			tf_post_script = nil
 		} 
-		
-		// TODO if yaml['platform'] == "ocp4" or yaml['platform'] == "eks" or yaml['platform'] == "gke" or yaml['platform'] == "aks" then yaml['nodes'] = 0 end
-		if config.Platform == "ocp4" {
-			tf_variables = append (tf_variables, "ocp4_nodes = \"" + config.Nodes + "\"")
-			config.Nodes="0"
-		} else if config.Platform == "eks" {
-			config.Nodes="0"
+				
+		switch config.Platform {
+		  	case "ocp4": 
+		  	{
+		  	  tf_variables = append (tf_variables, "ocp4_nodes = \"" + config.Nodes + "\"")
+			  config.Nodes="0"
+		  	} 
+		  	case "eks": 
+			{
+			  tf_variables = append (tf_variables, "eks_nodes = \"" + config.Nodes + "\"")
+			  config.Nodes="0"
+		  	}
 		}
 
 		Clusters, err := strconv.Atoi(config.Clusters)
@@ -797,10 +811,17 @@ func create_deployment(config Config) int {
 		if (pxduser != "") {
 			tf_variables = append (tf_variables, "PXDUSER = \"" + pxduser + "\"")	
 		}
-		if config.Platform == "ocp4" {		
-			tf_variables = append (tf_variables, "ocp4_domain = \"" + config.Ocp4_Domain + "\"")
-			tf_variables = append (tf_variables, "ocp4_pull_secret = \"" + base64.StdEncoding.EncodeToString([]byte(config.Ocp4_Pull_Secret)) + "\"")
-			tf_variables_ocp4 = append(tf_variables_ocp4,"ocp4clusters = {")
+		switch config.Platform {
+		  	case "ocp4": 
+		  	{		
+		      tf_variables = append (tf_variables, "ocp4_domain = \"" + config.Ocp4_Domain + "\"")
+		      tf_variables = append (tf_variables, "ocp4_pull_secret = \"" + base64.StdEncoding.EncodeToString([]byte(config.Ocp4_Pull_Secret)) + "\"")
+		      tf_variables_ocp4 = append(tf_variables_ocp4,"ocp4clusters = {")
+		  	}
+		  	case "eks": 
+	   	  	{
+		      tf_variables_eks = append(tf_variables_eks,"eksclusters = {")
+		  	}
 		}
 		
 		tf_variables = append (tf_variables, "nodeconfig = [")
@@ -866,9 +887,16 @@ func create_deployment(config Config) int {
 			tf_variables = append(tf_variables,tf_var_ebs...)
 			tf_variables = append(tf_variables,"    ]\n  },")
 
-			if config.Platform == "ocp4" {		
-				tf_variables_ocp4 = append(tf_variables_ocp4, "  \""+masternum+"\" = \""+tf_cluster_aws_type+"\",")
-			}
+			switch config.Platform {
+				case "ocp4":
+				{		
+				  tf_variables_ocp4 = append(tf_variables_ocp4, "  \""+masternum+"\" = \""+tf_cluster_aws_type+"\",")
+				}
+				case "eks":
+				{
+				  tf_variables_eks = append(tf_variables_eks, "  \""+masternum+"\" = \""+tf_cluster_aws_type+"\",")
+			  	}
+			}	
 			// loop nodes of cluster, add node name/ip to tf var and write individual cloud-init scripts file
 			for n :=1; n <= Nodes ; n++ {
 				nodenum := strconv.Itoa(n)
@@ -884,10 +912,18 @@ func create_deployment(config Config) int {
 		}
 		tf_variables = append(tf_variables,"]")
 		
-		if config.Platform == "ocp4" {		
-			tf_variables_ocp4 = append(tf_variables_ocp4, "}")
-			tf_variables = append(tf_variables,tf_variables_ocp4...)
-		} 
+		switch config.Platform {
+			case "ocp4": 
+			{		
+			  tf_variables_ocp4 = append(tf_variables_ocp4, "}")
+			  tf_variables = append(tf_variables,tf_variables_ocp4...)
+			} 
+			case "eks":
+			{
+				tf_variables_eks = append(tf_variables_eks, "}")
+				tf_variables = append(tf_variables,tf_variables_eks...)
+			}
+		}
 		write_tf_file(config.Name, ".tfvars",tf_variables)
 		// now run terraform plan & terraform apply
 		fmt.Println(White+"running terraform PLAN"+Reset)
