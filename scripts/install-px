@@ -160,7 +160,7 @@ if [ "$operator" != false ]; then
     curl -s -X PUT -H "Content-Type: application/json" -d '{"oldPassword":"admin","newPassword":"admin","confirmNew":"admin"}' http://admin:admin@localhost:30112/api/user/password
   fi
   
-  if [ $platform = eks ] && [ $platform = gke ] && [ $platform = ocp4 ]; then
+  if [ $platform = eks ] || [ $platform = gke ] || [ $platform = ocp4 ]; then
     while ! kubectl wait storageclusters.core.libopenstorage.org/px-deploy-$cluster -n portworx --for=jsonpath='{status.phase}'=Online --timeout=60s; do
       echo "Waiting for PX Storagecluster px-deploy-$cluster status online"
     done
