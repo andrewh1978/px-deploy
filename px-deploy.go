@@ -307,9 +307,10 @@ func main() {
 			}
 			// enable when ocp4/eks destroy is fixed for awstf
 			if config.Platform == "ocp4" && !(config.Cloud == "awstf") { die("Openshift 4 only supported on AWSTF (not " + config.Cloud + ")") }
+			if config.Platform == "eks" && !(config.Cloud == "awstf") { die("EKS only supported on AWSTF (not " + config.Cloud + ")") }
 			//if config.Platform == "eks" && !(config.Cloud == "aws" || config.Cloud == "awstf") { die("EKS only makes sense with AWS (not " + config.Cloud + ")") }
 			//if config.Platform == "ocp4" && config.Cloud != "aws" { die("Openshift 4 only supported on AWS (not " + config.Cloud + ")") }
-			if config.Platform == "eks" && config.Cloud != "aws"  { die("EKS only makes sense with AWS (not " + config.Cloud + ")") }
+			//if config.Platform == "eks" && config.Cloud != "aws"  { die("EKS only makes sense with AWS (not " + config.Cloud + ")") }
 			if config.Platform == "gke" && config.Cloud != "gcp" { die("GKE only makes sense with GCP (not " + config.Cloud + ")") }
 			if config.Platform == "aks" && config.Cloud != "azure" { die("AKS only makes sense with Azure (not " + config.Cloud + ")") }
 			y, _ := yaml.Marshal(config)
@@ -499,7 +500,7 @@ func main() {
 			switch config.Cloud {
 			case "awstf":
 				{
-					if config.Platform == "ocp4" {
+					if (config.Platform == "ocp4") || (config.Platform == "eks") {
 						Nodes = 0
 					}
 					// loop clusters and add master name/ip to tf var

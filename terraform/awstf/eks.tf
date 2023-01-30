@@ -193,8 +193,12 @@ resource "aws_eks_node_group" "worker-node-group" {
   node_group_name = format("%s-%s-%s",var.name_prefix,var.config_name, each.key)
   node_role_arn  = aws_iam_role.node-iam-role.arn
   subnet_ids   = [aws_subnet.eks_private[each.key - 1].id, aws_subnet.subnet[each.key - 1].id]
-  instance_types = [each.value]
- 
+   
+  launch_template {
+    id      = data.aws_launch_template.cluster[each.key].id
+    version = data.aws_launch_template.cluster[each.key].latest_version
+  }
+  
   scaling_config {
    desired_size = 3
    max_size   = 3
@@ -213,47 +217,32 @@ resource "aws_eks_node_group" "worker-node-group" {
   }
  }
 
-  
- 
-
-
-/*
-resource "local_file" "ocp4-install-config" {
-        for_each = var.ocp4clusters
-        content = templatefile("${path.module}/ocp4-install-config.tpl", {
-			tpl_sshkey 	=  tls_private_key.ssh.public_key_openssh  
-                        tpl_aws_region  = var.aws_region
-                        tpl_ocp4domain  = var.ocp4_domain
-                        tpl_ocp4pullsecret = base64decode(var.ocp4_pull_secret)
-                        tpl_cluster     = each.key
-                        tpl_awstype     = each.value
-                        tpl_configname  = var.config_name
-                        tpl_nodes       = var.ocp4_nodes
-                        tpl_cidr        = var.aws_cidr_vpc
-                        tpl_privsubnet  = aws_subnet.ocp4_private[each.key - 1].id
-                        tpl_pubsubnet   = aws_subnet.subnet[each.key - 1].id
-                }
-        )
-        filename = "${path.module}/ocp4-install-config-master-${each.key}-1.yaml"
-}
- 
-
-// range thru the master nodes (by definition on ocp4 only master nodes...)
-// copy the cluster specific ocp4 config file
-resource "null_resource" "ekscluster" {
-        for_each = aws_instance.node
- 
-        connection {
-                type = "ssh"
-                user = "centos"
-                host = each.value.public_ip
-                private_key = tls_private_key.ssh.private_key_openssh
-        }
-	        
-        provisioner "file" {
-            source = format("%s/ocp4-install-config-%s.yaml",path.module,each.key)
-            destination = "/tmp/ocp4-install-config.yaml"
-        }
+data "aws_launch_template" "cluster" {
+  for_each = var.eksclusters
+  name = aws_launch_template.cluster[each.key].name
+  depends_on = [aws_launch_template.cluster[each.key]]
 }
 
-*/
+resource "aws_launch_template" "cluster" {
+  for_each = var.eksclusters
+  name = format("%s-%s-%s",var.name_prefix,var.config_name, each.key)
+  instance_type = each.value
+  block_device_mappings {
+    device_name = "/dev/xvda"
+    ebs {
+      volume_size = 50
+      volume_type = "gp2"
+    }
+  }
+  tag_specifications {
+    resource_type = "instance"
+    tags = {
+      Name = format("%s-%s-%s-node",var.name_prefix,var.config_name, each.key)
+    }
+  tag_specifications {
+    resource_type = "volume"
+    tags = {
+      Name = format("%s-%s-%s-node",var.name_prefix,var.config_name, each.key)
+    }
+  }
+}
