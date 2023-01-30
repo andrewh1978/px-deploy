@@ -41,17 +41,83 @@ resource "aws_nat_gateway" "natgw" {
 }
 
 
-resource "aws_subnet" "eks_private" {
+resource "aws_subnet" "eks_private1" {
   count	= var.clusters
   vpc_id = aws_vpc.vpc.id
-  availability_zone = data.aws_availability_zones.available.names[1]
+  availability_zone = data.aws_availability_zones.available.names[0]
   cidr_block = "192.168.${count.index + 151}.0/24"
   tags = {
-    Name = format("%s-%s-eks-private-subnet-%s",var.name_prefix,var.config_name, count.index + 1)
+    Name = format("%s-%s-eks-private1-%s",var.name_prefix,var.config_name, count.index + 1)
     px-deploy_name = var.config_name
     px-deploy_username = var.PXDUSER
     "kubernetes.io/role/internal-elb" = 1
   }
+}
+
+resource "aws_subnet" "eks_private2" {
+  count	= var.clusters
+  vpc_id = aws_vpc.vpc.id
+  availability_zone = data.aws_availability_zones.available.names[1]
+  cidr_block = "192.168.${count.index + 181}.0/24"
+  tags = {
+    Name = format("%s-%s-eks-private2-%s",var.name_prefix,var.config_name, count.index + 1)
+    px-deploy_name = var.config_name
+    px-deploy_username = var.PXDUSER
+    "kubernetes.io/role/internal-elb" = 1
+  }
+}
+
+resource "aws_subnet" "eks_private3" {
+  count	= var.clusters
+  vpc_id = aws_vpc.vpc.id
+  availability_zone = data.aws_availability_zones.available.names[2]
+  cidr_block = "192.168.${count.index + 111}.0/24"
+  tags = {
+    Name = format("%s-%s-eks-private3-%s",var.name_prefix,var.config_name, count.index + 1)
+    px-deploy_name = var.config_name
+    px-deploy_username = var.PXDUSER
+    "kubernetes.io/role/internal-elb" = 1
+  }
+}
+
+resource "aws_subnet" "eks_public2" {
+	count					= 	var.clusters
+	availability_zone 		= 	data.aws_availability_zones.available.names[1]
+	map_public_ip_on_launch =   true
+  vpc_id 					=	aws_vpc.vpc.id
+	cidr_block 				= 	"192.168.${count.index + 11}.0/24"
+	tags = {
+		Name = format("%s-%s-eks-public2-%s",var.name_prefix,var.config_name, count.index + 1)
+    px-deploy_name = var.config_name
+		px-deploy_username = var.PXDUSER
+		"kubernetes.io/role/elb" = 1
+	}
+}
+
+resource "aws_subnet" "eks_public3" {
+	count					= 	var.clusters
+	availability_zone 		= 	data.aws_availability_zones.available.names[2]
+  map_public_ip_on_launch =   true
+	vpc_id 					=	aws_vpc.vpc.id
+	cidr_block 				= 	"192.168.${count.index + 41}.0/24"
+	tags = {
+		Name = format("%s-%s-eks-public3-%s",var.name_prefix,var.config_name, count.index + 1)
+    px-deploy_name = var.config_name
+		px-deploy_username = var.PXDUSER
+		"kubernetes.io/role/elb" = 1
+	}
+}
+
+resource "aws_route_table_association" "rt_eks_pub2" {
+	count			= var.clusters
+	subnet_id 		= aws_subnet.eks_public2[count.index].id
+	route_table_id 	= aws_route_table.rt.id
+}
+
+resource "aws_route_table_association" "rt_eks_pub3" {
+	count			= var.clusters
+	subnet_id 		= aws_subnet.eks_public3[count.index].id
+	route_table_id 	= aws_route_table.rt.id
 }
 
 resource "aws_route_table" "rt_sn_private" {
@@ -69,9 +135,21 @@ resource "aws_route_table" "rt_sn_private" {
   }
 }
 
-resource "aws_route_table_association" "rta_private" {
+resource "aws_route_table_association" "rta_private1" {
     count               = var.clusters
-    subnet_id           = aws_subnet.eks_private[count.index].id
+    subnet_id           = aws_subnet.eks_private1[count.index].id
+    route_table_id      = aws_route_table.rt_sn_private[count.index].id
+}
+
+resource "aws_route_table_association" "rta_private2" {
+    count               = var.clusters
+    subnet_id           = aws_subnet.eks_private2[count.index].id
+    route_table_id      = aws_route_table.rt_sn_private[count.index].id
+}
+
+resource "aws_route_table_association" "rta_private3" {
+    count               = var.clusters
+    subnet_id           = aws_subnet.eks_private3[count.index].id
     route_table_id      = aws_route_table.rt_sn_private[count.index].id
 }
 
@@ -172,7 +250,7 @@ resource "aws_eks_cluster" "eks" {
   version = "1.23"
   role_arn = aws_iam_role.eks-iam-role.arn
   vpc_config {
-    subnet_ids = [aws_subnet.eks_private[each.key - 1].id, aws_subnet.subnet[each.key - 1].id]
+    subnet_ids = [aws_subnet.eks_private1[each.key - 1].id, aws_subnet.eks_private2[each.key - 1].id, aws_subnet.eks_private3[each.key - 1].id, aws_subnet.subnet[each.key - 1].id, aws_subnet.eks_public2[each.key - 1].id, aws_subnet.eks_public3[each.key - 1].id]
   }    
 
   depends_on = [
@@ -192,7 +270,7 @@ resource "aws_eks_node_group" "worker-node-group" {
   cluster_name  = aws_eks_cluster.eks[each.key].name
   node_group_name = format("%s-%s-%s",var.name_prefix,var.config_name, each.key)
   node_role_arn  = aws_iam_role.node-iam-role.arn
-  subnet_ids   = [aws_subnet.eks_private[each.key - 1].id, aws_subnet.subnet[each.key - 1].id]
+  subnet_ids = [aws_subnet.eks_private1[each.key - 1].id, aws_subnet.eks_private2[each.key - 1].id, aws_subnet.eks_private3[each.key - 1].id, aws_subnet.subnet[each.key - 1].id, aws_subnet.eks_public2[each.key - 1].id, aws_subnet.eks_public3[each.key - 1].id]
    
   launch_template {
     id      = data.aws_launch_template.cluster[each.key].id
@@ -220,7 +298,7 @@ resource "aws_eks_node_group" "worker-node-group" {
 data "aws_launch_template" "cluster" {
   for_each = var.eksclusters
   name = aws_launch_template.cluster[each.key].name
-  depends_on = [aws_launch_template.cluster[each.key]]
+  //depends_on = [aws_launch_template.cluster[each.key]]
 }
 
 resource "aws_launch_template" "cluster" {
@@ -239,6 +317,7 @@ resource "aws_launch_template" "cluster" {
     tags = {
       Name = format("%s-%s-%s-node",var.name_prefix,var.config_name, each.key)
     }
+  }
   tag_specifications {
     resource_type = "volume"
     tags = {
