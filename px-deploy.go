@@ -1242,7 +1242,7 @@ func get_ip(deployment string) string {
 		output, _ = exec.Command("bash", "-c", `az vm show -g `+config.Azure__Group+` -n master-1 -d --query publicIps --output tsv`).Output()
 	} else if config.Cloud == "vsphere" {
 		var url = config.Vsphere_User + `:` + config.Vsphere_Password + `@` + config.Vsphere_Host
-		output, _ = exec.Command("bash", "-c", `govc vm.info -u '`+url+`' -k -json $(govc find -u '`+url+`' -k / -type m -runtime.powerState poweredOn | grep `+deployment+`-master) | jq -r '.VirtualMachines[0].Config.ExtraConfig[] | select(.Key==("guestinfo.local-ipv4")).Value' 2>/dev/null`).Output()
+		output, _ = exec.Command("bash", "-c", `govc vm.info -u '`+url+`' -k -json $(govc find -u '`+url+`' -k / -type m -runtime.powerState poweredOn | grep `+deployment+`-master) | jq -r '.VirtualMachines[0].Guest.IpAddress' 2>/dev/null`).Output()
 	}
 	return strings.TrimSuffix(string(output), "\n")
 }
