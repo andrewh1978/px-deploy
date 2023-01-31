@@ -19,12 +19,15 @@ import (
 	"encoding/base64"
 	"reflect"
 	
-
 	"github.com/go-yaml/yaml"
 	"github.com/google/uuid"
 	"github.com/imdario/mergo"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 )
 
 type Config struct {
@@ -1032,10 +1035,79 @@ func destroy_deployment(name string) {
 	var output []byte
 	var err error
 	var errdestroy error
+	var aws_instances []string
+	var aws_volumes []string
 
 	ip := get_ip(config.Name)
 	fmt.Println(White + "Destroying deployment '" + config.Name + "'..." + Reset)
 	if config.Cloud == "awstf" {
+
+		// connect to aws API
+		cfg, err := config.LoadDefaultConfig(context.TODO())
+		if err != nil {
+			panic("aws configuration error, " + err.Error())
+		}
+		
+		client := ec2.NewFromConfig(cfg)
+		
+		// get instances in current VPC
+		instances, err := client.DescribeInstances(context.TODO(), &ec2.DescribeInstancesInput{
+			Filters: []types.Filter {
+				{
+					Name:   aws.String("network-interface.vpc-id"),
+					Values: []string {
+						config.Aws__Vpc,
+					},
+				},
+			},
+		})
+		if err != nil {
+			fmt.Println("Got an error retrieving information about your Amazon EC2 instances:")
+			fmt.Println(err)
+			return
+		}
+		
+		for _, r := range instances.Reservations {
+			for _, i := range r.Instances {
+				fmt.Println("   " + *i.InstanceId+"  "+ *i.PrivateIpAddress)
+				aws_instances = append(aws_instances,*i.InstanceId)
+			}
+		}
+		
+		//get list of attached volumes, filter for PX Clouddrive Volumes
+		volumes, err := client.DescribeVolumes(context.TODO(), &ec2.DescribeVolumesInput{
+			Filters: []types.Filter {
+				{
+					Name: aws.String("attachment.instance-id"),
+					Values: aws_instances,
+				},
+				{
+					Name: aws.String("tag:pxtype"),
+					Values: []string {
+										"data",
+										"kvdb",
+										"journal",
+					},
+				},
+			},
+		})
+		
+		if err != nil {
+			fmt.Println("Got an error retrieving information about volumes:")
+			fmt.Println(err)
+			return
+		}
+		
+		fmt.Printf("Found %d PX Clouddrive Volumes \n",len(volumes.Volumes))
+		for _, i := range volumes.Volumes {
+			fmt.Println("   " + *i.VolumeId)
+			for _, t := range i.Tags {
+				fmt.Println("      "+ *t.Key + "  " + *t.Value)
+			}
+			aws_volumes = append(aws_volumes, *i.VolumeId)
+		}
+
+
 		if config.Platform == "ocp4" {
 			fmt.Println(White + "Destroying OCP4, wait about 5 minutes (per cluster)..." + Reset)
 			cmd := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, `
