@@ -19,6 +19,7 @@ import (
 	"encoding/base64"
 	"reflect"
 	"context"
+	"sync"
 	
 	"github.com/go-yaml/yaml"
 	"github.com/google/uuid"
@@ -100,6 +101,8 @@ var Red    = "\033[31m"
 var Green  = "\033[32m"
 var Yellow = "\033[33m"
 var Blue   = "\033[34m"
+
+var wg sync.WaitGroup
 
 func main() {
 	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createAwsTags, createGcpType, createGcpDisks, createGcpZone, createGkeVersion, createAzureType, createAzureDisks, createTemplate, createRegion, createCloud, createEnv, connectName, kubeconfigName, destroyName, statusName, historyNumber string
@@ -1102,9 +1105,6 @@ func destroy_deployment(name string) {
 		fmt.Printf("Found %d portworx clouddrive volumes. \n",len(volumes.Volumes))
 		for _, i := range volumes.Volumes {
 			fmt.Println("  " + *i.VolumeId)
-			//for _, t := range i.Tags {
-			//	fmt.Println("      "+ *t.Key + "  " + *t.Value)
-			//}
 			aws_volumes = append(aws_volumes, *i.VolumeId)
 		}
 
@@ -1126,61 +1126,45 @@ func destroy_deployment(name string) {
 		case "eks": 
 			{
 				// todo
-				// scale down or delete node group & wait
+				// scale down or delete node group & wait for success
 			}
 		case "k8s":
 			{
-				fmt.Println(White+"Stopping EC2 instances"+ Reset)
-				_, err := client.StopInstances(context.TODO(), &ec2.StopInstancesInput{
-					InstanceIds: aws_instances,
-				})
-				if err != nil {
-					fmt.Println("Got an error stopping ec2 instances:")
-					fmt.Println(err)
-					return
+				// if there are no px clouddrive volumes
+				// terraform will terminate instances
+				if len(aws_volumes) > 0 {
+					wg.Add(len(aws_instances))
+					for _,instanceID := range aws_instances {
+						go terminate_and_wait_ec2(client,instanceID)
+					}
+					wg.Wait()
+					fmt.Println(White + "EC2 instances stopped" + Reset)
+					}
 				}
-				waiter := ec2.NewInstanceStoppedWaiter(client)
+		}
+		// at this point px clouddrive volumes should no longer be attached
+		// as instances are terminated
+		if (len(aws_volumes) > 0 ) {
+			fmt.Println(White + "Deleting px clouddrive volumes" + Reset)
+			for _,i := range aws_volumes {
 				
-				params := &ec2.DescribeInstancesInput {
-					Filters: []types.Filter {
-						{
-							Name: aws.String("InstanceStateName"),
-							Values: []string{
-												"stopped",
-							},
-						},
-					},
-				}
-				
-				maxWaitTime := 5 * time.Minute
-				err = waiter.Wait(context.TODO(), params, maxWaitTime)  
-				if err != nil {
-					fmt.Println("error: %v", err)
-					return 
-				}
-				fmt.Println(White + "EC2 instances stopped" + Reset)
-				
+			fmt.Println("deleting volume " + i)
+			_, err = client.DeleteVolume(context.TODO(), &ec2.DeleteVolumeInput{
+				VolumeId: aws.String(i),
+				//DryRun: aws.Bool(true),
+			})
+			if err != nil {
+				fmt.Println("Error deleting Volume:")
+				fmt.Println(err)
+				return
+			}	
 			}
 		}
-		die("ende")
 		// Delete any ELB and Clouddrive not being created by Terraform
 		// ELB creation will be moved to TF later
-		fmt.Println(White+"Stopping Instances, Deleting ELB & CloudDrive EBS"+ Reset)
+		fmt.Println(White+"Deleting ELB"+ Reset)
 		cmd := exec.Command("bash", "-c", `
 		aws configure set default.region `+config.Aws_Region+`
-		instances=$(aws ec2 describe-instances --filters "Name=network-interface.vpc-id,Values=`+config.Aws__Vpc+`" --query "Reservations[*].Instances[*].InstanceId" --output text)
-
-		instancelist=$(echo $instances | sed -e "s/ /,/g")
-		volumes=$(aws ec2 describe-volumes --filters "Name=attachment.instance-id,Values=$instancelist" "Name=tag:pxtype,Values=data,kvdb,journal" --query "Volumes[*].VolumeId" --output json)
-		
-		[[ "$instances" ]] && {
-			aws ec2 stop-instances --instance-ids $instances >/dev/null
-			aws ec2 wait instance-stopped --instance-ids $instances
-		}
-		
-		echo $volumes |jq -c '.[]' | sed "s/\"//g" | while read i; do
-			aws ec2 delete-volume --volume-id $i &
-		done
 
 		[ "`+config.Aws__Vpc+`" ] || exit
 		for i in $(aws elb describe-load-balancers --query "LoadBalancerDescriptions[].{a:VPCId,b:LoadBalancerName}" --output text | awk '/`+config.Aws__Vpc+`/{print$2}'); do
@@ -1360,6 +1344,50 @@ func get_ip(deployment string) string {
 		output, _ = exec.Command("bash", "-c", `govc vm.info -u '`+url+`' -k -json $(govc find -u '`+url+`' -k / -type m -runtime.powerState poweredOn | grep `+deployment+`-master) | jq -r '.VirtualMachines[0].Guest.IpAddress' 2>/dev/null`).Output()
 	}
 	return strings.TrimSuffix(string(output), "\n")
+}
+
+func terminate_and_wait_ec2(client *ec2.Client,  instanceID string) {
+	defer wg.Done()
+
+	fmt.Printf("Waiting for termination of instance %s \n",instanceID)
+	_, err := client.TerminateInstances(context.TODO(), &ec2.TerminateInstancesInput{
+		InstanceIds: []string { 
+								instanceID,
+							},
+	})
+	
+	if err != nil {
+		fmt.Println("Got an error terminating ec2 instances:")
+		fmt.Println(err)
+		return
+	}
+				
+	waiter := ec2.NewInstanceTerminatedWaiter(client)
+				
+	params := &ec2.DescribeInstancesInput {
+		Filters: []types.Filter {
+		{
+			Name: aws.String("instance-id"),
+			Values: []string {
+				instanceID,
+			},											
+		},
+		{
+			Name: aws.String("instance-state-name"),
+			Values: []string{
+				"terminated",
+			},
+		},
+		},
+		
+	}
+				
+	maxWaitTime := 5 * time.Minute
+	err = waiter.Wait(context.TODO(), params, maxWaitTime)  
+	if err != nil {
+		fmt.Println("error:", err)
+		return 
+	}
 }
 
 func vsphere_init() {
