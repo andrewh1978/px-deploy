@@ -24,7 +24,7 @@ allowVolumeExpansion: true
 EOF
 
 # /usr/local/bin/helm install px-backup portworx/px-backup --namespace px-backup --create-namespace --set persistentStorage.enabled=true,persistentStorage.storageClassName="px-repl3",oidc.centralOIDC.updateAdminProfile=false
-/usr/local/bin/helm install px-central portworx/px-central --namespace central --create-namespace --version 2.3.0 --set persistentStorage.enabled=true,persistentStorage.storageClassName="px-repl3",pxbackup.enabled=true,oidc.centralOIDC.updateAdminProfile=false
+/usr/local/bin/helm install px-central portworx/px-central --namespace central --create-namespace --version 2.3.2 --set persistentStorage.enabled=true,persistentStorage.storageClassName="px-repl3",pxbackup.enabled=true,oidc.centralOIDC.updateAdminProfile=false
 
 until (kubectl get po --namespace central -ljob-name=pxcentral-post-install-hook  -o wide | awk '{print $1, $2, $3}' |grep "Completed"); do echo "Waiting for post install hook";sleep 3; done
 until (kubectl get po --namespace central -lapp=px-backup  -o wide | awk '{print $1, $2, $3}' | grep "Running" | grep "1/1"); do echo "Waiting for backup service";sleep 3; done
@@ -68,7 +68,7 @@ EOF
 kubectl label node node-1-1 px/ls=true
 kubectl label node node-1-2 px/ls=true
 
-helm get values --namespace central px-central -o yaml > values-px-upgrade.yaml && kubectl delete job pxcentral-post-install-hook --namespace central && helm upgrade px-central portworx/px-central --namespace central --version 2.3.0 --set pxlicenseserver.enabled=true,pxmonitor.enabled=true,persistentStorage.enabled=true,persistentStorage.storageClassName="px-repl3",installCRDs=true,pxmonitor.pxCentralEndpoint=$pubIP:$backupPort -f values-px-upgrade.yaml
+helm get values --namespace central px-central -o yaml > values-px-upgrade.yaml && kubectl delete job pxcentral-post-install-hook --namespace central && helm upgrade px-central portworx/px-central --namespace central --version 2.3.2 --set pxlicenseserver.enabled=true,pxmonitor.enabled=true,persistentStorage.enabled=true,persistentStorage.storageClassName="px-repl3",installCRDs=true,pxmonitor.pxCentralEndpoint=$pubIP:$backupPort -f values-px-upgrade.yaml
 
 until (kubectl get po --namespace central -ljob-name=pxcentral-post-install-hook  -o wide | awk '{print $1, $2, $3}' |grep "Completed"); do echo "Waiting for post install hook";sleep 3; done
 
