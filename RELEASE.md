@@ -1,3 +1,16 @@
+# 4.16
+
+## Improvements
+ * Lots of awstf updates
+ * Add containerd to support Kubernetes 1.25
+ * Add OCP4 support for awstf
+ * Petclinic now always in its own namespace
+ * Bump PX-Central to 2.3.2
+ * Bump OCP version to 4.10.37
+
+## Fixes
+ * Fix intermittent vSphere provisioning bug
+
 # 4.15
 
 ## Improvements
