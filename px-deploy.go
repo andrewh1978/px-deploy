@@ -18,13 +18,18 @@ import (
 	"net/http"
 	"encoding/base64"
 	"reflect"
+	"context"
+	"sync"
 	
-
 	"github.com/go-yaml/yaml"
 	"github.com/google/uuid"
 	"github.com/imdario/mergo"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awscfg "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 )
 
 type Config struct {
@@ -96,6 +101,8 @@ var Red    = "\033[31m"
 var Green  = "\033[32m"
 var Yellow = "\033[33m"
 var Blue   = "\033[34m"
+
+var wg sync.WaitGroup
 
 func main() {
 	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createAwsTags, createGcpType, createGcpDisks, createGcpZone, createGkeVersion, createAzureType, createAzureDisks, createTemplate, createRegion, createCloud, createEnv, connectName, kubeconfigName, destroyName, statusName, historyNumber string
@@ -1032,40 +1039,132 @@ func destroy_deployment(name string) {
 	var output []byte
 	var err error
 	var errdestroy error
+	var aws_instances []string
+	var aws_volumes []string
 
 	ip := get_ip(config.Name)
 	fmt.Println(White + "Destroying deployment '" + config.Name + "'..." + Reset)
 	if config.Cloud == "awstf" {
-		if config.Platform == "ocp4" {
-			fmt.Println(White + "Destroying OCP4, wait about 5 minutes (per cluster)..." + Reset)
-			cmd := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, `
-				for i in $(seq 1 ` + config.Clusters + `); do
-				  ssh master-$i "cd /root/ocp4 ; openshift-install destroy cluster"
-				done
-			`)
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-			err = cmd.Run()
-			if (err != nil) { fmt.Println(Yellow + "Failed to destroy OCP4 - please clean up VMs manually: " + err.Error() + Reset) }
+
+		// connect to aws API
+		cfg, err := awscfg.LoadDefaultConfig(context.TODO())
+		if err != nil {
+			panic("aws configuration error, " + err.Error())
 		}
-		// Delete any ELB and Clouddrive not being created by Terraform
-		// ELB creation will be moved to TF later
-		fmt.Println(White+"Stopping Instances, Deleting ELB & CloudDrive EBS"+ Reset)
+		
+		client := ec2.NewFromConfig(cfg)
+		
+		// get instances in current VPC
+		instances, err := client.DescribeInstances(context.TODO(), &ec2.DescribeInstancesInput{
+			Filters: []types.Filter {
+				{
+					Name:   aws.String("network-interface.vpc-id"),
+					Values: []string {
+						config.Aws__Vpc,
+					},
+				},
+			},
+		})
+		if err != nil {
+			fmt.Println("Got an error retrieving information about your Amazon EC2 instances:")
+			fmt.Println(err)
+			return
+		}
+		
+		for _, r := range instances.Reservations {
+			for _, i := range r.Instances {
+				//fmt.Println("   " + *i.InstanceId+"  "+ *i.PrivateIpAddress)
+				aws_instances = append(aws_instances,*i.InstanceId)
+			}
+		}
+		
+		//get list of attached volumes, filter for PX Clouddrive Volumes
+		volumes, err := client.DescribeVolumes(context.TODO(), &ec2.DescribeVolumesInput{
+			Filters: []types.Filter {
+				{
+					Name: aws.String("attachment.instance-id"),
+					Values: aws_instances,
+				},
+				{
+					Name: aws.String("tag:pxtype"),
+					Values: []string {
+										"data",
+										"kvdb",
+										"journal",
+					},
+				},
+			},
+		})
+		
+		if err != nil {
+			fmt.Println("Got an error retrieving information about volumes:")
+			fmt.Println(err)
+			return
+		}
+		
+		fmt.Printf("Found %d portworx clouddrive volumes: \n",len(volumes.Volumes))
+		for _, i := range volumes.Volumes {
+			fmt.Println("  " + *i.VolumeId)
+			aws_volumes = append(aws_volumes, *i.VolumeId)
+		}
+
+
+		switch config.Platform {
+		case "ocp4":
+			{
+				fmt.Println(White + "Destroying OCP4, wait about 5 minutes (per cluster)..." + Reset)
+				cmd := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, `
+					for i in $(seq 1 ` + config.Clusters + `); do
+				  	ssh master-$i "cd /root/ocp4 ; openshift-install destroy cluster"
+					done
+				`)
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+				err = cmd.Run()
+				if (err != nil) { fmt.Println(Yellow + "Failed to destroy OCP4 - please clean up VMs manually: " + err.Error() + Reset) }
+			}
+		case "eks": 
+			{
+				// todo
+				// scale down or delete node group & wait for success
+			}
+		case "k8s":
+			{
+				// if there are no px clouddrive volumes
+				// terraform will terminate instances
+				if len(aws_volumes) > 0 {
+					fmt.Println("Waiting for termination of instances: (timeout 5min)")
+					wg.Add(len(aws_instances))
+					for _,instanceID := range aws_instances {
+						go terminate_and_wait_ec2(client,instanceID,5)
+					}
+					wg.Wait()
+					fmt.Println("EC2 instances terminated")
+					}
+				}
+		}
+		// at this point px clouddrive volumes must no longer be attached
+		// as instances are terminated
+		if (len(aws_volumes) > 0 ) {
+			fmt.Println(White + "Deleting px clouddrive volumes:" + Reset)
+			for _,i := range aws_volumes {
+				
+			fmt.Println("  " + i)
+			_, err = client.DeleteVolume(context.TODO(), &ec2.DeleteVolumeInput{
+				VolumeId: aws.String(i),
+				//DryRun: aws.Bool(true),
+			})
+			if err != nil {
+				fmt.Println("Error deleting Volume:")
+				fmt.Println(err)
+				return
+			}	
+			}
+		}
+		// Delete any ELB not being created by Terraform
+		fmt.Println(White+"Deleting ELB"+ Reset)
 		cmd := exec.Command("bash", "-c", `
 		aws configure set default.region `+config.Aws_Region+`
-		instances=$(aws ec2 describe-instances --filters "Name=network-interface.vpc-id,Values=`+config.Aws__Vpc+`" --query "Reservations[*].Instances[*].InstanceId" --output text)
-
-		instancelist=$(echo $instances | sed -e "s/ /,/g")
-		volumes=$(aws ec2 describe-volumes --filters "Name=attachment.instance-id,Values=$instancelist" "Name=tag:pxtype,Values=data,kvdb,journal" --query "Volumes[*].VolumeId" --output json)
-		
-		[[ "$instances" ]] && {
-			aws ec2 stop-instances --instance-ids $instances >/dev/null
-			aws ec2 wait instance-stopped --instance-ids $instances
-		}
-		
-		echo $volumes |jq -c '.[]' | sed "s/\"//g" | while read i; do
-			aws ec2 delete-volume --volume-id $i &
-		done
 
 		[ "`+config.Aws__Vpc+`" ] || exit
 		for i in $(aws elb describe-load-balancers --query "LoadBalancerDescriptions[].{a:VPCId,b:LoadBalancerName}" --output text | awk '/`+config.Aws__Vpc+`/{print$2}'); do
@@ -1245,6 +1344,50 @@ func get_ip(deployment string) string {
 		output, _ = exec.Command("bash", "-c", `govc vm.info -u '`+url+`' -k -json $(govc find -u '`+url+`' -k / -type m -runtime.powerState poweredOn | grep `+deployment+`-master) | jq -r '.VirtualMachines[0].Guest.IpAddress' 2>/dev/null`).Output()
 	}
 	return strings.TrimSuffix(string(output), "\n")
+}
+
+func terminate_and_wait_ec2(client *ec2.Client,  instanceID string, timeout_min time.Duration) {
+	defer wg.Done()
+
+	fmt.Printf("  %s \n",instanceID)
+	_, err := client.TerminateInstances(context.TODO(), &ec2.TerminateInstancesInput{
+		InstanceIds: []string { 
+								instanceID,
+							},
+	})
+	
+	if err != nil {
+		fmt.Println("error terminating ec2 instance:")
+		fmt.Println(err)
+		return
+	}
+				
+	waiter := ec2.NewInstanceTerminatedWaiter(client)
+				
+	params := &ec2.DescribeInstancesInput {
+		Filters: []types.Filter {
+		{
+			Name: aws.String("instance-id"),
+			Values: []string {
+				instanceID,
+			},											
+		},
+		{
+			Name: aws.String("instance-state-name"),
+			Values: []string{
+				"terminated",
+			},
+		},
+		},
+		
+	}
+				
+	maxWaitTime := timeout_min * time.Minute
+	err = waiter.Wait(context.TODO(), params, maxWaitTime)  
+	if err != nil {
+		fmt.Println("waiter error:", err)
+		return 
+	}
 }
 
 func vsphere_init() {
