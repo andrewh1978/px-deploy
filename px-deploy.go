@@ -1102,7 +1102,7 @@ func destroy_deployment(name string) {
 			return
 		}
 		
-		fmt.Printf("Found %d portworx clouddrive volumes. \n",len(volumes.Volumes))
+		fmt.Printf("Found %d portworx clouddrive volumes: \n",len(volumes.Volumes))
 		for _, i := range volumes.Volumes {
 			fmt.Println("  " + *i.VolumeId)
 			aws_volumes = append(aws_volumes, *i.VolumeId)
@@ -1133,22 +1133,23 @@ func destroy_deployment(name string) {
 				// if there are no px clouddrive volumes
 				// terraform will terminate instances
 				if len(aws_volumes) > 0 {
+					fmt.Println("Waiting for termination of instances: (timeout 5min)")
 					wg.Add(len(aws_instances))
 					for _,instanceID := range aws_instances {
-						go terminate_and_wait_ec2(client,instanceID)
+						go terminate_and_wait_ec2(client,instanceID,5)
 					}
 					wg.Wait()
-					fmt.Println(White + "EC2 instances stopped" + Reset)
+					fmt.Println("EC2 instances terminated")
 					}
 				}
 		}
-		// at this point px clouddrive volumes should no longer be attached
+		// at this point px clouddrive volumes must no longer be attached
 		// as instances are terminated
 		if (len(aws_volumes) > 0 ) {
-			fmt.Println(White + "Deleting px clouddrive volumes" + Reset)
+			fmt.Println(White + "Deleting px clouddrive volumes:" + Reset)
 			for _,i := range aws_volumes {
 				
-			fmt.Println("deleting volume " + i)
+			fmt.Println("  " + i)
 			_, err = client.DeleteVolume(context.TODO(), &ec2.DeleteVolumeInput{
 				VolumeId: aws.String(i),
 				//DryRun: aws.Bool(true),
@@ -1160,8 +1161,7 @@ func destroy_deployment(name string) {
 			}	
 			}
 		}
-		// Delete any ELB and Clouddrive not being created by Terraform
-		// ELB creation will be moved to TF later
+		// Delete any ELB not being created by Terraform
 		fmt.Println(White+"Deleting ELB"+ Reset)
 		cmd := exec.Command("bash", "-c", `
 		aws configure set default.region `+config.Aws_Region+`
@@ -1346,10 +1346,10 @@ func get_ip(deployment string) string {
 	return strings.TrimSuffix(string(output), "\n")
 }
 
-func terminate_and_wait_ec2(client *ec2.Client,  instanceID string) {
+func terminate_and_wait_ec2(client *ec2.Client,  instanceID string, timeout_min time.Duration) {
 	defer wg.Done()
 
-	fmt.Printf("Waiting for termination of instance %s \n",instanceID)
+	fmt.Printf("  %s \n",instanceID)
 	_, err := client.TerminateInstances(context.TODO(), &ec2.TerminateInstancesInput{
 		InstanceIds: []string { 
 								instanceID,
@@ -1357,7 +1357,7 @@ func terminate_and_wait_ec2(client *ec2.Client,  instanceID string) {
 	})
 	
 	if err != nil {
-		fmt.Println("Got an error terminating ec2 instances:")
+		fmt.Println("error terminating ec2 instance:")
 		fmt.Println(err)
 		return
 	}
@@ -1382,10 +1382,10 @@ func terminate_and_wait_ec2(client *ec2.Client,  instanceID string) {
 		
 	}
 				
-	maxWaitTime := 5 * time.Minute
+	maxWaitTime := timeout_min * time.Minute
 	err = waiter.Wait(context.TODO(), params, maxWaitTime)  
 	if err != nil {
-		fmt.Println("error:", err)
+		fmt.Println("waiter error:", err)
 		return 
 	}
 }
