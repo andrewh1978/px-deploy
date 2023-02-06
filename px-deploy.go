@@ -30,6 +30,7 @@ import (
 	awscfg "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/aws/aws-sdk-go-v2/service/eks"
 )
 
 type Config struct {
@@ -1162,8 +1163,60 @@ func destroy_deployment(name string) {
 			}
 		case "eks": 
 			{
-				// todo
-				// scale down or delete node group & wait for success
+				
+				clusters,_ := strconv.Atoi(config.Clusters)
+				/*
+				eksclient := eks.NewFromConfig(cfg)
+				fmt.Println("Deleting EKS Nodegroups: (timeout 20min)")
+				for i :=1; i <= clusters ; i++ {
+					nodegroups, err := eksclient.ListNodegroups(context.TODO(), &eks.ListNodegroupsInput{
+						ClusterName: aws.String(fmt.Sprintf("px-deploy-%s-%d",config.Name,i)), 
+					})					
+					if err != nil {
+						fmt.Println("Error retrieving information about EKS Node Groups:")
+						fmt.Println(err)
+						return
+					}
+				
+					wg.Add(len(nodegroups.Nodegroups))
+					for _,nodegroupname := range nodegroups.Nodegroups {
+						//fmt.Printf("Nodegroup %s \n",nodegroupname)	
+						go terminate_and_wait_nodegroup(eksclient, nodegroupname ,fmt.Sprintf("px-deploy-%s-%d",config.Name,i),20)
+					}
+				}
+				wg.Wait()				
+				*/
+
+				// delete ELB generated Security Groups
+				for i :=1; i <= clusters ; i++ {
+					sg, err := client.DescribeSecurityGroups(context.TODO(), &ec2.DescribeSecurityGroupsInput{
+						Filters: []types.Filter {
+						{
+							Name:   aws.String("vpc-id"),
+							Values: []string {
+								config.Aws__Vpc,
+							},
+						},
+						{
+							Name: aws.String(fmt.Sprintf("tag:kubernetes.io/cluster/px-deploy-%s-%d",config.Name,i)),
+							Values: []string {
+												"owned",												
+							},
+						},
+						},
+					})
+					if err != nil {
+						fmt.Println("Error retrieving information about security groups:")
+						fmt.Println(err)
+						return
+					}
+					
+					for _,sgname := range sg.SecurityGroups {
+						fmt.Printf("SG: %s \n",*sgname.GroupName)
+					}
+				}
+				die("end")
+
 			}
 		case "k8s":
 			{
@@ -1189,7 +1242,6 @@ func destroy_deployment(name string) {
 			fmt.Println("  " + i)
 			_, err = client.DeleteVolume(context.TODO(), &ec2.DeleteVolumeInput{
 				VolumeId: aws.String(i),
-				//DryRun: aws.Bool(true),
 			})
 			if err != nil {
 				fmt.Println("Error deleting Volume:")
@@ -1417,6 +1469,36 @@ func terminate_and_wait_ec2(client *ec2.Client,  instanceID string, timeout_min 
 		},
 		},
 		
+	}
+				
+	maxWaitTime := timeout_min * time.Minute
+	err = waiter.Wait(context.TODO(), params, maxWaitTime)  
+	if err != nil {
+		fmt.Println("waiter error:", err)
+		return 
+	}
+}
+
+func terminate_and_wait_nodegroup(eksclient *eks.Client,  nodegroupName string, clusterName string, timeout_min time.Duration) {
+	defer wg.Done()
+
+	fmt.Printf("  %s \n",nodegroupName)
+	_, err := eksclient.DeleteNodegroup(context.TODO(), &eks.DeleteNodegroupInput{
+		ClusterName: aws.String(clusterName),
+		NodegroupName: aws.String(nodegroupName),
+	})
+	
+	if err != nil {
+		fmt.Println("error deleting EKS nodegroup:")
+		fmt.Println(err)
+		return
+	}
+				
+	waiter := eks.NewNodegroupDeletedWaiter(eksclient)
+				
+	params := &eks.DescribeNodegroupInput {
+		ClusterName: aws.String(clusterName),
+		NodegroupName: aws.String(nodegroupName),		
 	}
 				
 	maxWaitTime := timeout_min * time.Minute
