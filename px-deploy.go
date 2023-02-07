@@ -1085,7 +1085,7 @@ func destroy_deployment(name string) {
 	if config.Cloud == "awstf" {
 
 		// connect to aws API
-		cfg, err := awscfg.LoadDefaultConfig(context.TODO())
+		cfg, err := awscfg.LoadDefaultConfig(context.TODO(), awscfg.WithRegion(config.Aws_Region))
 		if err != nil {
 			panic("aws configuration error, " + err.Error())
 		}
