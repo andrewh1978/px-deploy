@@ -1165,9 +1165,9 @@ func destroy_deployment(name string) {
 		case "eks": 
 			{
 				delete_elb_instances(config.Aws__Vpc, cfg)
+				
 				/*
 				clusters,_ := strconv.Atoi(config.Clusters)
-				
 				eksclient := eks.NewFromConfig(cfg)
 				fmt.Println("Deleting EKS Nodegroups: (timeout 20min)")
 				for i :=1; i <= clusters ; i++ {
@@ -1187,7 +1187,7 @@ func destroy_deployment(name string) {
 					}
 				}
 				wg.Wait()				
-				*/
+*/				
 				
 				/*
 				// Range all clusters (a.k.a eks clusters)
@@ -1513,6 +1513,7 @@ func get_ip(deployment string) string {
 	return strings.TrimSuffix(string(output), "\n")
 }
 
+
 func delete_elb_instances(vpc string, cfg aws.Config) {
 	var elb_sg_list []string
 
@@ -1526,13 +1527,13 @@ func delete_elb_instances(vpc string, cfg aws.Config) {
 		return
 	}
 
-	// range thru loadbalancers, filter for VPC
-	// cumulate list of referenced security groups
+	// range thru loadbalancers within VPC
+	// cumulate list of their security groups
 	// delete ELB instance
 	fmt.Printf("ELB Instances:\n")
 	for _, i := range elb.LoadBalancerDescriptions {
 		if *i.VPCId == vpc {
-			fmt.Printf("ELB  %s  \n", *i.LoadBalancerName)
+			fmt.Printf("ELB %s  \n", *i.LoadBalancerName)
 			for _, z := range i.SecurityGroups {
 				fmt.Printf("    %s \n",z)
 				elb_sg_list = append(elb_sg_list,z)
@@ -1550,65 +1551,60 @@ func delete_elb_instances(vpc string, cfg aws.Config) {
 			*/
 		}
 	}
-
+	
 	//find other SGs referencing the ELB SGs
 	//delete the referencing rules 
-	for _, elb_sg := range elb_sg_list {
-		fmt.Printf("ELB SG: %s \n",elb_sg)
-		// find referencing SGs 
-		sg,err := ec2client.DescribeSecurityGroups(context.TODO(), &ec2.DescribeSecurityGroupsInput{
-			Filters: []types.Filter {
-				{
-					Name:   aws.String("vpc-id"),
-					Values: []string {
-						vpc,
-					},
-				},
-				{
-					Name: aws.String("ip-permission.group-id"),
-					Values: []string { elb_sg,},
+	// find referencing SGs 
+	sg,err := ec2client.DescribeSecurityGroups(context.TODO(), &ec2.DescribeSecurityGroupsInput{
+		Filters: []types.Filter {
+			{
+				Name:   aws.String("vpc-id"),
+				Values: []string {
+					vpc,
 				},
 			},
-		})
+			{
+				Name: aws.String("ip-permission.group-id"),
+				Values: elb_sg_list,
+			},
+		},
+	})
 		
+	if err != nil {
+		fmt.Println("Error retrieving SG references:")
+		fmt.Println(err)
+		return
+	}
+		
+	// range thru referencing SGs, get their rules
+	for _,ref_sg := range sg.SecurityGroups {
+		fmt.Printf("    referenced by SG %s \n",*ref_sg.GroupId)
+		ref_sg_rules, err := ec2client.DescribeSecurityGroupRules(context.TODO(), &ec2.DescribeSecurityGroupRulesInput{
+			Filters: []types.Filter {
+			{
+				Name: aws.String("group-id"),
+				Values: []string {
+						*ref_sg.GroupId,
+				},
+			},
+			},				
+		})
+
 		if err != nil {
-			fmt.Println("Error retrieving SG references:")
+			fmt.Println("Error retrieving SG rule refs:")
 			fmt.Println(err)
 			return
 		}
+	
+		for _, ref_rule := range ref_sg_rules.SecurityGroupRules {
+			if ref_rule.ReferencedGroupInfo != nil {
+				fmt.Printf("      rule %s references %s \n", *ref_rule.SecurityGroupRuleId, aws.ToString(ref_rule.ReferencedGroupInfo.GroupId))
 
-		// range thru referencing SGs, get their rules
-		for _,ref_sg := range sg.SecurityGroups {
-			var ref_sg_group types.ReferencedSecurityGroup
-			fmt.Printf("    referenced by SG %s \n",*ref_sg.GroupId)
-			ref_sg_rules, err := ec2client.DescribeSecurityGroupRules(context.TODO(), &ec2.DescribeSecurityGroupRulesInput{
-				Filters: []types.Filter {
-				{
-					Name: aws.String("group-id"),
-					Values: []string {
-							*ref_sg.GroupId,
-					},
-				},
-				},				
-			})
-			if err != nil {
-				fmt.Println("Error retrieving SG rule refs:")
-				fmt.Println(err)
-				return
+				// todo: if ref_rule.ReferencedGroupInfo.GroupId is in elb_sg_list -> delete it
 			}
-			for _, ref_rule := range ref_sg_rules.SecurityGroupRules {
-		//		if *ref_rule.ReferencedGroupInfo.GroupId == elb_sg {
-			ref_sg_group = *ref_rule.ReferencedGroupInfo
-			//fmt.Println(ref_sg_group.VpcId)
-			fmt.Printf("      rule %d references \n", *ref_rule.SecurityGroupRuleId)
-		//		}
-			}
-
 		}
 
-
 	}
-
 }
 
 func terminate_and_wait_ec2(client *ec2.Client,  instanceID string, timeout_min time.Duration) {
