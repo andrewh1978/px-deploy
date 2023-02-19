@@ -1498,6 +1498,9 @@ func delete_elb_instances(vpc string, cfg aws.Config) {
 				// if referenced rule is within elb_sg_list, delete it
 				for _,v := range elb_sg_list {
 					if aws.ToString(ref_rule.ReferencedGroupInfo.GroupId) == v {
+						
+						delete_and_wait_sgrule(ec2client,*ref_rule.GroupId,*ref_rule.SecurityGroupRuleId, *ref_rule.IsEgress)						
+						/*
 						if *ref_rule.IsEgress {
 							fmt.Printf("  delete %s egress rule %s \n", aws.ToString(ref_rule.GroupId), *ref_rule.SecurityGroupRuleId)
 							_,err = ec2client.RevokeSecurityGroupEgress(context.TODO(), &ec2.RevokeSecurityGroupEgressInput{
@@ -1518,6 +1521,7 @@ func delete_elb_instances(vpc string, cfg aws.Config) {
 							fmt.Println(err)
 							return
 						}
+						*/
 					}
 				}
 			}
@@ -1540,7 +1544,67 @@ func delete_elb_instances(vpc string, cfg aws.Config) {
 			return
 		}
 	}
+	// dont wait for SGs to be deleted as terraform VPC destruction will finally wait for it
+}
+
+func delete_and_wait_sgrule(client *ec2.Client, groupId string, ruleId string, isEgress bool) {
+	var err error
+	defer wg.Done()
+/*
+	if isEgress {
+		fmt.Printf("  delete %s egress rule %s \n", groupId, ruleId)
+		_,err = client.RevokeSecurityGroupEgress(context.TODO(), &ec2.RevokeSecurityGroupEgressInput{
+			DryRun: aws.Bool(true),
+			GroupId: aws.String(groupId),
+			SecurityGroupRuleIds: []string { ruleId, },
+		})
+	} else {
+		fmt.Printf("  delete %s ingress rule %s \n", groupId, ruleId)
+		_,err = client.RevokeSecurityGroupIngress(context.TODO(), &ec2.RevokeSecurityGroupIngressInput{
+			DryRun: aws.Bool(true),
+			GroupId: aws.String(groupId),
+			SecurityGroupRuleIds: []string { ruleId, },
+		})
+	}
 	
+	if err != nil {
+		fmt.Println("Error deleting SG rule:")
+		fmt.Println(err)
+		return
+	}	
+*/
+	deleted := false
+
+	for deleted {
+		sg_rules, err := client.DescribeSecurityGroupRules(context.TODO(), &ec2.DescribeSecurityGroupRulesInput{
+			Filters: []types.Filter {
+			{
+				Name: aws.String("group-id"),
+				Values: []string {
+						groupId,
+				},
+			},
+			{
+				Name: aws.String("security-group-rule-id"),
+				Values: []string {
+						ruleId,
+				},
+			},
+			},				
+		})
+
+		if err != nil {
+			fmt.Println("Error retrieving SG rule to check deletion status:")
+			fmt.Println(err)
+			return
+		}
+		if len(sg_rules.SecurityGroupRules) == 0 {
+			deleted = true
+		} else {
+			fmt.Println("Wait 2 sec for SG rule deletion")
+			time.Sleep(2 * time.Second)
+		}
+	}
 }
 
 func terminate_and_wait_ec2(client *ec2.Client,  instanceID string, timeout_min time.Duration) {
