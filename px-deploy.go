@@ -20,7 +20,7 @@ import (
 	"reflect"
 	"context"
 	"sync"
-	
+		
 	"github.com/go-yaml/yaml"
 	"github.com/google/uuid"
 	"github.com/imdario/mergo"
@@ -1165,6 +1165,7 @@ func destroy_deployment(name string) {
 		case "eks": 
 			{
 			delete_elb_instances(config.Aws__Vpc, cfg)
+			die("ende")
 			clusters,_ := strconv.Atoi(config.Clusters)
 			eksclient := eks.NewFromConfig(cfg)
 			fmt.Println("Deleting EKS Nodegroups: (timeout 20min)")
@@ -1434,18 +1435,11 @@ func delete_elb_instances(vpc string, cfg aws.Config) {
 				elb_sg_list = append(elb_sg_list,z)
 			}
 			fmt.Printf("\n")
-			
-			_,err := elbclient.DeleteLoadBalancer(context.TODO(), &elasticloadbalancing.DeleteLoadBalancerInput{
-				LoadBalancerName: aws.String(*i.LoadBalancerName),
-			})
-			if err != nil {
-				fmt.Println("Error deleting ELB:")
-				fmt.Println(err)
-				return
-			}
-			
+			wg.Add(1)
+			go delete_and_wait_elb(elbclient,*i.LoadBalancerName)
 		}
 	}
+	wg.Wait()
 	
 	//find other SGs referencing the ELB SGs
 	//delete the referencing rules 
@@ -1529,8 +1523,8 @@ func delete_elb_instances(vpc string, cfg aws.Config) {
 	}
 
 	// TODO: find out a wait() for rule deletion API call
-	fmt.Println("Wait 5 sec for SG rule deletion")
-	time.Sleep(5 * time.Second)
+	//fmt.Println("Wait 5 sec for SG rule deletion")
+	//time.Sleep(5 * time.Second)
 
 	for _,v := range elb_sg_list {
 		_, err = ec2client.DeleteSecurityGroup(context.TODO(), &ec2.DeleteSecurityGroupInput{
@@ -1547,9 +1541,45 @@ func delete_elb_instances(vpc string, cfg aws.Config) {
 	// dont wait for SGs to be deleted as terraform VPC destruction will finally wait for it
 }
 
-func delete_and_wait_sgrule(client *ec2.Client, groupId string, ruleId string, isEgress bool) {
-	var err error
+// delete a elb instance and wait until DescribeLoadBalancer returns Error LoadBalancerNotFound
+// could be moved to waiter as soon as available in aws sdk
+func delete_and_wait_elb(client *elasticloadbalancing.Client, elbName string) {
 	defer wg.Done()
+	_,err := client.DeleteLoadBalancer(context.TODO(), &elasticloadbalancing.DeleteLoadBalancerInput{
+		LoadBalancerName: aws.String(elbName),
+	})
+	if err != nil {
+		fmt.Println("Error deleting ELB:")
+		fmt.Println(err)
+		return
+	}
+
+	deleted := false
+	for deleted != true {
+		_,err := client.DescribeLoadBalancers(context.TODO(), &elasticloadbalancing.DescribeLoadBalancersInput{
+			LoadBalancerNames: []string{ elbName, },
+		})
+
+		if err != nil {
+			if strings.Contains(fmt.Sprint(err), "LoadBalancerNotFound") {
+				deleted = true
+			} else {
+				fmt.Println("Error retrieving information about ELB deletion status:")
+				fmt.Println(err)
+				return
+			}
+    	}
+		if !deleted {
+			fmt.Printf("  Wait 5 sec for deletion of ELB %s \n",elbName)
+			time.Sleep(5 * time.Second)
+		}
+	}
+}
+
+
+func delete_and_wait_sgrule(client *ec2.Client, groupId string, ruleId string, isEgress bool) {
+//  var err error
+//	defer wg.Done()
 /*
 	if isEgress {
 		fmt.Printf("  delete %s egress rule %s \n", groupId, ruleId)
@@ -1575,7 +1605,7 @@ func delete_and_wait_sgrule(client *ec2.Client, groupId string, ruleId string, i
 */
 	deleted := false
 
-	for deleted {
+	for deleted != true {
 		sg_rules, err := client.DescribeSecurityGroupRules(context.TODO(), &ec2.DescribeSecurityGroupRulesInput{
 			Filters: []types.Filter {
 			{
@@ -1601,8 +1631,8 @@ func delete_and_wait_sgrule(client *ec2.Client, groupId string, ruleId string, i
 		if len(sg_rules.SecurityGroupRules) == 0 {
 			deleted = true
 		} else {
-			fmt.Println("Wait 2 sec for SG rule deletion")
-			time.Sleep(2 * time.Second)
+			fmt.Printf("  Wait 5 sec for deletion of SG rule %s (%s) \n", ruleId, groupId)
+			time.Sleep(5 * time.Second)
 		}
 	}
 }
