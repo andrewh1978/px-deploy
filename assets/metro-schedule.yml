@@ -20,5 +20,5 @@ spec:
       startApplications: false
       includeVolumes: false
       namespaces:
-      - default
+      - petclinic
   schedulePolicyName: appschedule
