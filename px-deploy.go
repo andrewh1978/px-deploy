@@ -1147,7 +1147,6 @@ func destroy_deployment(name string) {
 			aws_volumes = append(aws_volumes, *i.VolumeId)
 		}
 
-
 		switch config.Platform {
 		case "ocp4":
 			{
@@ -1164,8 +1163,6 @@ func destroy_deployment(name string) {
 			}
 		case "eks": 
 			{
-			delete_elb_instances(config.Aws__Vpc, cfg)
-			die("ende")
 			clusters,_ := strconv.Atoi(config.Clusters)
 			eksclient := eks.NewFromConfig(cfg)
 			fmt.Println("Deleting EKS Nodegroups: (timeout 20min)")
@@ -1186,7 +1183,7 @@ func destroy_deployment(name string) {
 				}
 			}
 			wg.Wait()				
-			}
+		}
 		default:
 			{
 				// if there are no px clouddrive volumes
@@ -1202,6 +1199,10 @@ func destroy_deployment(name string) {
 					}
 				}
 		}
+		
+		// delete elb instances & attached SGs (+referncing rules) from VPC
+		delete_elb_instances(config.Aws__Vpc, cfg)
+		
 		// at this point px clouddrive volumes must no longer be attached
 		// as instances are terminated
 		if (len(aws_volumes) > 0 ) {
@@ -1219,26 +1220,10 @@ func destroy_deployment(name string) {
 			}	
 			}
 		}
-		// Delete any ELB not being created by Terraform
-		fmt.Println(White+"Deleting ELB"+ Reset)
-		cmd := exec.Command("bash", "-c", `
-		aws configure set default.region `+config.Aws_Region+`
 
-		[ "`+config.Aws__Vpc+`" ] || exit
-		for i in $(aws elb describe-load-balancers --query "LoadBalancerDescriptions[].{a:VPCId,b:LoadBalancerName}" --output text | awk '/`+config.Aws__Vpc+`/{print$2}'); do
-		  aws elb delete-load-balancer --load-balancer-name $i
-		done
-		while [ "$(aws elb describe-load-balancers --query "LoadBalancerDescriptions[].VPCId" --output text | grep `+config.Aws__Vpc+`)" ]; do
-		  echo "waiting for ELB to disappear"
-		  sleep 2
-		done
-		`)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		err = cmd.Run()
-		
+
 		fmt.Println(White+"running Terraform PLAN"+ Reset)
-		cmd = exec.Command("terraform","-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan","-destroy", "-input=false", "-out=tfplan", "-var-file",".tfvars")
+		cmd := exec.Command("terraform","-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan","-destroy", "-input=false", "-out=tfplan", "-var-file",".tfvars")
 		cmd.Stderr = os.Stderr
 		err = cmd.Run()
 		if err != nil {
@@ -1426,7 +1411,7 @@ func delete_elb_instances(vpc string, cfg aws.Config) {
 	// range thru loadbalancers within VPC
 	// cumulate list of their security groups
 	// delete ELB instance
-	fmt.Printf("Deleting ELBs within VPC:\n")
+	fmt.Printf("Deleting ELBs within VPC\n")
 	for _, i := range elb.LoadBalancerDescriptions {
 		if *i.VPCId == vpc {
 			fmt.Printf("  ELB: %s ", *i.LoadBalancerName)
@@ -1492,53 +1477,23 @@ func delete_elb_instances(vpc string, cfg aws.Config) {
 				// if referenced rule is within elb_sg_list, delete it
 				for _,v := range elb_sg_list {
 					if aws.ToString(ref_rule.ReferencedGroupInfo.GroupId) == v {
-						
-						delete_and_wait_sgrule(ec2client,*ref_rule.GroupId,*ref_rule.SecurityGroupRuleId, *ref_rule.IsEgress)						
-						/*
-						if *ref_rule.IsEgress {
-							fmt.Printf("  delete %s egress rule %s \n", aws.ToString(ref_rule.GroupId), *ref_rule.SecurityGroupRuleId)
-							_,err = ec2client.RevokeSecurityGroupEgress(context.TODO(), &ec2.RevokeSecurityGroupEgressInput{
-								//DryRun: aws.Bool(true),
-								GroupId: aws.String(*ref_rule.GroupId),
-								SecurityGroupRuleIds: []string { *ref_rule.SecurityGroupRuleId},
-							})
-						} else {
-							fmt.Printf("  delete %s ingress rule %s \n", aws.ToString(ref_rule.GroupId), *ref_rule.SecurityGroupRuleId)
-							_,err = ec2client.RevokeSecurityGroupIngress(context.TODO(), &ec2.RevokeSecurityGroupIngressInput{
-								//DryRun: aws.Bool(true),
-								GroupId: aws.String(*ref_rule.GroupId),
-								SecurityGroupRuleIds: []string { *ref_rule.SecurityGroupRuleId},
-							})
-						}
-						if err != nil {
-							fmt.Println("Error deleting SG rule:")
-							fmt.Println(err)
-							return
-						}
-						*/
+						wg.Add(1)	
+						go delete_and_wait_sgrule(ec2client,*ref_rule.GroupId,*ref_rule.SecurityGroupRuleId, *ref_rule.IsEgress)						
 					}
 				}
 			}
 		}
 	}
-
-	// TODO: find out a wait() for rule deletion API call
-	//fmt.Println("Wait 5 sec for SG rule deletion")
-	//time.Sleep(5 * time.Second)
-
+	wg.Wait()
+	
+	fmt.Println("Deleting ELB SGs")
 	for _,v := range elb_sg_list {
-		_, err = ec2client.DeleteSecurityGroup(context.TODO(), &ec2.DeleteSecurityGroupInput{
-			//DryRun: aws.Bool(true),
-			GroupId: aws.String(v),
-		})
-					
-		if err != nil {
-			fmt.Println("Error deleting SG:")
-			fmt.Println(err)
-			return
-		}
+		fmt.Printf("  delete SG %s \n",v)
+		wg.Add(1)
+		go delete_and_wait_sg(ec2client,v)		
 	}
-	// dont wait for SGs to be deleted as terraform VPC destruction will finally wait for it
+	wg.Wait()
+	// dont finally wait for SGs to be deleted as terraform VPC destruction will finally wait for it
 }
 
 // delete a elb instance and wait until DescribeLoadBalancer returns Error LoadBalancerNotFound
@@ -1576,22 +1531,45 @@ func delete_and_wait_elb(client *elasticloadbalancing.Client, elbName string) {
 	}
 }
 
+func delete_and_wait_sg(client *ec2.Client, sgName string) {
+	defer wg.Done()
+	deleted := false
+	for deleted != true {
+		_, err := client.DeleteSecurityGroup(context.TODO(), &ec2.DeleteSecurityGroupInput{
+		//DryRun: aws.Bool(true),
+		GroupId: aws.String(sgName),
+		})
+					
+		if err != nil {
+			if strings.Contains(fmt.Sprint(err), "DependencyViolation") {
+				fmt.Printf("    wait 5 sec to resolve dependency violation during deletion of %s \n",sgName)
+				time.Sleep(5 * time.Second)
+			} else {
+				fmt.Println("Error deleting SG:")
+				fmt.Println(err)
+				return
+			}
+		} else {
+			deleted = true
+		}
+	}
+}
 
 func delete_and_wait_sgrule(client *ec2.Client, groupId string, ruleId string, isEgress bool) {
-//  var err error
-//	defer wg.Done()
-/*
+	var err error
+	defer wg.Done()
+
 	if isEgress {
 		fmt.Printf("  delete %s egress rule %s \n", groupId, ruleId)
 		_,err = client.RevokeSecurityGroupEgress(context.TODO(), &ec2.RevokeSecurityGroupEgressInput{
-			DryRun: aws.Bool(true),
+			//DryRun: aws.Bool(true),
 			GroupId: aws.String(groupId),
 			SecurityGroupRuleIds: []string { ruleId, },
 		})
 	} else {
 		fmt.Printf("  delete %s ingress rule %s \n", groupId, ruleId)
 		_,err = client.RevokeSecurityGroupIngress(context.TODO(), &ec2.RevokeSecurityGroupIngressInput{
-			DryRun: aws.Bool(true),
+			//DryRun: aws.Bool(true),
 			GroupId: aws.String(groupId),
 			SecurityGroupRuleIds: []string { ruleId, },
 		})
@@ -1602,9 +1580,11 @@ func delete_and_wait_sgrule(client *ec2.Client, groupId string, ruleId string, i
 		fmt.Println(err)
 		return
 	}	
-*/
-	deleted := false
 
+
+	// check if security rule is deleted in API
+	// to be replaced by a waiter as soon as implemented in AWS SDK
+	deleted := false
 	for deleted != true {
 		sg_rules, err := client.DescribeSecurityGroupRules(context.TODO(), &ec2.DescribeSecurityGroupRulesInput{
 			Filters: []types.Filter {
@@ -1628,9 +1608,12 @@ func delete_and_wait_sgrule(client *ec2.Client, groupId string, ruleId string, i
 			fmt.Println(err)
 			return
 		}
-		if len(sg_rules.SecurityGroupRules) == 0 {
+
+		if len(sg_rules.SecurityGroupRules)==0 {
 			deleted = true
-		} else {
+		}
+		
+		if !deleted {
 			fmt.Printf("  Wait 5 sec for deletion of SG rule %s (%s) \n", ruleId, groupId)
 			time.Sleep(5 * time.Second)
 		}
