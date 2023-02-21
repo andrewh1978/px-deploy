@@ -659,21 +659,11 @@ func create_deployment(config Config) int {
 
 	var pxduser string
 	
-	var tf_node_scripts []string
-	var tf_master_scripts []string
 	var tf_variables []string
 	var tf_variables_ocp4 []string
 	var tf_variables_eks []string
-
-	var tf_common_master_script []byte
-	var tf_post_script []byte
-	var tf_node_script []byte
-	var tf_individual_node_script []byte
-	var tf_master_script []byte
 	
 	var tf_cluster_aws_type string
-	var tf_env_script []byte
-
 	var tf_var_ebs []string
 	
 	fmt.Println(White + "Provisioning infrastructure..." + Reset)
@@ -705,24 +695,9 @@ func create_deployment(config Config) int {
 			  exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/eks/eks.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
 		  	} 			
 		}
-		// prepare ENV variables for node/master scripts
-		// to maintain compatibility, create a env variable of everything from the yml spec which is from type string
-		e := reflect.ValueOf(&config).Elem()
-		for i:=0; i < e.NumField(); i++ {
-			if e.Type().Field(i).Type.Name() == "string" {
-				tf_env_script = append(tf_env_script,"export "+strings.ToLower(strings.TrimSpace(e.Type().Field(i).Name))+"=\""+strings.ToLower(strings.TrimSpace(e.Field(i).Interface().(string)))+"\"\n"...)
-			}
-		}
 		
-		// set env variables from env spec
-		for key,val := range config.Env {
-			tf_env_script = append(tf_env_script,"export "+key+"=\""+val+"\"\n"...)
-		}
-		err = os.WriteFile("/px-deploy/.px-deploy/tf-deployments/" + config.Name + "/env.sh", tf_env_script, 0666)
-		if err != nil {
-			die(err.Error())
-		}
-
+		write_nodescripts(config)
+		
 		// create EBS definitions
 		// split ebs definition by spaces and range the results
 		
@@ -733,69 +708,7 @@ func create_deployment(config Config) int {
 			tf_var_ebs = append(tf_var_ebs, "      {\n        ebs_type = \""+entry[0]+"\"\n        ebs_size = \""+entry[1]+"\"\n        ebs_device_name = \"/dev/sd"+string(i+98)+"\"\n      },")
 		}
 		// other node ebs processing happens in cluster/node loop
-
-		// use aws vagrant scripts as awstf is just the tf implementation of aws
-		// prepare (single) cloud-init script for all nodes			
-		tf_node_scripts = []string{"all-common",config.Platform+"-common",config.Platform+"-node"}
-		tf_node_script = append(tf_node_script,"#!/bin/bash\n"...)
-		
-		tf_node_script = append(tf_node_script,"mkdir /var/log/px-deploy\n"...)
-
-		for _,filename := range tf_node_scripts {
-			content, err := ioutil.ReadFile("/px-deploy/vagrant/"+filename)
-			if err == nil {
-				tf_node_script = append(tf_node_script,"(\n"...)			
-				tf_node_script = append(tf_node_script,"echo \"Started ($date)\"\n"...)			
-				tf_node_script = append(tf_node_script,content...)
-				tf_node_script = append(tf_node_script,"\necho \"Finished ($date)\"\n"...)
-				tf_node_script = append(tf_node_script,"\n) >&/var/log/px-deploy/"+filename+"\n"...)			
-			}
-		}
-
-		// prepare common base script for all master nodes
-		// prepare common cloud-init script for all master nodes
-		tf_master_scripts = []string{"all-common",config.Platform+"-common","all-master",config.Platform+"-master"}
-		tf_common_master_script = append(tf_common_master_script,"#!/bin/bash\n"...)
-		tf_common_master_script = append(tf_common_master_script,"mkdir /var/log/px-deploy\n"...)
-		tf_common_master_script = append(tf_common_master_script,"mkdir /var/log/px-deploy/completed\n"...)
-		tf_common_master_script = append(tf_common_master_script,"touch /var/log/px-deploy/completed/tracking\n"...)
-
-		for _,filename := range tf_master_scripts {
-			content, err := ioutil.ReadFile("/px-deploy/vagrant/"+filename)
-			if err == nil {
-				tf_common_master_script = append(tf_common_master_script,"(\n"...)			
-				tf_common_master_script = append(tf_common_master_script,"echo \"Started $(date)\"\n"...)			
-				tf_common_master_script = append(tf_common_master_script,content...)
-				tf_common_master_script = append(tf_common_master_script,"\necho \"Finished $(date)\"\n"...)
-				tf_common_master_script = append(tf_common_master_script,"\n) >&/var/log/px-deploy/"+filename+"\n"...)			
-			}
-		}
-		
-		// add scripts from the "scripts" section of config.yaml to common master node script
-		for _,filename := range config.Scripts {
-			content, err := ioutil.ReadFile("/px-deploy/.px-deploy/scripts/"+filename)
-			if err == nil {
-				tf_common_master_script = append(tf_common_master_script,"(\n"...)
-				tf_common_master_script = append(tf_common_master_script,"echo \"Started $(date)\"\n"...)						
-				tf_common_master_script = append(tf_common_master_script,content...)
-				tf_common_master_script = append(tf_common_master_script,"\necho \"Finished $(date)\"\n"...)
-				tf_common_master_script = append(tf_common_master_script,"\n) >&/var/log/px-deploy/"+filename+"\n"...)			
-			}
-		}
-		// add post_script if defined
-		if config.Post_Script != "" {
-			content, err := ioutil.ReadFile("/px-deploy/.px-deploy/scripts/"+config.Post_Script)
-			if err == nil {
-				tf_post_script = append(tf_post_script,"(\n"...)
-				tf_post_script = append(tf_post_script,"echo \"Started $(date)\"\n"...)						
-				tf_post_script = append(tf_post_script,content...)
-				tf_post_script = append(tf_post_script,"echo \"Finished $(date)\"\n"...)
-				tf_post_script = append(tf_post_script,"\n) >&/var/log/px-deploy/"+config.Post_Script+"\n"...)			
-			}
-		} else {
-			tf_post_script = nil
-		} 
-				
+						
 		switch config.Platform {
 		  	case "ocp4": 
 		  	{
@@ -839,42 +752,16 @@ func create_deployment(config Config) int {
 		// loop clusters (masters and nodes) to build tfvars and master/node scripts		
 		for c := 1; c <= Clusters ; c++ {
 			masternum := strconv.Itoa(c)
-			
-			tf_master_script = tf_common_master_script
 			tf_cluster_aws_type = config.Aws_Type
 
 			// if exist, apply individual scripts/aws_type settings for nodes of a cluster
 			for _, clusterconf := range config.Cluster {
 				if clusterconf.Id == c {
-					for _,filename := range clusterconf.Scripts {
-						content, err := ioutil.ReadFile("/px-deploy/.px-deploy/scripts/"+filename)
-						if err == nil {
-							tf_master_script = append(tf_master_script,"(\n"...)			
-							tf_master_script = append(tf_master_script,content...)
-							tf_master_script = append(tf_master_script,"\n) >&/var/log/px-deploy/"+filename+"\n"...)			
-						}
-					}
-									
 					//is there a cluster specific aws_type override? if not, set from generic config
 					if clusterconf.Aws_Type != "" {
 						tf_cluster_aws_type = clusterconf.Aws_Type
 					} 
 				}
-			}
-
-			// add post_script if defined
-			if tf_post_script != nil {
-				tf_master_script = append(tf_master_script,tf_post_script...)
-			}	
-			
-			// after running all scripts create file in /var/log/px-deploy/completed 
-			tf_master_script = append(tf_master_script,"export IP=$(curl -s https://ipinfo.io/ip)\n"...)
-			tf_master_script = append(tf_master_script,"echo \"master-"+masternum+" $IP \" >> /var/log/px-deploy/completed/tracking \n"...)
-			
-			//write master script for cluster
-			err := os.WriteFile("/px-deploy/.px-deploy/tf-deployments/" + config.Name + "/master-" +masternum+"-1" , tf_master_script, 0666)
-			if err != nil {
-				die(err.Error())
 			}
 			
 			// process .tfvars file for deployment
@@ -907,18 +794,6 @@ func create_deployment(config Config) int {
 				  tf_variables_eks = append(tf_variables_eks, "  \""+masternum+"\" = \""+tf_cluster_aws_type+"\",")
 			  	}
 			}	
-			// loop nodes of cluster, add node name/ip to tf var and write individual cloud-init scripts file
-			for n :=1; n <= Nodes ; n++ {
-				nodenum := strconv.Itoa(n)
-				tf_individual_node_script = tf_node_script
-				tf_individual_node_script = append(tf_individual_node_script, "export IP=$(curl -s https://ipinfo.io/ip)\n"...)
-				tf_individual_node_script = append(tf_individual_node_script, "echo \"echo 'node-"+masternum+"-"+nodenum+" $IP' >> /var/log/px-deploy/completed/tracking \" | ssh root@master-"+masternum+" \n"...)
-
-				err := os.WriteFile("/px-deploy/.px-deploy/tf-deployments/" + config.Name + "/node-" +masternum+"-"+nodenum , tf_individual_node_script, 0666)
-				if err != nil {
-					die(err.Error())
-				}
-			}
 		}
 		tf_variables = append(tf_variables,"]")
 		
@@ -1691,6 +1566,150 @@ func terminate_and_wait_nodegroup(eksclient *eks.Client,  nodegroupName string, 
 	if err != nil {
 		fmt.Println("waiter error:", err)
 		return 
+	}
+}
+
+func write_nodescripts(config Config) {
+	var tf_node_scripts []string
+	var tf_master_scripts []string
+	var tf_common_master_script []byte
+	var tf_post_script []byte
+	var tf_node_script []byte
+	var tf_individual_node_script []byte
+	var tf_master_script []byte
+	var tf_env_script []byte
+	
+	// prepare ENV variables for node/master scripts
+	// to maintain compatibility, create a env variable of everything from the yml spec which is from type string
+	e := reflect.ValueOf(&config).Elem()
+	for i:=0; i < e.NumField(); i++ {
+		if e.Type().Field(i).Type.Name() == "string" {
+		tf_env_script = append(tf_env_script,"export "+strings.ToLower(strings.TrimSpace(e.Type().Field(i).Name))+"=\""+strings.ToLower(strings.TrimSpace(e.Field(i).Interface().(string)))+"\"\n"...)
+		}
+	}
+		
+	// set env variables from env spec
+	for key,val := range config.Env {
+		tf_env_script = append(tf_env_script,"export "+key+"=\""+val+"\"\n"...)
+	}
+	err := os.WriteFile("/px-deploy/.px-deploy/tf-deployments/" + config.Name + "/env.sh", tf_env_script, 0666)
+	if err != nil {
+		die(err.Error())
+	}
+
+	// use aws vagrant scripts as awstf is just the tf implementation of aws
+	// prepare (single) cloud-init script for all nodes			
+	tf_node_scripts = []string{"all-common",config.Platform+"-common",config.Platform+"-node"}
+	tf_node_script = append(tf_node_script,"#!/bin/bash\n"...)
+		
+	tf_node_script = append(tf_node_script,"mkdir /var/log/px-deploy\n"...)
+
+	for _,filename := range tf_node_scripts {
+		content, err := ioutil.ReadFile("/px-deploy/vagrant/"+filename)
+		if err == nil {
+			tf_node_script = append(tf_node_script,"(\n"...)			
+			tf_node_script = append(tf_node_script,"echo \"Started ($date)\"\n"...)			
+			tf_node_script = append(tf_node_script,content...)
+			tf_node_script = append(tf_node_script,"\necho \"Finished ($date)\"\n"...)
+			tf_node_script = append(tf_node_script,"\n) >&/var/log/px-deploy/"+filename+"\n"...)			
+		}
+	}
+
+	// prepare common base script for all master nodes
+	// prepare common cloud-init script for all master nodes
+	tf_master_scripts = []string{"all-common",config.Platform+"-common","all-master",config.Platform+"-master"}
+	tf_common_master_script = append(tf_common_master_script,"#!/bin/bash\n"...)
+	tf_common_master_script = append(tf_common_master_script,"mkdir /var/log/px-deploy\n"...)
+	tf_common_master_script = append(tf_common_master_script,"mkdir /var/log/px-deploy/completed\n"...)
+	tf_common_master_script = append(tf_common_master_script,"touch /var/log/px-deploy/completed/tracking\n"...)
+
+	for _,filename := range tf_master_scripts {
+		content, err := ioutil.ReadFile("/px-deploy/vagrant/"+filename)
+		if err == nil {
+			tf_common_master_script = append(tf_common_master_script,"(\n"...)			
+			tf_common_master_script = append(tf_common_master_script,"echo \"Started $(date)\"\n"...)			
+			tf_common_master_script = append(tf_common_master_script,content...)
+			tf_common_master_script = append(tf_common_master_script,"\necho \"Finished $(date)\"\n"...)
+			tf_common_master_script = append(tf_common_master_script,"\n) >&/var/log/px-deploy/"+filename+"\n"...)			
+		}
+	}
+		
+	// add scripts from the "scripts" section of config.yaml to common master node script
+	for _,filename := range config.Scripts {
+		content, err := ioutil.ReadFile("/px-deploy/.px-deploy/scripts/"+filename)
+		if err == nil {
+			tf_common_master_script = append(tf_common_master_script,"(\n"...)
+			tf_common_master_script = append(tf_common_master_script,"echo \"Started $(date)\"\n"...)						
+			tf_common_master_script = append(tf_common_master_script,content...)
+			tf_common_master_script = append(tf_common_master_script,"\necho \"Finished $(date)\"\n"...)
+			tf_common_master_script = append(tf_common_master_script,"\n) >&/var/log/px-deploy/"+filename+"\n"...)			
+		}
+	}
+	
+	// add post_script if defined
+	if config.Post_Script != "" {
+		content, err := ioutil.ReadFile("/px-deploy/.px-deploy/scripts/"+config.Post_Script)
+		if err == nil {
+			tf_post_script = append(tf_post_script,"(\n"...)
+			tf_post_script = append(tf_post_script,"echo \"Started $(date)\"\n"...)						
+			tf_post_script = append(tf_post_script,content...)
+			tf_post_script = append(tf_post_script,"echo \"Finished $(date)\"\n"...)
+			tf_post_script = append(tf_post_script,"\n) >&/var/log/px-deploy/"+config.Post_Script+"\n"...)			
+		}
+	} else {
+		tf_post_script = nil
+	} 
+				
+	Clusters, err := strconv.Atoi(config.Clusters)
+	Nodes, err := strconv.Atoi(config.Nodes)
+		
+	// loop clusters (masters and nodes) to build tfvars and master/node scripts		
+	for c := 1; c <= Clusters ; c++ {
+		masternum := strconv.Itoa(c)
+		
+		tf_master_script = tf_common_master_script
+
+		// if exist, apply individual scripts/aws_type settings for nodes of a cluster
+		for _, clusterconf := range config.Cluster {
+			if clusterconf.Id == c {
+				for _,filename := range clusterconf.Scripts {
+					content, err := ioutil.ReadFile("/px-deploy/.px-deploy/scripts/"+filename)
+					if err == nil {
+						tf_master_script = append(tf_master_script,"(\n"...)			
+						tf_master_script = append(tf_master_script,content...)
+						tf_master_script = append(tf_master_script,"\n) >&/var/log/px-deploy/"+filename+"\n"...)			
+					}
+				}
+			}
+		}
+
+		// add post_script if defined
+		if tf_post_script != nil {
+			tf_master_script = append(tf_master_script,tf_post_script...)
+		}	
+			
+		// after running all scripts create file in /var/log/px-deploy/completed 
+		tf_master_script = append(tf_master_script,"export IP=$(curl -s https://ipinfo.io/ip)\n"...)
+		tf_master_script = append(tf_master_script,"echo \"master-"+masternum+" $IP \" >> /var/log/px-deploy/completed/tracking \n"...)
+		
+		//write master script for cluster
+		err := os.WriteFile("/px-deploy/.px-deploy/tf-deployments/" + config.Name + "/master-" +masternum+"-1" , tf_master_script, 0666)
+		if err != nil {
+			die(err.Error())
+		}
+	
+		// loop nodes of cluster, add node name/ip to tf var and write individual cloud-init scripts file
+		for n :=1; n <= Nodes ; n++ {
+			nodenum := strconv.Itoa(n)
+			tf_individual_node_script = tf_node_script
+			tf_individual_node_script = append(tf_individual_node_script, "export IP=$(curl -s https://ipinfo.io/ip)\n"...)
+			tf_individual_node_script = append(tf_individual_node_script, "echo \"echo 'node-"+masternum+"-"+nodenum+" $IP' >> /var/log/px-deploy/completed/tracking \" | ssh root@master-"+masternum+" \n"...)
+
+			err := os.WriteFile("/px-deploy/.px-deploy/tf-deployments/" + config.Name + "/node-" +masternum+"-"+nodenum , tf_individual_node_script, 0666)
+			if err != nil {
+				die(err.Error())
+			}
+		}
 	}
 }
 
