@@ -6,20 +6,20 @@ metadata:
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
-    name: px-repl3-sc
+    name: px-repl2-sc
 provisioner: kubernetes.io/portworx-volume
 parameters:
   #openstorage.io/auth-secret-name: px-user-token
   #openstorage.io/auth-secret-namespace: portworx
-  repl: "3"
-  io_profile: "db"
+  repl: "2"
+  io_profile: "db_remote"
 ---
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   namespace: petclinic
   annotations:
-    volume.beta.kubernetes.io/storage-class: px-repl3-sc
+    volume.beta.kubernetes.io/storage-class: px-repl2-sc
   name: petclinic-db-mysql
 spec:
   accessModes:
