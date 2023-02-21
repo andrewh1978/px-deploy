@@ -20,7 +20,7 @@ import (
 	"reflect"
 	"context"
 	"sync"
-	
+		
 	"github.com/go-yaml/yaml"
 	"github.com/google/uuid"
 	"github.com/imdario/mergo"
@@ -30,6 +30,8 @@ import (
 	awscfg "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/aws/aws-sdk-go-v2/service/eks"
+	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancing"
 )
 
 type Config struct {
@@ -314,9 +316,10 @@ func main() {
 			}
 			// enable when ocp4/eks destroy is fixed for awstf
 			if config.Platform == "ocp4" && !(config.Cloud == "awstf") { die("Openshift 4 only supported on AWSTF (not " + config.Cloud + ")") }
+			if config.Platform == "eks" && !(config.Cloud == "awstf") { die("EKS only supported on AWSTF (not " + config.Cloud + ")") }
 			//if config.Platform == "eks" && !(config.Cloud == "aws" || config.Cloud == "awstf") { die("EKS only makes sense with AWS (not " + config.Cloud + ")") }
 			//if config.Platform == "ocp4" && config.Cloud != "aws" { die("Openshift 4 only supported on AWS (not " + config.Cloud + ")") }
-			if config.Platform == "eks" && config.Cloud != "aws"  { die("EKS only makes sense with AWS (not " + config.Cloud + ")") }
+			//if config.Platform == "eks" && config.Cloud != "aws"  { die("EKS only makes sense with AWS (not " + config.Cloud + ")") }
 			if config.Platform == "gke" && config.Cloud != "gcp" { die("GKE only makes sense with GCP (not " + config.Cloud + ")") }
 			if config.Platform == "aks" && config.Cloud != "azure" { die("AKS only makes sense with Azure (not " + config.Cloud + ")") }
 			y, _ := yaml.Marshal(config)
@@ -506,7 +509,7 @@ func main() {
 			switch config.Cloud {
 			case "awstf":
 				{
-					if config.Platform == "ocp4" {
+					if (config.Platform == "ocp4") || (config.Platform == "eks") {
 						Nodes = 0
 					}
 					// loop clusters and add master name/ip to tf var
@@ -660,6 +663,7 @@ func create_deployment(config Config) int {
 	var tf_master_scripts []string
 	var tf_variables []string
 	var tf_variables_ocp4 []string
+	var tf_variables_eks []string
 
 	var tf_common_master_script []byte
 	var tf_post_script []byte
@@ -689,10 +693,18 @@ func create_deployment(config Config) int {
 		// also copy terraform modules
 		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/.terraform`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
 		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/.terraform.lock.hcl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
-		if config.Platform == "ocp4" {
-			exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/ocp4.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
-			exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/ocp4-install-config.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
-		}			
+		
+		switch config.Platform {
+		  	case "ocp4": 
+		  	{
+		  	  exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/ocp4/ocp4.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+			  exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/ocp4/ocp4-install-config.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+		  	}
+		  	case "eks": 
+		  	{
+			  exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/eks/eks.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+		  	} 			
+		}
 		// prepare ENV variables for node/master scripts
 		// to maintain compatibility, create a env variable of everything from the yml spec which is from type string
 		e := reflect.ValueOf(&config).Elem()
@@ -783,13 +795,18 @@ func create_deployment(config Config) int {
 		} else {
 			tf_post_script = nil
 		} 
-		
-		// TODO if yaml['platform'] == "ocp4" or yaml['platform'] == "eks" or yaml['platform'] == "gke" or yaml['platform'] == "aks" then yaml['nodes'] = 0 end
-		if config.Platform == "ocp4" {
-			tf_variables = append (tf_variables, "ocp4_nodes = \"" + config.Nodes + "\"")
-			config.Nodes="0"
-		} else if config.Platform == "eks" {
-			config.Nodes="0"
+				
+		switch config.Platform {
+		  	case "ocp4": 
+		  	{
+		  	  tf_variables = append (tf_variables, "ocp4_nodes = \"" + config.Nodes + "\"")
+			  config.Nodes="0"
+		  	} 
+		  	case "eks": 
+			{
+			  tf_variables = append (tf_variables, "eks_nodes = \"" + config.Nodes + "\"")
+			  config.Nodes="0"
+		  	}
 		}
 
 		Clusters, err := strconv.Atoi(config.Clusters)
@@ -804,10 +821,17 @@ func create_deployment(config Config) int {
 		if (pxduser != "") {
 			tf_variables = append (tf_variables, "PXDUSER = \"" + pxduser + "\"")	
 		}
-		if config.Platform == "ocp4" {		
-			tf_variables = append (tf_variables, "ocp4_domain = \"" + config.Ocp4_Domain + "\"")
-			tf_variables = append (tf_variables, "ocp4_pull_secret = \"" + base64.StdEncoding.EncodeToString([]byte(config.Ocp4_Pull_Secret)) + "\"")
-			tf_variables_ocp4 = append(tf_variables_ocp4,"ocp4clusters = {")
+		switch config.Platform {
+		  	case "ocp4": 
+		  	{		
+		      tf_variables = append (tf_variables, "ocp4_domain = \"" + config.Ocp4_Domain + "\"")
+		      tf_variables = append (tf_variables, "ocp4_pull_secret = \"" + base64.StdEncoding.EncodeToString([]byte(config.Ocp4_Pull_Secret)) + "\"")
+		      tf_variables_ocp4 = append(tf_variables_ocp4,"ocp4clusters = {")
+		  	}
+		  	case "eks": 
+	   	  	{
+		      tf_variables_eks = append(tf_variables_eks,"eksclusters = {")
+		  	}
 		}
 		
 		tf_variables = append (tf_variables, "nodeconfig = [")
@@ -873,9 +897,16 @@ func create_deployment(config Config) int {
 			tf_variables = append(tf_variables,tf_var_ebs...)
 			tf_variables = append(tf_variables,"    ]\n  },")
 
-			if config.Platform == "ocp4" {		
-				tf_variables_ocp4 = append(tf_variables_ocp4, "  \""+masternum+"\" = \""+tf_cluster_aws_type+"\",")
-			}
+			switch config.Platform {
+				case "ocp4":
+				{		
+				  tf_variables_ocp4 = append(tf_variables_ocp4, "  \""+masternum+"\" = \""+tf_cluster_aws_type+"\",")
+				}
+				case "eks":
+				{
+				  tf_variables_eks = append(tf_variables_eks, "  \""+masternum+"\" = \""+tf_cluster_aws_type+"\",")
+			  	}
+			}	
 			// loop nodes of cluster, add node name/ip to tf var and write individual cloud-init scripts file
 			for n :=1; n <= Nodes ; n++ {
 				nodenum := strconv.Itoa(n)
@@ -891,10 +922,18 @@ func create_deployment(config Config) int {
 		}
 		tf_variables = append(tf_variables,"]")
 		
-		if config.Platform == "ocp4" {		
-			tf_variables_ocp4 = append(tf_variables_ocp4, "}")
-			tf_variables = append(tf_variables,tf_variables_ocp4...)
-		} 
+		switch config.Platform {
+			case "ocp4": 
+			{		
+			  tf_variables_ocp4 = append(tf_variables_ocp4, "}")
+			  tf_variables = append(tf_variables,tf_variables_ocp4...)
+			} 
+			case "eks":
+			{
+				tf_variables_eks = append(tf_variables_eks, "}")
+				tf_variables = append(tf_variables,tf_variables_eks...)
+			}
+		}
 		write_tf_file(config.Name, ".tfvars",tf_variables)
 		// now run terraform plan & terraform apply
 		fmt.Println(White+"running terraform PLAN"+Reset)
@@ -1041,7 +1080,7 @@ func destroy_deployment(name string) {
 	var errdestroy error
 	var aws_instances []string
 	var aws_volumes []string
-
+	
 	ip := get_ip(config.Name)
 	fmt.Println(White + "Destroying deployment '" + config.Name + "'..." + Reset)
 	if config.Cloud == "awstf" {
@@ -1108,27 +1147,44 @@ func destroy_deployment(name string) {
 			aws_volumes = append(aws_volumes, *i.VolumeId)
 		}
 
-
 		switch config.Platform {
 		case "ocp4":
 			{
-				fmt.Println(White + "Destroying OCP4, wait about 5 minutes (per cluster)..." + Reset)
-				cmd := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, `
-					for i in $(seq 1 ` + config.Clusters + `); do
-				  	ssh master-$i "cd /root/ocp4 ; openshift-install destroy cluster"
-					done
-				`)
-				cmd.Stdout = os.Stdout
-				cmd.Stderr = os.Stderr
-				err = cmd.Run()
-				if (err != nil) { fmt.Println(Yellow + "Failed to destroy OCP4 - please clean up VMs manually: " + err.Error() + Reset) }
+			fmt.Println(White + "Destroying OCP4, wait about 5 minutes (per cluster)..." + Reset)
+			cmd := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, `
+				for i in $(seq 1 ` + config.Clusters + `); do
+			  	ssh master-$i "cd /root/ocp4 ; openshift-install destroy cluster"
+				done
+			`)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			err = cmd.Run()
+			if (err != nil) { fmt.Println(Yellow + "Failed to destroy OCP4 - please clean up VMs manually: " + err.Error() + Reset) }
 			}
 		case "eks": 
 			{
-				// todo
-				// scale down or delete node group & wait for success
+			clusters,_ := strconv.Atoi(config.Clusters)
+			eksclient := eks.NewFromConfig(cfg)
+			fmt.Println("Deleting EKS Nodegroups: (timeout 20min)")
+			for i :=1; i <= clusters ; i++ {
+				nodegroups, err := eksclient.ListNodegroups(context.TODO(), &eks.ListNodegroupsInput{
+					ClusterName: aws.String(fmt.Sprintf("px-deploy-%s-%d",config.Name,i)), 
+				})					
+				if err != nil {
+					fmt.Println("Error retrieving information about EKS Node Groups:")
+					fmt.Println(err)
+					return
+				}
+			
+				wg.Add(len(nodegroups.Nodegroups))
+				for _,nodegroupname := range nodegroups.Nodegroups {
+					//fmt.Printf("Nodegroup %s \n",nodegroupname)	
+					go terminate_and_wait_nodegroup(eksclient, nodegroupname ,fmt.Sprintf("px-deploy-%s-%d",config.Name,i),20)
+				}
 			}
-		case "k8s":
+			wg.Wait()				
+		}
+		default:
 			{
 				// if there are no px clouddrive volumes
 				// terraform will terminate instances
@@ -1143,6 +1199,10 @@ func destroy_deployment(name string) {
 					}
 				}
 		}
+		
+		// delete elb instances & attached SGs (+referncing rules) from VPC
+		delete_elb_instances(config.Aws__Vpc, cfg)
+		
 		// at this point px clouddrive volumes must no longer be attached
 		// as instances are terminated
 		if (len(aws_volumes) > 0 ) {
@@ -1152,7 +1212,6 @@ func destroy_deployment(name string) {
 			fmt.Println("  " + i)
 			_, err = client.DeleteVolume(context.TODO(), &ec2.DeleteVolumeInput{
 				VolumeId: aws.String(i),
-				//DryRun: aws.Bool(true),
 			})
 			if err != nil {
 				fmt.Println("Error deleting Volume:")
@@ -1161,26 +1220,10 @@ func destroy_deployment(name string) {
 			}	
 			}
 		}
-		// Delete any ELB not being created by Terraform
-		fmt.Println(White+"Deleting ELB"+ Reset)
-		cmd := exec.Command("bash", "-c", `
-		aws configure set default.region `+config.Aws_Region+`
 
-		[ "`+config.Aws__Vpc+`" ] || exit
-		for i in $(aws elb describe-load-balancers --query "LoadBalancerDescriptions[].{a:VPCId,b:LoadBalancerName}" --output text | awk '/`+config.Aws__Vpc+`/{print$2}'); do
-		  aws elb delete-load-balancer --load-balancer-name $i
-		done
-		while [ "$(aws elb describe-load-balancers --query "LoadBalancerDescriptions[].VPCId" --output text | grep `+config.Aws__Vpc+`)" ]; do
-		  echo "waiting for ELB to disappear"
-		  sleep 2
-		done
-		`)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		err = cmd.Run()
-		
+
 		fmt.Println(White+"running Terraform PLAN"+ Reset)
-		cmd = exec.Command("terraform","-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan","-destroy", "-input=false", "-out=tfplan", "-var-file",".tfvars")
+		cmd := exec.Command("terraform","-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan","-destroy", "-input=false", "-out=tfplan", "-var-file",".tfvars")
 		cmd.Stderr = os.Stderr
 		err = cmd.Run()
 		if err != nil {
@@ -1346,6 +1389,237 @@ func get_ip(deployment string) string {
 	return strings.TrimSuffix(string(output), "\n")
 }
 
+
+// range thru ELBs of VPC
+// collect list of SGs used by ELBs
+// find SGs referncing those ELB SGs in rules
+// delete those rules first
+// delete ELB SGs
+func delete_elb_instances(vpc string, cfg aws.Config) {
+	var elb_sg_list []string
+
+	elbclient := elasticloadbalancing.NewFromConfig(cfg)
+	ec2client := ec2.NewFromConfig(cfg)
+
+	elb,err := elbclient.DescribeLoadBalancers(context.TODO(), &elasticloadbalancing.DescribeLoadBalancersInput{})
+	if err != nil {
+		fmt.Println("Error retrieving information about ELBs:")
+		fmt.Println(err)
+		return
+	}
+
+	// range thru loadbalancers within VPC
+	// cumulate list of their security groups
+	// delete ELB instance
+	fmt.Printf("Deleting ELBs within VPC\n")
+	for _, i := range elb.LoadBalancerDescriptions {
+		if *i.VPCId == vpc {
+			fmt.Printf("  ELB: %s ", *i.LoadBalancerName)
+			for _, z := range i.SecurityGroups {
+				fmt.Printf(" (attached SG %s)",z)
+				elb_sg_list = append(elb_sg_list,z)
+			}
+			fmt.Printf("\n")
+			wg.Add(1)
+			go delete_and_wait_elb(elbclient,*i.LoadBalancerName)
+		}
+	}
+	wg.Wait()
+	
+	//find other SGs referencing the ELB SGs
+	//delete the referencing rules 
+	// find referencing SGs 
+	fmt.Println(" Deleting SG rules referencing the ELB SGs")
+	sg,err := ec2client.DescribeSecurityGroups(context.TODO(), &ec2.DescribeSecurityGroupsInput{
+		Filters: []types.Filter {
+			{
+				Name:   aws.String("vpc-id"),
+				Values: []string {
+					vpc,
+				},
+			},
+			{
+				Name: aws.String("ip-permission.group-id"),
+				Values: elb_sg_list,
+			},
+		},
+	})
+		
+	if err != nil {
+		fmt.Println("Error retrieving SG references:")
+		fmt.Println(err)
+		return
+	}
+		
+	// range thru referencing SGs, get their rules
+	for _,ref_sg := range sg.SecurityGroups {
+		//fmt.Printf("    referenced by SG %s \n",*ref_sg.GroupId)
+		ref_sg_rules, err := ec2client.DescribeSecurityGroupRules(context.TODO(), &ec2.DescribeSecurityGroupRulesInput{
+			Filters: []types.Filter {
+			{
+				Name: aws.String("group-id"),
+				Values: []string {
+						*ref_sg.GroupId,
+				},
+			},
+			},				
+		})
+
+		if err != nil {
+			fmt.Println("Error retrieving SG rule refs:")
+			fmt.Println(err)
+			return
+		}
+	
+		for _, ref_rule := range ref_sg_rules.SecurityGroupRules {
+			if ref_rule.ReferencedGroupInfo != nil {
+				//fmt.Printf("      rule %s references %s \n", *ref_rule.SecurityGroupRuleId, aws.ToString(ref_rule.ReferencedGroupInfo.GroupId))
+				// if referenced rule is within elb_sg_list, delete it
+				for _,v := range elb_sg_list {
+					if aws.ToString(ref_rule.ReferencedGroupInfo.GroupId) == v {
+						wg.Add(1)	
+						go delete_and_wait_sgrule(ec2client,*ref_rule.GroupId,*ref_rule.SecurityGroupRuleId, *ref_rule.IsEgress)						
+					}
+				}
+			}
+		}
+	}
+	wg.Wait()
+	
+	fmt.Println(" Deleting ELB SGs")
+	for _,v := range elb_sg_list {
+		fmt.Printf("   delete SG %s \n",v)
+		wg.Add(1)
+		go delete_and_wait_sg(ec2client,v)		
+	}
+	wg.Wait()
+	// dont finally wait for SGs to be deleted as terraform VPC destruction will finally wait for it
+}
+
+// delete a elb instance and wait until DescribeLoadBalancer returns Error LoadBalancerNotFound
+// could be moved to waiter as soon as available in aws sdk
+func delete_and_wait_elb(client *elasticloadbalancing.Client, elbName string) {
+	defer wg.Done()
+	_,err := client.DeleteLoadBalancer(context.TODO(), &elasticloadbalancing.DeleteLoadBalancerInput{
+		LoadBalancerName: aws.String(elbName),
+	})
+	if err != nil {
+		fmt.Println("Error deleting ELB:")
+		fmt.Println(err)
+		return
+	}
+
+	deleted := false
+	for deleted != true {
+		_,err := client.DescribeLoadBalancers(context.TODO(), &elasticloadbalancing.DescribeLoadBalancersInput{
+			LoadBalancerNames: []string{ elbName, },
+		})
+
+		if err != nil {
+			if strings.Contains(fmt.Sprint(err), "LoadBalancerNotFound") {
+				deleted = true
+			} else {
+				fmt.Println("Error retrieving information about ELB deletion status:")
+				fmt.Println(err)
+				return
+			}
+    	}
+		if !deleted {
+			fmt.Printf("   Wait 5 sec for deletion of ELB %s \n",elbName)
+			time.Sleep(5 * time.Second)
+		}
+	}
+}
+
+func delete_and_wait_sg(client *ec2.Client, sgName string) {
+	defer wg.Done()
+	deleted := false
+	for deleted != true {
+		_, err := client.DeleteSecurityGroup(context.TODO(), &ec2.DeleteSecurityGroupInput{
+		//DryRun: aws.Bool(true),
+		GroupId: aws.String(sgName),
+		})
+					
+		if err != nil {
+			if strings.Contains(fmt.Sprint(err), "DependencyViolation") {
+				fmt.Printf("    wait 5 sec to resolve dependency violation during deletion of %s \n",sgName)
+				time.Sleep(5 * time.Second)
+			} else {
+				fmt.Println("Error deleting SG:")
+				fmt.Println(err)
+				return
+			}
+		} else {
+			deleted = true
+		}
+	}
+}
+
+func delete_and_wait_sgrule(client *ec2.Client, groupId string, ruleId string, isEgress bool) {
+	var err error
+	defer wg.Done()
+
+	if isEgress {
+		fmt.Printf("   delete %s egress rule %s \n", groupId, ruleId)
+		_,err = client.RevokeSecurityGroupEgress(context.TODO(), &ec2.RevokeSecurityGroupEgressInput{
+			//DryRun: aws.Bool(true),
+			GroupId: aws.String(groupId),
+			SecurityGroupRuleIds: []string { ruleId, },
+		})
+	} else {
+		fmt.Printf("   delete %s ingress rule %s \n", groupId, ruleId)
+		_,err = client.RevokeSecurityGroupIngress(context.TODO(), &ec2.RevokeSecurityGroupIngressInput{
+			//DryRun: aws.Bool(true),
+			GroupId: aws.String(groupId),
+			SecurityGroupRuleIds: []string { ruleId, },
+		})
+	}
+	
+	if err != nil {
+		fmt.Println("Error deleting SG rule:")
+		fmt.Println(err)
+		return
+	}	
+
+
+	// check if security rule is deleted in API
+	// to be replaced by a waiter as soon as implemented in AWS SDK
+	deleted := false
+	for deleted != true {
+		sg_rules, err := client.DescribeSecurityGroupRules(context.TODO(), &ec2.DescribeSecurityGroupRulesInput{
+			Filters: []types.Filter {
+			{
+				Name: aws.String("group-id"),
+				Values: []string {
+						groupId,
+				},
+			},
+			{
+				Name: aws.String("security-group-rule-id"),
+				Values: []string {
+						ruleId,
+				},
+			},
+			},				
+		})
+
+		if err != nil {
+			fmt.Println("Error retrieving SG rule to check deletion status:")
+			fmt.Println(err)
+			return
+		}
+
+		if len(sg_rules.SecurityGroupRules)==0 {
+			deleted = true
+		}
+		
+		if !deleted {
+			fmt.Printf("   Wait 5 sec for deletion of SG rule %s (%s) \n", ruleId, groupId)
+			time.Sleep(5 * time.Second)
+		}
+	}
+}
+
 func terminate_and_wait_ec2(client *ec2.Client,  instanceID string, timeout_min time.Duration) {
 	defer wg.Done()
 
@@ -1380,6 +1654,36 @@ func terminate_and_wait_ec2(client *ec2.Client,  instanceID string, timeout_min 
 		},
 		},
 		
+	}
+				
+	maxWaitTime := timeout_min * time.Minute
+	err = waiter.Wait(context.TODO(), params, maxWaitTime)  
+	if err != nil {
+		fmt.Println("waiter error:", err)
+		return 
+	}
+}
+
+func terminate_and_wait_nodegroup(eksclient *eks.Client,  nodegroupName string, clusterName string, timeout_min time.Duration) {
+	defer wg.Done()
+
+	fmt.Printf("  %s \n",nodegroupName)
+	_, err := eksclient.DeleteNodegroup(context.TODO(), &eks.DeleteNodegroupInput{
+		ClusterName: aws.String(clusterName),
+		NodegroupName: aws.String(nodegroupName),
+	})
+	
+	if err != nil {
+		fmt.Println("error deleting EKS nodegroup:")
+		fmt.Println(err)
+		return
+	}
+				
+	waiter := eks.NewNodegroupDeletedWaiter(eksclient)
+				
+	params := &eks.DescribeNodegroupInput {
+		ClusterName: aws.String(clusterName),
+		NodegroupName: aws.String(nodegroupName),		
 	}
 				
 	maxWaitTime := timeout_min * time.Minute
