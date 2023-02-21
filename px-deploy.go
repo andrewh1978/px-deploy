@@ -1429,7 +1429,7 @@ func delete_elb_instances(vpc string, cfg aws.Config) {
 	//find other SGs referencing the ELB SGs
 	//delete the referencing rules 
 	// find referencing SGs 
-	fmt.Println("Deleting SG rules referencing the ELB SGs")
+	fmt.Println(" Deleting SG rules referencing the ELB SGs")
 	sg,err := ec2client.DescribeSecurityGroups(context.TODO(), &ec2.DescribeSecurityGroupsInput{
 		Filters: []types.Filter {
 			{
@@ -1486,9 +1486,9 @@ func delete_elb_instances(vpc string, cfg aws.Config) {
 	}
 	wg.Wait()
 	
-	fmt.Println("Deleting ELB SGs")
+	fmt.Println(" Deleting ELB SGs")
 	for _,v := range elb_sg_list {
-		fmt.Printf("  delete SG %s \n",v)
+		fmt.Printf("   delete SG %s \n",v)
 		wg.Add(1)
 		go delete_and_wait_sg(ec2client,v)		
 	}
@@ -1525,7 +1525,7 @@ func delete_and_wait_elb(client *elasticloadbalancing.Client, elbName string) {
 			}
     	}
 		if !deleted {
-			fmt.Printf("  Wait 5 sec for deletion of ELB %s \n",elbName)
+			fmt.Printf("   Wait 5 sec for deletion of ELB %s \n",elbName)
 			time.Sleep(5 * time.Second)
 		}
 	}
@@ -1560,14 +1560,14 @@ func delete_and_wait_sgrule(client *ec2.Client, groupId string, ruleId string, i
 	defer wg.Done()
 
 	if isEgress {
-		fmt.Printf("  delete %s egress rule %s \n", groupId, ruleId)
+		fmt.Printf("   delete %s egress rule %s \n", groupId, ruleId)
 		_,err = client.RevokeSecurityGroupEgress(context.TODO(), &ec2.RevokeSecurityGroupEgressInput{
 			//DryRun: aws.Bool(true),
 			GroupId: aws.String(groupId),
 			SecurityGroupRuleIds: []string { ruleId, },
 		})
 	} else {
-		fmt.Printf("  delete %s ingress rule %s \n", groupId, ruleId)
+		fmt.Printf("   delete %s ingress rule %s \n", groupId, ruleId)
 		_,err = client.RevokeSecurityGroupIngress(context.TODO(), &ec2.RevokeSecurityGroupIngressInput{
 			//DryRun: aws.Bool(true),
 			GroupId: aws.String(groupId),
@@ -1614,7 +1614,7 @@ func delete_and_wait_sgrule(client *ec2.Client, groupId string, ruleId string, i
 		}
 		
 		if !deleted {
-			fmt.Printf("  Wait 5 sec for deletion of SG rule %s (%s) \n", ruleId, groupId)
+			fmt.Printf("   Wait 5 sec for deletion of SG rule %s (%s) \n", ruleId, groupId)
 			time.Sleep(5 * time.Second)
 		}
 	}
