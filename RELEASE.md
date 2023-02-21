@@ -1,3 +1,11 @@
+# 4.17
+
+## Improvements
+ * awstf EKS Terraform implemented
+
+## Fixes
+ * Fix petclinic replication and io_profile
+
 # 4.16
 
 ## Improvements
