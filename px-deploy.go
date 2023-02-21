@@ -697,12 +697,12 @@ func create_deployment(config Config) int {
 		switch config.Platform {
 		  	case "ocp4": 
 		  	{
-		  	  exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/ocp4.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
-			  exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/ocp4-install-config.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+		  	  exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/ocp4/ocp4.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+			  exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/ocp4/ocp4-install-config.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
 		  	}
 		  	case "eks": 
 		  	{
-			  exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/eks.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+			  exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/eks/eks.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
 		  	} 			
 		}
 		// prepare ENV variables for node/master scripts
