@@ -11,7 +11,7 @@ terraform {
       source = "hashicorp/null"
     }
     tls = {
-      source = "hashicop/tls"
+      source = "hashicorp/tls"
     }
   }
 }
