@@ -67,6 +67,7 @@ type Config struct {
 	Vsphere_Password         string
 	Vsphere_Template         string
 	Vsphere_Datastore        string
+	Vsphere_Datacenter       string
 	Vsphere_Folder           string
 	Vsphere_Disks            string
 	Vsphere_Network          string
@@ -1702,6 +1703,8 @@ func vsphere_init() {
 		die("Must define Vsphere_Compute_Resource")
 	} else if config.Vsphere_Resource_Pool == "" {
 		die("Must define Vsphere_Resource_Pool")
+	} else if config.Vsphere_Datacenter == "" {
+			die("Must define Vsphere_Datacenter")
 	} else if config.Vsphere_User == "" {
 		die("Must define Vsphere_User")
 	} else if config.Vsphere_Password == "" {
@@ -1723,6 +1726,7 @@ func vsphere_init() {
 	os.Setenv("vsphere_template_dir", vsphere_template_dir)
 	os.Setenv("vsphere_template_base", vsphere_template_base)
 	os.Setenv("vsphere_datastore", config.Vsphere_Datastore)
+	os.Setenv("vsphere_datacenter", config.Vsphere_Datacenter)
 	os.Setenv("vsphere_network", config.Vsphere_Network)
 	syscall.Exec("/vsphere-init.sh", []string{}, os.Environ())
 }

@@ -151,6 +151,7 @@ The `defaults.yml` file sets a number of deployment variables:
  * `vsphere_user` - user with which to provision VMs
  * `vsphere_password` - password
  * `vsphere_template` - full path to CentOS 7 template
+ * `vsphere_datacenter` - vcenter datacenter
  * `vsphere_datastore` - datastore prefix
  * `vsphere_folder` - folder for vSphere VMs
  * `vsphere_disks` - similar to aws_ebs, for example: `"20 30"` (NOTE: these are not provisioned as static block devices, but they are used as clouddrives)

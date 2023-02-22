@@ -28,6 +28,7 @@ azure_disks: "50"
 vsphere_host: XXX
 vsphere_compute_resource: XXX
 vsphere_resource_pool: XXX
+vsphere_datacenter: XXX
 vsphere_user: XXX
 vsphere_password: XXX
 vsphere_template: XXX
