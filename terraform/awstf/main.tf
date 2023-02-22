@@ -24,6 +24,26 @@ data "aws_availability_zones" "available" {
 	state = "available"
 }
 
+data "aws_ami" "centos" {
+  owners = ["679593333241"]
+  include_deprecated = true  
+  most_recent = true
+  filter {
+    name   = "name"
+    values = ["CentOS Linux 7 x86_64 HVM EBS*"]
+  }
+   
+  filter {
+	name = "architecture"
+	values = ["x86_64"]
+  }
+  
+  filter {
+	name = "root-device-type"
+	values = ["ebs"]
+  }
+}
+
 resource "tls_private_key" "ssh" {
 	algorithm = "RSA" 
 	rsa_bits  = 2048
@@ -202,7 +222,7 @@ locals {
 
 resource "aws_instance" "node" {
 	for_each 					=	{for server in local.instances: server.instance_name =>  server}
-	ami 						= 	var.aws_ami_image
+	ami 						= 	data.aws_ami.centos.id
 	instance_type				=	each.value.instance_type
 	vpc_security_group_ids 		=	[aws_security_group.sg_px-deploy.id]
 	subnet_id					=	aws_subnet.subnet[each.value.cluster - 1].id
@@ -281,7 +301,7 @@ resource "local_file" "cloud-init" {
 		tpl_subnet = aws_subnet.subnet[each.value.cluster - 1].id,
 		tpl_gw = aws_internet_gateway.igw.id,
 		tpl_routetable = aws_route_table.rt.id,
-		tpl_ami = 	var.aws_ami_image,
+		tpl_ami = 	data.aws_ami.centos.id,
 		tpl_cluster = each.value.cluster
 		}	
 	)
@@ -295,7 +315,7 @@ resource "local_file" "aws-returns" {
 		tpl_sg = aws_security_group.sg_px-deploy.id,
 		tpl_gw = aws_internet_gateway.igw.id,
 		tpl_routetable = aws_route_table.rt.id,
-		tpl_ami = 	var.aws_ami_image,
+		tpl_ami = 	data.aws_ami.centos.id,
 		}
 	)
 	filename = "${path.module}/aws-returns-generated.yaml"
