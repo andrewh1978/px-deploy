@@ -2,7 +2,6 @@ apiVersion: stork.libopenstorage.org/v1alpha1
 kind: SchedulePolicy
 metadata:
   name: drpolicy
-  namespace: kube-system
 policy:
   interval:
     intervalMinutes: 1
@@ -19,5 +18,5 @@ spec:
       includeResources: true
       startApplications: false
       namespaces:
-      - default
+      - petclinic
   schedulePolicyName: drpolicy
