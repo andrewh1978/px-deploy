@@ -20,14 +20,6 @@ variable "clusters" {
 	type			= number
 }
 
-
-variable "aws_ami_image" {
-	description = "ami image for ec2 instances"
-	type		= string
-	default 	= "ami-0b850cf02cc00fdc8"
-}
-
-
 variable "nodeconfig" {
 	description		= "list / config of all ec2 instances"
 	default = [{}]
