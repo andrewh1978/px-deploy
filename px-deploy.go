@@ -463,6 +463,8 @@ func main() {
 				config := parse_yaml(file)
 				var region string
 				switch config.Cloud {
+				case "awstf":
+					region = config.Aws_Region
 				case "aws":
 					region = config.Aws_Region
 				case "gcp":
