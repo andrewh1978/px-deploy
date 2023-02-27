@@ -1,8 +1,8 @@
 #!/bin/bash
 
 url=$vsphere_user:$vsphere_password@$vsphere_host
-dc=$(govc find -k -u $url / -type c -name "$vsphere_compute_resource" | cut -f 2 -d /)
-for i in $(govc find -k -u $url / -type m -runtime.powerState poweredOff -dc $dc | grep -v " "); do
+
+for i in $(govc find -k -u $url / -type m -runtime.powerState poweredOff -dc $vsphere_datacenter | grep -v " "); do
   if [ "$(govc vm.info -k -u $url -json $i | jq -r '.VirtualMachines[0].Config.ExtraConfig[] | select(.Key==("pxd.deployment")).Value' 2>/dev/null)" = TEMPLATE ] ; then
     echo Found template $i - please use this one, or delete it and retry.
     exit 1
@@ -17,6 +17,7 @@ cat <<EOF >/vsphere-centos.json
     "vsphere-user": "$vsphere_user",
     "vsphere-password": "$vsphere_password",
     "vsphere-cluster": "$vsphere_compute_resource",
+    "vsphere-datacenter": "$vsphere_datacenter",
     "vsphere-resource-pool": "$vsphere_resource_pool",
     "vsphere-network": "$vsphere_network",
     "vsphere-datastore": "$vsphere_datastore",

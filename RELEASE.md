@@ -1,3 +1,11 @@
+# 4.17.1
+
+## Improvements
+ * Add vsphere_datacenter
+
+## Fixes
+ * awstf AMI for all regions
+
 # 4.17
 
 ## Improvements
