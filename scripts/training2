@@ -19,7 +19,9 @@ EOF
   done
 fi
 
-while ! (cat /root/.kube/config | ssh master-1 "su -l training$cluster -c 'cat >.kube/config'"); do
+while :; do
   echo trying to copy kubeconfig
+  cat /root/.kube/config | ssh master-1 "su -l training$cluster -c 'cat >.kube/config' && exit 22"
+  [ $? -eq 22 ] && break
   sleep 2
 done
