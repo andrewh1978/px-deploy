@@ -679,23 +679,23 @@ func create_deployment(config Config) int {
 			die(err.Error())
 		}
 		//maybe there is a better way to copy templates to working dir ?
-		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/main.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
-		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/variables.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
-		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/cloud-init.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
-		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/aws-returns.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+		exec.Command("cp", "-a", `/px-deploy/terraform/awstf/main.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+		exec.Command("cp", "-a", `/px-deploy/terraform/awstf/variables.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+		exec.Command("cp", "-a", `/px-deploy/terraform/awstf/cloud-init.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+		exec.Command("cp", "-a", `/px-deploy/terraform/awstf/aws-returns.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
 		// also copy terraform modules
-		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/.terraform`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
-		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/.terraform.lock.hcl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+		exec.Command("cp", "-a", `/px-deploy/terraform/awstf/.terraform`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+		exec.Command("cp", "-a", `/px-deploy/terraform/awstf/.terraform.lock.hcl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
 		
 		switch config.Platform {
 		  	case "ocp4": 
 		  	{
-		  	  exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/ocp4/ocp4.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
-			  exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/ocp4/ocp4-install-config.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+		  	  exec.Command("cp", "-a", `/px-deploy/terraform/awstf/ocp4/ocp4.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+			  exec.Command("cp", "-a", `/px-deploy/terraform/awstf/ocp4/ocp4-install-config.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
 		  	}
 		  	case "eks": 
 		  	{
-			  exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/eks/eks.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+			  exec.Command("cp", "-a", `/px-deploy/terraform/awstf/eks/eks.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
 		  	} 			
 		}
 		

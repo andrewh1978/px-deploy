@@ -8,8 +8,7 @@ WHITE='\033[0;37m'
 NC='\033[0m'
 
 echo -e ${BLUE}Setting up installation container
-curl -s https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo >/etc/yum.repos.d/terraform-repo.repo
-yum install -y git docker terraform-1.3.7 >&/dev/null
+yum install -y git docker >&/dev/null
 echo Cloning repo
 git clone https://github.com/andrewh1978/px-deploy >&/dev/null
 cd px-deploy
@@ -18,13 +17,9 @@ echo Building container
 docker build -t px-deploy . >&/dev/null
 mkdir -p /.px-deploy/{keys,deployments,kubeconfig,tf-deployments}
 time=$(date +%s)
-for i in scripts templates assets terraform defaults.yml; do
+for i in scripts templates assets defaults.yml; do
   [ -e /.px-deploy/$i ] && echo Backing up $home/.px-deploy/$i to $home/.px-deploy/$i.$time && mv /.px-deploy/$i /.px-deploy/$i.$time
   cp -r $i /.px-deploy
-done
-
-for d in /.px-deploy/terraform/*/; do
-  terraform -chdir=$d init
 done
 
 echo
