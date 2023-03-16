@@ -16,7 +16,11 @@ git checkout $(cat VERSION)
 echo Building container
 docker build -t px-deploy . >&/dev/null
 mkdir -p /.px-deploy/{keys,deployments,kubeconfig,tf-deployments}
+
+#remove remainders of terraform (outside container)
+#*** can be removed after july 2023***
 rm -rf /.px-deploy/terraform*
+
 time=$(date +%s)
 for i in scripts templates assets defaults.yml; do
   [ -e /.px-deploy/$i ] && echo Backing up $home/.px-deploy/$i to $home/.px-deploy/$i.$time && mv /.px-deploy/$i /.px-deploy/$i.$time
