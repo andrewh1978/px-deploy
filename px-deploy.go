@@ -1028,6 +1028,15 @@ func destroy_deployment(name string) {
 		switch config.Platform {
 		case "ocp4":
 			{
+			
+			clusters,_ := strconv.Atoi(config.Clusters)
+			fmt.Println("Running pre-delete scripts on all master nodes. Output will be mixed")
+			for i :=1; i <= clusters ; i++ {
+				wg.Add(1)
+				go run_script_predelete(config.Cloud,config.Name, fmt.Sprintf("master-%v-1",i))
+			}
+			wg.Wait()
+
 			fmt.Println(White + "Destroying OCP4, wait about 5 minutes (per cluster)..." + Reset)
 			cmd := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, `
 				for i in $(seq 1 ` + config.Clusters + `); do
@@ -1066,6 +1075,15 @@ func destroy_deployment(name string) {
 			{
 				// if there are no px clouddrive volumes
 				// terraform will terminate instances
+				// otherwise terminate instances to enable volume deletion
+				clusters,_ := strconv.Atoi(config.Clusters)
+				fmt.Println("Running pre-delete scripts on all master nodes. Output will be mixed")
+				for i :=1; i <= clusters ; i++ {
+					wg.Add(1)
+					go run_script_predelete(config.Cloud,config.Name, fmt.Sprintf("master-%v-1",i))
+				}
+				wg.Wait()
+								
 				if len(aws_volumes) > 0 {
 					fmt.Println("Waiting for termination of instances: (timeout 5min)")
 					wg.Add(len(aws_instances))
@@ -1267,6 +1285,20 @@ func get_ip(deployment string) string {
 	return strings.TrimSuffix(string(output), "\n")
 }
 
+func run_script_predelete(confCloud string, confName string, confNode string) {
+	defer wg.Done()
+	ip := get_node_ip(confName, confNode)
+	fmt.Printf("Running pre-delete scripts on %v (%v)\n",confNode,ip)
+	
+	cmd := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+confCloud+"."+confName, "root@"+ip, `
+		for i in /px-deploy/script-delete/*.sh; do bash $i ;done
+	`)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	if (err != nil) { fmt.Println(Yellow + "Failed to run pre-delete script:" + err.Error() + Reset) }
+
+}
 
 // range thru ELBs of VPC
 // collect list of SGs used by ELBs
@@ -1622,6 +1654,9 @@ func write_nodescripts(config Config) {
 	// prepare common cloud-init script for all master nodes
 	tf_master_scripts = []string{"all-common",config.Platform+"-common","all-master",config.Platform+"-master"}
 	tf_common_master_script = append(tf_common_master_script,"#!/bin/bash\n"...)
+	tf_common_master_script = append(tf_common_master_script,"mkdir /px-deploy\n"...)
+	tf_common_master_script = append(tf_common_master_script,"mkdir /px-deploy/platform-delete\n"...)
+	tf_common_master_script = append(tf_common_master_script,"mkdir /px-deploy/script-delete\n"...)
 	tf_common_master_script = append(tf_common_master_script,"mkdir /var/log/px-deploy\n"...)
 	tf_common_master_script = append(tf_common_master_script,"mkdir /var/log/px-deploy/completed\n"...)
 	tf_common_master_script = append(tf_common_master_script,"touch /var/log/px-deploy/completed/tracking\n"...)
