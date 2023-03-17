@@ -2,6 +2,11 @@ dnf install -y docker python3-pip epel-release
 dnf install -y jq
 systemctl enable --now docker
 pip3 install awscli
+
+curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
+chmod 700 get_helm.sh
+HELM_INSTALL_DIR=/usr/bin ./get_helm.sh
+
 ln -s /usr/local/bin/aws /usr/bin/aws
 eval $(ssh-agent)
 cd /tmp
@@ -29,6 +34,8 @@ sg=$(cat terraform.cluster.tfstate | jq -r '.resources[] | select(.name==("worke
 aws configure set default.region $aws_region
 aws ec2 authorize-security-group-ingress --group-id $sg --protocol tcp --port 17001-17022 --cidr 0.0.0.0/0
 aws ec2 authorize-security-group-ingress --group-id $sg --protocol udp --port 17001-17022 --cidr 0.0.0.0/0
+
+echo "cd /root/ocp4 ; openshift-install destroy cluster" >> /px-deploy/platform-delete/ocp4.sh
 
 URL=$(grep 'Access the OpenShift web-console' /root/ocp4/.openshift_install.log |cut -d\" -f4 | cut -d: -f2-)
 echo "url $URL" >> /var/log/px-deploy/completed/tracking

@@ -1030,27 +1030,43 @@ func destroy_deployment(name string) {
 			{
 			
 			clusters,_ := strconv.Atoi(config.Clusters)
-			fmt.Println("Running pre-delete scripts on all master nodes. Output will be mixed")
+			fmt.Println("Running pre-delete scripts on all master nodes. Output is mixed")
 			for i :=1; i <= clusters ; i++ {
 				wg.Add(1)
-				go run_script_predelete(config.Cloud,config.Name, fmt.Sprintf("master-%v-1",i))
+				go run_predelete(config.Cloud,config.Name, fmt.Sprintf("master-%v-1",i),"script")
 			}
 			wg.Wait()
+			fmt.Println("pre-delete scripts done")
 
-			fmt.Println(White + "Destroying OCP4, wait about 5 minutes (per cluster)..." + Reset)
-			cmd := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, `
-				for i in $(seq 1 ` + config.Clusters + `); do
-			  	ssh master-$i "cd /root/ocp4 ; openshift-install destroy cluster"
-				done
-			`)
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-			err = cmd.Run()
-			if (err != nil) { fmt.Println(Yellow + "Failed to destroy OCP4 - please clean up VMs manually: " + err.Error() + Reset) }
+			fmt.Println(White + "Destroying OCP4 cluster(s), wait about 5 minutes (per cluster)... Output is mixed" + Reset)
+			for i :=1; i <= clusters ; i++ {
+				wg.Add(1)
+				go run_predelete(config.Cloud,config.Name, fmt.Sprintf("master-%v-1",i),"platform")
+			}
+			wg.Wait()
+			fmt.Println("OCP4 cluster delete done")
+			//cmd := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, `
+			//	for i in $(seq 1 ` + config.Clusters + `); do
+			//  	ssh master-$i "cd /root/ocp4 ; openshift-install destroy cluster"
+			//	done
+			//`)
+			//cmd.Stdout = os.Stdout
+			//cmd.Stderr = os.Stderr
+			//err = cmd.Run()
+			//if (err != nil) { fmt.Println(Yellow + "Failed to destroy OCP4 - please clean up VMs manually: " + err.Error() + Reset) }
 			}
 		case "eks": 
 			{
 			clusters,_ := strconv.Atoi(config.Clusters)
+			
+			fmt.Println("Running pre-delete scripts on all master nodes. Output will be mixed")
+				for i :=1; i <= clusters ; i++ {
+					wg.Add(1)
+					go run_predelete(config.Cloud,config.Name, fmt.Sprintf("master-%v-1",i),"script")
+				}
+			wg.Wait()
+			fmt.Println("pre-delete scripts done")
+
 			eksclient := eks.NewFromConfig(cfg)
 			fmt.Println("Deleting EKS Nodegroups: (timeout 20min)")
 			for i :=1; i <= clusters ; i++ {
@@ -1080,10 +1096,11 @@ func destroy_deployment(name string) {
 				fmt.Println("Running pre-delete scripts on all master nodes. Output will be mixed")
 				for i :=1; i <= clusters ; i++ {
 					wg.Add(1)
-					go run_script_predelete(config.Cloud,config.Name, fmt.Sprintf("master-%v-1",i))
+					go run_predelete(config.Cloud,config.Name, fmt.Sprintf("master-%v-1",i), "script")
 				}
 				wg.Wait()
-								
+				fmt.Println("pre-delete scripts done")
+
 				if len(aws_volumes) > 0 {
 					fmt.Println("Waiting for termination of instances: (timeout 5min)")
 					wg.Add(len(aws_instances))
@@ -1285,13 +1302,13 @@ func get_ip(deployment string) string {
 	return strings.TrimSuffix(string(output), "\n")
 }
 
-func run_script_predelete(confCloud string, confName string, confNode string) {
+func run_predelete(confCloud string, confName string, confNode string, confPath string) {
 	defer wg.Done()
 	ip := get_node_ip(confName, confNode)
 	fmt.Printf("Running pre-delete scripts on %v (%v)\n",confNode,ip)
 	
 	cmd := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+confCloud+"."+confName, "root@"+ip, `
-		for i in /px-deploy/script-delete/*.sh; do bash $i ;done
+		for i in /px-deploy/`+confPath+`-delete/*.sh; do bash $i ;done
 	`)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
