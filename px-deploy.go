@@ -1091,7 +1091,7 @@ func destroy_deployment(name string) {
 				}
 				wg.Wait()
 				fmt.Println("pre-delete scripts done")
-
+die("ende")
 				if len(aws_volumes) > 0 {
 					fmt.Println("Waiting for termination of instances: (timeout 5min)")
 					wg.Add(len(aws_instances))
@@ -1299,7 +1299,7 @@ func run_predelete(confCloud string, confName string, confNode string, confPath 
 	fmt.Printf("Running pre-delete scripts on %v (%v)\n",confNode,ip)
 	
 	cmd := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+confCloud+"."+confName, "root@"+ip, `
-		for i in /px-deploy/`+confPath+`-delete/*.sh; do bash $i ;done
+		for i in /px-deploy/`+confPath+`-delete/*.sh; do bash $i ;done; exit 0
 	`)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
