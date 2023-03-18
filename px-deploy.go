@@ -1091,7 +1091,6 @@ func destroy_deployment(name string) {
 				}
 				wg.Wait()
 				fmt.Println("pre-delete scripts done")
-die("ende")
 				if len(aws_volumes) > 0 {
 					fmt.Println("Waiting for termination of instances: (timeout 5min)")
 					wg.Add(len(aws_instances))
