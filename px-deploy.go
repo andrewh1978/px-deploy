@@ -1044,16 +1044,7 @@ func destroy_deployment(name string) {
 				go run_predelete(config.Cloud,config.Name, fmt.Sprintf("master-%v-1",i),"platform")
 			}
 			wg.Wait()
-			fmt.Println("OCP4 cluster delete done")
-			//cmd := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, `
-			//	for i in $(seq 1 ` + config.Clusters + `); do
-			//  	ssh master-$i "cd /root/ocp4 ; openshift-install destroy cluster"
-			//	done
-			//`)
-			//cmd.Stdout = os.Stdout
-			//cmd.Stderr = os.Stderr
-			//err = cmd.Run()
-			//if (err != nil) { fmt.Println(Yellow + "Failed to destroy OCP4 - please clean up VMs manually: " + err.Error() + Reset) }
+			fmt.Println("OCP4 cluster delete done")			
 			}
 		case "eks": 
 			{
