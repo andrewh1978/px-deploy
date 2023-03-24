@@ -679,23 +679,23 @@ func create_deployment(config Config) int {
 			die(err.Error())
 		}
 		//maybe there is a better way to copy templates to working dir ?
-		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/main.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
-		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/variables.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
-		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/cloud-init.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
-		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/aws-returns.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+		exec.Command("cp", "-a", `/px-deploy/terraform/awstf/main.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+		exec.Command("cp", "-a", `/px-deploy/terraform/awstf/variables.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+		exec.Command("cp", "-a", `/px-deploy/terraform/awstf/cloud-init.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+		exec.Command("cp", "-a", `/px-deploy/terraform/awstf/aws-returns.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
 		// also copy terraform modules
-		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/.terraform`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
-		exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/.terraform.lock.hcl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+		exec.Command("cp", "-a", `/px-deploy/terraform/awstf/.terraform`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+		exec.Command("cp", "-a", `/px-deploy/terraform/awstf/.terraform.lock.hcl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
 		
 		switch config.Platform {
 		  	case "ocp4": 
 		  	{
-		  	  exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/ocp4/ocp4.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
-			  exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/ocp4/ocp4-install-config.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+		  	  exec.Command("cp", "-a", `/px-deploy/terraform/awstf/ocp4/ocp4.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+			  exec.Command("cp", "-a", `/px-deploy/terraform/awstf/ocp4/ocp4-install-config.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
 		  	}
 		  	case "eks": 
 		  	{
-			  exec.Command("cp", "-a", `/px-deploy/.px-deploy/terraform/awstf/eks/eks.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+			  exec.Command("cp", "-a", `/px-deploy/terraform/awstf/eks/eks.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
 		  	} 			
 		}
 		
@@ -1028,20 +1028,36 @@ func destroy_deployment(name string) {
 		switch config.Platform {
 		case "ocp4":
 			{
-			fmt.Println(White + "Destroying OCP4, wait about 5 minutes (per cluster)..." + Reset)
-			cmd := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, `
-				for i in $(seq 1 ` + config.Clusters + `); do
-			  	ssh master-$i "cd /root/ocp4 ; openshift-install destroy cluster"
-				done
-			`)
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-			err = cmd.Run()
-			if (err != nil) { fmt.Println(Yellow + "Failed to destroy OCP4 - please clean up VMs manually: " + err.Error() + Reset) }
+			
+			clusters,_ := strconv.Atoi(config.Clusters)
+			fmt.Println("Running pre-delete scripts on all master nodes. Output is mixed")
+			for i :=1; i <= clusters ; i++ {
+				wg.Add(1)
+				go run_predelete(config.Cloud,config.Name, fmt.Sprintf("master-%v-1",i),"script")
+			}
+			wg.Wait()
+			fmt.Println("pre-delete scripts done")
+
+			fmt.Println(White + "Destroying OCP4 cluster(s), wait about 5 minutes (per cluster)... Output is mixed" + Reset)
+			for i :=1; i <= clusters ; i++ {
+				wg.Add(1)
+				go run_predelete(config.Cloud,config.Name, fmt.Sprintf("master-%v-1",i),"platform")
+			}
+			wg.Wait()
+			fmt.Println("OCP4 cluster delete done")			
 			}
 		case "eks": 
 			{
 			clusters,_ := strconv.Atoi(config.Clusters)
+			
+			fmt.Println("Running pre-delete scripts on all master nodes. Output will be mixed")
+				for i :=1; i <= clusters ; i++ {
+					wg.Add(1)
+					go run_predelete(config.Cloud,config.Name, fmt.Sprintf("master-%v-1",i),"script")
+				}
+			wg.Wait()
+			fmt.Println("pre-delete scripts done")
+
 			eksclient := eks.NewFromConfig(cfg)
 			fmt.Println("Deleting EKS Nodegroups: (timeout 20min)")
 			for i :=1; i <= clusters ; i++ {
@@ -1066,6 +1082,15 @@ func destroy_deployment(name string) {
 			{
 				// if there are no px clouddrive volumes
 				// terraform will terminate instances
+				// otherwise terminate instances to enable volume deletion
+				clusters,_ := strconv.Atoi(config.Clusters)
+				fmt.Println("Running pre-delete scripts on all master nodes. Output will be mixed")
+				for i :=1; i <= clusters ; i++ {
+					wg.Add(1)
+					go run_predelete(config.Cloud,config.Name, fmt.Sprintf("master-%v-1",i), "script")
+				}
+				wg.Wait()
+				fmt.Println("pre-delete scripts done")
 				if len(aws_volumes) > 0 {
 					fmt.Println("Waiting for termination of instances: (timeout 5min)")
 					wg.Add(len(aws_instances))
@@ -1267,6 +1292,20 @@ func get_ip(deployment string) string {
 	return strings.TrimSuffix(string(output), "\n")
 }
 
+func run_predelete(confCloud string, confName string, confNode string, confPath string) {
+	defer wg.Done()
+	ip := get_node_ip(confName, confNode)
+	fmt.Printf("Running pre-delete scripts on %v (%v)\n",confNode,ip)
+	
+	cmd := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+confCloud+"."+confName, "root@"+ip, `
+		for i in /px-deploy/`+confPath+`-delete/*.sh; do bash $i ;done; exit 0
+	`)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	if (err != nil) { fmt.Println(Yellow + "Failed to run pre-delete script:" + err.Error() + Reset) }
+
+}
 
 // range thru ELBs of VPC
 // collect list of SGs used by ELBs
@@ -1622,6 +1661,9 @@ func write_nodescripts(config Config) {
 	// prepare common cloud-init script for all master nodes
 	tf_master_scripts = []string{"all-common",config.Platform+"-common","all-master",config.Platform+"-master"}
 	tf_common_master_script = append(tf_common_master_script,"#!/bin/bash\n"...)
+	tf_common_master_script = append(tf_common_master_script,"mkdir /px-deploy\n"...)
+	tf_common_master_script = append(tf_common_master_script,"mkdir /px-deploy/platform-delete\n"...)
+	tf_common_master_script = append(tf_common_master_script,"mkdir /px-deploy/script-delete\n"...)
 	tf_common_master_script = append(tf_common_master_script,"mkdir /var/log/px-deploy\n"...)
 	tf_common_master_script = append(tf_common_master_script,"mkdir /var/log/px-deploy/completed\n"...)
 	tf_common_master_script = append(tf_common_master_script,"touch /var/log/px-deploy/completed/tracking\n"...)
