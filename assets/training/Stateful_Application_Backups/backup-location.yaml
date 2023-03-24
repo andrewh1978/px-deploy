@@ -1,7 +1,7 @@
 apiVersion: stork.libopenstorage.org/v1alpha1
 kind: BackupLocation
 metadata:
-  name: internal-objectstore
+  name: minio
   namespace: backup-lab
   annotations:
     stork.libopenstorage.org/skipresource: "false"
@@ -11,7 +11,7 @@ location:
   path: "portworx"
   s3Config:
     region: default
-    accessKeyID: xxx
-    secretAccessKey: xxx
-    endpoint: "http://xxx:9010"
+    accessKeyID: minio
+    secretAccessKey: minio123
+    endpoint: "http://192.168.1<nn>.101:30221"
     disableSSL: true

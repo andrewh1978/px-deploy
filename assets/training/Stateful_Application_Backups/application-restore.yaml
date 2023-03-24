@@ -5,4 +5,4 @@ metadata:
   namespace: backup-lab
 spec:
   backupName: <INSERT NAME OF BACKUP>
-  backupLocation: internal-objectstore
+  backupLocation: minio

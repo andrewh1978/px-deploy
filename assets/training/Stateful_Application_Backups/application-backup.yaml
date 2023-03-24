@@ -4,7 +4,7 @@ metadata:
   name: postgres-backup
   namespace: backup-lab
 spec:
-  backupLocation: internal-objectstore
+  backupLocation: minio
   namespaces:
   - backup-lab
   reclaimPolicy: Retain

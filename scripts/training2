@@ -1,5 +1,5 @@
 if [ $cluster -eq 1 ]; then
-  dnf install -y epel-release vim-enhanced
+  dnf install -y epel-release vim-enhanced nano
   dnf install -y shellinabox jq
   rm -f /etc/securetty
   sed -i s/4200/443/ /etc/sysconfig/shellinaboxd
