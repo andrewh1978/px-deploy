@@ -696,6 +696,7 @@ func create_deployment(config Config) int {
 		  	case "eks": 
 		  	{
 			  exec.Command("cp", "-a", `/px-deploy/terraform/awstf/eks/eks.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+			  exec.Command("cp", "-a", `/px-deploy/terraform/awstf/eks/eks_run_everywhere.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
 		  	} 			
 		}
 		
@@ -722,6 +723,9 @@ func create_deployment(config Config) int {
 			{
 			  tf_variables = append (tf_variables, "eks_nodes = \"" + config.Nodes + "\"")
 			  config.Nodes="0"
+			  if config.Env["run_everywhere"] != "" {
+				tf_variables = append (tf_variables, "run_everywhere = \"" + strings.Replace(config.Env["run_everywhere"],"'","\\\"", -1) + "\"")
+			  } 
 		  	}
 		}
 
