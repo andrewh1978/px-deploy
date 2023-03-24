@@ -1,0 +1,13 @@
+kubectl exec $POD -n backup-lab -- createdb pxdemo
+
+kubectl exec $POD -n backup-lab -- pgbench -i -s 50 pxdemo
+
+kubectl exec $POD -n backup-lab -- psql pxdemo -c 'select count(*) from pgbench_accounts'
+
+kubectl get backuplocation -n backup-lab
+
+storkctl get backuplocation -n backup-lab
+
+storkctl get applicationbackups -n backup-lab
+
+storkctl get applicationrestores -n backup-lab

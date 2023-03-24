@@ -1,0 +1,9 @@
+kubectl exec $POD -- psql -c 'drop database pxdemo'
+
+kubectl exec $POD -- psql -l
+
+kubectl scale --replicas=0 deployment/postgres
+
+kubectl scale --replicas=1 deployment/postgres
+
+kubectl exec $POD -- psql pxdemo -c 'select count(*) from pgbench_accounts'

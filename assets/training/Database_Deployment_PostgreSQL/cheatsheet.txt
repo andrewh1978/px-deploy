@@ -1,0 +1,7 @@
+kubectl exec $POD -- createdb pxdemo
+
+kubectl exec $POD -- psql -l
+
+kubectl exec $POD -- pgbench -i -s 50 pxdemo
+
+kubectl exec $POD -- psql pxdemo -c 'select count(*) from pgbench_accounts'
