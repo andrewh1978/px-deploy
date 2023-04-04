@@ -1,5 +1,5 @@
 docker run --help | grep -q -- "--platform string" && PLATFORM="--platform=linux/amd64"
-docker run $PLATFORM --rm -i -e home=$HOME -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.px-deploy:/.px-deploy centos:7 <<\EOF
+docker run $PLATFORM --rm -i -e home=$HOME -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.px-deploy:/.px-deploy oraclelinux:8 <<\EOF
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -8,7 +8,7 @@ WHITE='\033[0;37m'
 NC='\033[0m'
 
 echo -e ${BLUE}Setting up installation container
-yum install -y git docker >&/dev/null
+dnf install -y git docker >&/dev/null
 echo Cloning repo
 git clone https://github.com/andrewh1978/px-deploy >&/dev/null
 cd px-deploy
