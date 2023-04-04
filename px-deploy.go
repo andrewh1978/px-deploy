@@ -1270,12 +1270,75 @@ func get_node_ip(deployment string, node string) string {
 
 	switch config.Cloud {
 	case "awstf":
-	{
-		output, _ = exec.Command("bash", "-c", `aws ec2 describe-instances --region `+config.Aws_Region+` --filters "Name=network-interface.vpc-id,Values=`+config.Aws__Vpc+`" "Name=tag:Name,Values=`+node+`" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PublicIpAddress" --output text`).Output()
-	}
+		{
+		// connect to aws API
+		cfg, err := awscfg.LoadDefaultConfig(context.TODO(), awscfg.WithRegion(config.Aws_Region))
+		if err != nil {
+			panic("aws configuration error, " + err.Error())
+		}
+	
+		client := ec2.NewFromConfig(cfg)
+	
+		// get instances in current VPC
+		instances, err := client.DescribeInstances(context.TODO(), &ec2.DescribeInstancesInput{
+			Filters: []types.Filter {
+				{
+					Name:   aws.String("network-interface.vpc-id"),
+					Values: []string {
+						config.Aws__Vpc,
+					},
+				},
+				{
+					Name: aws.String("instance-state-name"),
+					Values: []string {
+							"running",
+					},
+				},
+				{
+					Name:   aws.String("tag:Name"),
+					Values: []string {
+						node,
+					},
+				},
+			},
+		})
+		
+		if err != nil {
+			fmt.Println("Got an error retrieving information about your Amazon EC2 instances:")
+			panic("Error getting IP of instance:"+err.Error())
+		}
+	
+		if len(instances.Reservations) == 1	{
+			if len(instances.Reservations[0].Instances) == 1 {
+				//fmt.Printf(" %v ",*instances.Reservations[0].Instances[0].PublicIpAddress)
+				output = []byte(*instances.Reservations[0].Instances[0].PublicIpAddress)
+			} else {
+				panic(fmt.Sprintf("search for %v public IP returned %v IP Addresses (expect: 1) \n", node, len(instances.Reservations)))
+			}
+			
+		} else {
+			panic(fmt.Sprintf("search for %v returned %v instances (expect: 1)) \n", node, len(instances.Reservations)))
+		}
+		}
+	case "aws":
+		{
+			output, _ = exec.Command("bash", "-c", `aws ec2 describe-instances --region `+config.Aws_Region+` --filters "Name=network-interface.vpc-id,Values=`+config.Aws__Vpc+`" "Name=tag:Name,Values=master-1" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PublicIpAddress" --output text`).Output()
+		}
+	case "gcp":
+		{
+			output, _ = exec.Command("bash", "-c", `gcloud compute instances list --project `+config.Gcp__Project+` --filter="name=('master-1')" --format 'flattened(networkInterfaces[0].accessConfigs[0].natIP)' | tail -1 | cut -f 2 -d " "`).Output()
+		}
+	case "azure":
+		{
+			output, _ = exec.Command("bash", "-c", `az vm show -g `+config.Azure__Group+` -n master-1 -d --query publicIps --output tsv`).Output()
+		}
+	case "vsphere":
+		{
+			var url = config.Vsphere_User + `:` + config.Vsphere_Password + `@` + config.Vsphere_Host
+			output, _ = exec.Command("bash", "-c", `govc vm.info -u '`+url+`' -k -json $(govc find -u '`+url+`' -k / -type m -runtime.powerState poweredOn | grep `+deployment+`-master) | jq -r '.VirtualMachines[0].Guest.IpAddress' 2>/dev/null`).Output()	
+		}
 	}
 	return strings.TrimSuffix(string(output), "\n")
-
 }
 
 func get_ip(deployment string) string {
