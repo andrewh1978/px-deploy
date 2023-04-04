@@ -3,6 +3,12 @@ variable "eks_nodes" {
 	type 		= number
 }
 
+variable "run_everywhere" {
+   description = "content of run_everywhere"
+   type = string
+   default = "echo \"no run_everywhere set\""
+}
+
 variable "eksclusters" {
 	description = "map of clusternumber & aws_type"
 	type 		= map
@@ -295,6 +301,14 @@ resource "aws_eks_node_group" "worker-node-group" {
   }
  }
 
+resource "local_file" "eks_run_everywhere" {
+        content = templatefile("${path.module}/eks_run_everywhere.tpl", {
+                tpl_cmd = var.run_everywhere
+                }
+        )
+        filename = "${path.module}/eks_run_everywhere-generated.yaml"
+}
+
 data "aws_launch_template" "cluster" {
   for_each = var.eksclusters
   name = aws_launch_template.cluster[each.key].name
@@ -324,4 +338,6 @@ resource "aws_launch_template" "cluster" {
       Name = format("%s-%s-%s-node",var.name_prefix,var.config_name, each.key)
     }
   }
+  user_data = base64encode(local_file.eks_run_everywhere.content)
+  key_name =  aws_key_pair.deploy_key.key_name
 }
