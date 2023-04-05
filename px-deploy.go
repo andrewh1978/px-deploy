@@ -1280,7 +1280,7 @@ func aws_get_node_ip(deployment string, node string) string {
 	
 		client := ec2.NewFromConfig(cfg)
 	
-		// get instances in current VPC
+		// get running instances matching node name in current VPC
 		instances, err := client.DescribeInstances(context.TODO(), &ec2.DescribeInstancesInput{
 			Filters: []types.Filter {
 				{
@@ -1311,7 +1311,6 @@ func aws_get_node_ip(deployment string, node string) string {
 	
 		if len(instances.Reservations) == 1	{
 			if len(instances.Reservations[0].Instances) == 1 {
-				//fmt.Printf(" %v ",*instances.Reservations[0].Instances[0].PublicIpAddress)
 				output = []byte(*instances.Reservations[0].Instances[0].PublicIpAddress)
 			} else {
 				// no [or multiple] instances found 
@@ -1334,10 +1333,8 @@ func get_ip(deployment string) string {
 	config := parse_yaml("/px-deploy/.px-deploy/deployments/" + deployment + ".yml")
 	var output []byte
 	if config.Cloud == "aws" {
-		//output, _ = exec.Command("bash", "-c", `aws ec2 describe-instances --region `+config.Aws_Region+` --filters "Name=network-interface.vpc-id,Values=`+config.Aws__Vpc+`" "Name=tag:Name,Values=master-1" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PublicIpAddress" --output text`).Output()
 		aws_get_node_ip(deployment,"master-1")
 	} else if config.Cloud == "awstf" { 
-		//output, _ = exec.Command("bash", "-c", `aws ec2 describe-instances --region `+config.Aws_Region+` --filters "Name=network-interface.vpc-id,Values=`+config.Aws__Vpc+`" "Name=tag:Name,Values=master-1-1" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PublicIpAddress" --output text`).Output()
 		aws_get_node_ip(deployment,"master-1-1")
 	} else if config.Cloud == "gcp" {
 		output, _ = exec.Command("bash", "-c", `gcloud compute instances list --project `+config.Gcp__Project+` --filter="name=('master-1')" --format 'flattened(networkInterfaces[0].accessConfigs[0].natIP)' | tail -1 | cut -f 2 -d " "`).Output()
