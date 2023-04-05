@@ -517,7 +517,7 @@ func main() {
 					}
 					// loop clusters and add master name/ip to tf var
 					for c := 1; c <= Clusters ; c++ {
-						ip = get_node_ip(statusName,fmt.Sprintf("master-%v-1",c))
+						ip = aws_get_node_ip(statusName,fmt.Sprintf("master-%v-1",c))
 						// get content of node tracking file (-> each node will add its entry when finished cloud-init/vagrant scripts)
 						cmd := exec.Command("ssh", "-q", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa." + config.Cloud + "." + config.Name, "root@" + ip, "cat /var/log/px-deploy/completed/tracking")
     					out, err := cmd.CombinedOutput()
@@ -1264,7 +1264,8 @@ EOF
 	fmt.Println(White + "Destroyed." + Reset)
 }
 
-func get_node_ip(deployment string, node string) string {
+// get node ip implementation leveraging API calls
+func aws_get_node_ip(deployment string, node string) string {
 	config := parse_yaml("/px-deploy/.px-deploy/deployments/" + deployment + ".yml")
 	var output []byte
 
@@ -1313,41 +1314,31 @@ func get_node_ip(deployment string, node string) string {
 				//fmt.Printf(" %v ",*instances.Reservations[0].Instances[0].PublicIpAddress)
 				output = []byte(*instances.Reservations[0].Instances[0].PublicIpAddress)
 			} else {
-				panic(fmt.Sprintf("search for %v public IP returned %v IP Addresses (expect: 1) \n", node, len(instances.Reservations)))
+				// no [or multiple] instances found 
+				output = []byte("")
 			}
 			
 		} else {
-			panic(fmt.Sprintf("search for %v returned %v instances (expect: 1)) \n", node, len(instances.Reservations)))
+			// no [or multiple] instances found 
+			output = []byte("")
 		}
-		}
-	case "aws":
-		{
-			output, _ = exec.Command("bash", "-c", `aws ec2 describe-instances --region `+config.Aws_Region+` --filters "Name=network-interface.vpc-id,Values=`+config.Aws__Vpc+`" "Name=tag:Name,Values=master-1" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PublicIpAddress" --output text`).Output()
-		}
-	case "gcp":
-		{
-			output, _ = exec.Command("bash", "-c", `gcloud compute instances list --project `+config.Gcp__Project+` --filter="name=('master-1')" --format 'flattened(networkInterfaces[0].accessConfigs[0].natIP)' | tail -1 | cut -f 2 -d " "`).Output()
-		}
-	case "azure":
-		{
-			output, _ = exec.Command("bash", "-c", `az vm show -g `+config.Azure__Group+` -n master-1 -d --query publicIps --output tsv`).Output()
-		}
-	case "vsphere":
-		{
-			var url = config.Vsphere_User + `:` + config.Vsphere_Password + `@` + config.Vsphere_Host
-			output, _ = exec.Command("bash", "-c", `govc vm.info -u '`+url+`' -k -json $(govc find -u '`+url+`' -k / -type m -runtime.powerState poweredOn | grep `+deployment+`-master) | jq -r '.VirtualMachines[0].Guest.IpAddress' 2>/dev/null`).Output()	
 		}
 	}
 	return strings.TrimSuffix(string(output), "\n")
 }
 
+// get node ip following old naming scheme (master-1)
+// terraform based deployments changed naming to master-1-1
+// this function can be replaced after all clouds run terraform based
 func get_ip(deployment string) string {
 	config := parse_yaml("/px-deploy/.px-deploy/deployments/" + deployment + ".yml")
 	var output []byte
 	if config.Cloud == "aws" {
-		output, _ = exec.Command("bash", "-c", `aws ec2 describe-instances --region `+config.Aws_Region+` --filters "Name=network-interface.vpc-id,Values=`+config.Aws__Vpc+`" "Name=tag:Name,Values=master-1" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PublicIpAddress" --output text`).Output()
+		//output, _ = exec.Command("bash", "-c", `aws ec2 describe-instances --region `+config.Aws_Region+` --filters "Name=network-interface.vpc-id,Values=`+config.Aws__Vpc+`" "Name=tag:Name,Values=master-1" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PublicIpAddress" --output text`).Output()
+		aws_get_node_ip(deployment,"master-1")
 	} else if config.Cloud == "awstf" { 
-		output, _ = exec.Command("bash", "-c", `aws ec2 describe-instances --region `+config.Aws_Region+` --filters "Name=network-interface.vpc-id,Values=`+config.Aws__Vpc+`" "Name=tag:Name,Values=master-1-1" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PublicIpAddress" --output text`).Output()
+		//output, _ = exec.Command("bash", "-c", `aws ec2 describe-instances --region `+config.Aws_Region+` --filters "Name=network-interface.vpc-id,Values=`+config.Aws__Vpc+`" "Name=tag:Name,Values=master-1-1" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PublicIpAddress" --output text`).Output()
+		aws_get_node_ip(deployment,"master-1-1")
 	} else if config.Cloud == "gcp" {
 		output, _ = exec.Command("bash", "-c", `gcloud compute instances list --project `+config.Gcp__Project+` --filter="name=('master-1')" --format 'flattened(networkInterfaces[0].accessConfigs[0].natIP)' | tail -1 | cut -f 2 -d " "`).Output()
 	} else if config.Cloud == "azure" {
@@ -1360,8 +1351,21 @@ func get_ip(deployment string) string {
 }
 
 func run_predelete(confCloud string, confName string, confNode string, confPath string) {
+	var ip string
+
 	defer wg.Done()
-	ip := get_node_ip(confName, confNode)
+	
+	switch confCloud {
+	case "awstf":
+		{
+			ip = aws_get_node_ip(confName, confNode)
+		}
+	default :
+		{
+			panic(fmt.Sprintf("pre_delete not implemented for cloud %v",confCloud))
+		}
+	
+	}
 	fmt.Printf("Running pre-delete scripts on %v (%v)\n",confNode,ip)
 	
 	cmd := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+confCloud+"."+confName, "root@"+ip, `
