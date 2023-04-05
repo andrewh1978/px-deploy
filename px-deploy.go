@@ -1333,9 +1333,9 @@ func get_ip(deployment string) string {
 	config := parse_yaml("/px-deploy/.px-deploy/deployments/" + deployment + ".yml")
 	var output []byte
 	if config.Cloud == "aws" {
-		aws_get_node_ip(deployment,"master-1")
+		output = []byte(aws_get_node_ip(deployment,"master-1"))
 	} else if config.Cloud == "awstf" { 
-		aws_get_node_ip(deployment,"master-1-1")
+		output = []byte(aws_get_node_ip(deployment,"master-1-1"))
 	} else if config.Cloud == "gcp" {
 		output, _ = exec.Command("bash", "-c", `gcloud compute instances list --project `+config.Gcp__Project+` --filter="name=('master-1')" --format 'flattened(networkInterfaces[0].accessConfigs[0].natIP)' | tail -1 | cut -f 2 -d " "`).Output()
 	} else if config.Cloud == "azure" {
