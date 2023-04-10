@@ -1,5 +1,5 @@
 docker run --help | grep -q -- "--platform string" && PLATFORM="--platform=linux/amd64"
-docker run $PLATFORM --rm -i -e home=$HOME -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.px-deploy:/.px-deploy oraclelinux:8 <<\EOF
+docker run $PLATFORM --rm --privileged -i -e home=$HOME -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.px-deploy:/.px-deploy oraclelinux:8 <<\EOF
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
