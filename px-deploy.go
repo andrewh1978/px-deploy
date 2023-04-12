@@ -668,6 +668,7 @@ func create_deployment(config Config) int {
 	
 	var tf_cluster_aws_type string
 	var tf_var_ebs []string
+	var tf_var_tags []string
 	
 	fmt.Println(White + "Provisioning infrastructure..." + Reset)
 	switch config.Cloud {
@@ -712,7 +713,27 @@ func create_deployment(config Config) int {
 			tf_var_ebs = append(tf_var_ebs, "      {\n        ebs_type = \""+entry[0]+"\"\n        ebs_size = \""+entry[1]+"\"\n        ebs_device_name = \"/dev/sd"+string(i+98)+"\"\n      },")
 		}
 		// other node ebs processing happens in cluster/node loop
-						
+		
+		// AWS default tagging
+		tf_var_tags = append(tf_var_tags, "aws_tags = {\n")
+		
+		if config.Aws_Tags != "" {
+			tags := strings.Split(config.Aws_Tags,",")
+			for _,val := range tags {
+				entry := strings.Split(val,"=")
+				tf_var_tags = append(tf_var_tags, "  "+entry[0]+" = \""+entry[1]+"\"\n")
+			}
+		}
+		// get PXDUSER env and apply to tf_variables
+		pxduser = os.Getenv("PXDUSER")
+		if (pxduser != "") {
+			tf_var_tags = append (tf_var_tags, "  px-deploy_username = \"" + pxduser + "\"\n")	
+		} else {
+			tf_var_tags = append (tf_var_tags, "  px-deploy_username = \"unknown\"\n")	
+		}
+		tf_var_tags = append (tf_var_tags, "  px-deploy_name = \""+ config.Name+ "\"\n")	
+		tf_var_tags = append(tf_var_tags, "}\n")
+
 		switch config.Platform {
 		  	case "ocp4": 
 		  	{
@@ -736,11 +757,7 @@ func create_deployment(config Config) int {
 		tf_variables = append (tf_variables, "config_name = \"" + config.Name + "\"")
 		tf_variables = append (tf_variables, "clusters = " + config.Clusters)
 		tf_variables = append (tf_variables, "aws_region = \"" + config.Aws_Region + "\"")
-		// get PXDUSER env and apply to tf_variables
-		pxduser = os.Getenv("PXDUSER")
-		if (pxduser != "") {
-			tf_variables = append (tf_variables, "PXDUSER = \"" + pxduser + "\"")	
-		}
+		
 		switch config.Platform {
 		  	case "ocp4": 
 		  	{		
@@ -816,6 +833,7 @@ func create_deployment(config Config) int {
 				tf_variables = append(tf_variables,tf_variables_eks...)
 			}
 		}
+		tf_variables = append(tf_variables,tf_var_tags...)
 		write_tf_file(config.Name, ".tfvars",tf_variables)
 		// now run terraform plan & terraform apply
 		fmt.Println(White+"running terraform PLAN"+Reset)

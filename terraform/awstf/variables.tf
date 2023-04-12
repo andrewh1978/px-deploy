@@ -4,10 +4,9 @@ variable "name_prefix" {
     default     = "px-deploy"
 }
 
-variable "PXDUSER" {
-	description = "username running the px-deploy command"
-	type = string
-	default = "unknown"
+variable "aws_tags" {
+	description = "user-defined custom aws tags"
+	type 		= map(string)
 }
 
 variable "config_name" {

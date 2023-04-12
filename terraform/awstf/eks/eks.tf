@@ -19,8 +19,6 @@ resource "aws_vpc_dhcp_options" "dhcpopt" {
   domain_name_servers  = ["AmazonProvidedDNS"]
   tags = {
     Name = format("%s-%s-%s",var.name_prefix,var.config_name,"dhcp_opt")
-    px-deploy_name = var.config_name
-    px-deploy_username = var.PXDUSER
   }
 }
 
@@ -40,8 +38,6 @@ resource "aws_nat_gateway" "natgw" {
 
   tags = {
         Name = format("%s-%s-%s",var.name_prefix,var.config_name,"ngw")
-        px-deploy_name = var.config_name
-	px-deploy_username = var.PXDUSER
   }
   depends_on = [aws_internet_gateway.igw]
 }
@@ -54,8 +50,6 @@ resource "aws_subnet" "eks_private1" {
   cidr_block = "192.168.${count.index + 151}.0/24"
   tags = {
     Name = format("%s-%s-eks-private1-%s",var.name_prefix,var.config_name, count.index + 1)
-    px-deploy_name = var.config_name
-    px-deploy_username = var.PXDUSER
     "kubernetes.io/role/internal-elb" = 1
   }
 }
@@ -67,8 +61,6 @@ resource "aws_subnet" "eks_private2" {
   cidr_block = "192.168.${count.index + 181}.0/24"
   tags = {
     Name = format("%s-%s-eks-private2-%s",var.name_prefix,var.config_name, count.index + 1)
-    px-deploy_name = var.config_name
-    px-deploy_username = var.PXDUSER
     "kubernetes.io/role/internal-elb" = 1
   }
 }
@@ -80,8 +72,6 @@ resource "aws_subnet" "eks_private3" {
   cidr_block = "192.168.${count.index + 111}.0/24"
   tags = {
     Name = format("%s-%s-eks-private3-%s",var.name_prefix,var.config_name, count.index + 1)
-    px-deploy_name = var.config_name
-    px-deploy_username = var.PXDUSER
     "kubernetes.io/role/internal-elb" = 1
   }
 }
@@ -94,8 +84,6 @@ resource "aws_subnet" "eks_public2" {
 	cidr_block 				= 	"192.168.${count.index + 11}.0/24"
 	tags = {
 		Name = format("%s-%s-eks-public2-%s",var.name_prefix,var.config_name, count.index + 1)
-    px-deploy_name = var.config_name
-		px-deploy_username = var.PXDUSER
 		"kubernetes.io/role/elb" = 1
 	}
 }
@@ -108,8 +96,6 @@ resource "aws_subnet" "eks_public3" {
 	cidr_block 				= 	"192.168.${count.index + 41}.0/24"
 	tags = {
 		Name = format("%s-%s-eks-public3-%s",var.name_prefix,var.config_name, count.index + 1)
-    px-deploy_name = var.config_name
-		px-deploy_username = var.PXDUSER
 		"kubernetes.io/role/elb" = 1
 	}
 }
@@ -136,8 +122,6 @@ resource "aws_route_table" "rt_sn_private" {
 
   tags = {
     Name = format("%s-%s-eks-private-rt-%s",var.name_prefix,var.config_name, count.index + 1)
-    px-deploy_name = var.config_name
-    px-deploy_username = var.PXDUSER
   }
 }
 
@@ -266,8 +250,6 @@ resource "aws_eks_cluster" "eks" {
   ]
   tags = {
     Name = format("%s-%s-%s",var.name_prefix,var.config_name, each.key)
-    px-deploy_name = var.config_name
-    px-deploy_username = var.PXDUSER
   }
 }
 
@@ -296,8 +278,6 @@ resource "aws_eks_node_group" "worker-node-group" {
   ]
   tags = {
     Name = format("%s-%s-%s",var.name_prefix,var.config_name, each.key)
-    px-deploy_name = var.config_name
-    px-deploy_username = var.PXDUSER
   }
  }
 
@@ -328,15 +308,15 @@ resource "aws_launch_template" "cluster" {
   }
   tag_specifications {
     resource_type = "instance"
-    tags = {
+    tags = merge(var.aws_tags, {
       Name = format("%s-%s-%s-node",var.name_prefix,var.config_name, each.key)
-    }
+    },)
   }
   tag_specifications {
     resource_type = "volume"
-    tags = {
+    tags = merge(var.aws_tags, {
       Name = format("%s-%s-%s-node",var.name_prefix,var.config_name, each.key)
-    }
+    },)
   }
   user_data = base64encode(local_file.eks_run_everywhere.content)
   key_name =  aws_key_pair.deploy_key.key_name
