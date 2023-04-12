@@ -18,6 +18,9 @@ terraform {
 
 provider "aws" {
 	region 	= var.aws_region
+	default_tags {
+		tags = var.aws_tags
+	  }
 }
 
 data "aws_availability_zones" "available" {
@@ -72,8 +75,6 @@ resource "aws_vpc" "vpc" {
 	enable_dns_support		= true
 	tags = {
 		Name = format("%s.%s-%s",var.name_prefix,var.config_name,"vpc")
-        px-deploy_name = var.config_name
-		px-deploy_username = var.PXDUSER
 	}
 }
 
@@ -85,8 +86,6 @@ resource "aws_subnet" "subnet" {
 	cidr_block 				= 	"192.168.${count.index + 101}.0/24"
 	tags = {
 		Name = format("%s-%s-subnet-%s",var.name_prefix,var.config_name, count.index + 1)
-        px-deploy_name = var.config_name
-		px-deploy_username = var.PXDUSER
 		"kubernetes.io/role/elb" = 1
 		}
 }
@@ -95,8 +94,6 @@ resource "aws_internet_gateway" "igw" {
 	vpc_id = aws_vpc.vpc.id
 	tags = {
 		Name = format("%s-%s-%s",var.name_prefix,var.config_name,"igw")
-        px-deploy_name = var.config_name
-		px-deploy_username = var.PXDUSER
 	}
 }
 
@@ -108,8 +105,6 @@ resource "aws_route_table" "rt" {
 	}
 	tags = {
 		Name = format("%s-%s-%s",var.name_prefix,var.config_name,"rt")
-		px-deploy_name = var.config_name
-		px-deploy_username = var.PXDUSER
 	}  
 }
 
@@ -195,8 +190,6 @@ resource "aws_security_group" "sg_px-deploy" {
 		cidr_blocks = ["0.0.0.0/0"]
 		}
 	tags = {
-		px-deploy_name = var.config_name
-		px-deploy_username = var.PXDUSER
 		Name=format("px-deploy-%s",var.config_name)
 		}
 }
@@ -235,8 +228,6 @@ resource "aws_instance" "node" {
 	  	delete_on_termination 	= 	true
 	  	tags					=  	{
 			Name 					= format("%s.%s.%s.%s",var.name_prefix,var.config_name,each.key,"root")
-			px-deploy_name 			= var.config_name
-			px-deploy_username 		= var.PXDUSER
 	  	}
 	}
 	
@@ -247,8 +238,6 @@ resource "aws_instance" "node" {
       		volume_size 		= ebs_block_device.value.ebs_size
       		tags 				= {
 				Name 				= format("%s.%s.%s.ebs%s",var.name_prefix,var.config_name,each.key,ebs_block_device.key)
-				px-deploy_name 		= var.config_name
-				px-deploy_username 	= var.PXDUSER
 			}
       		device_name 		= ebs_block_device.value.ebs_device_name
     	}
@@ -256,8 +245,6 @@ resource "aws_instance" "node" {
 	user_data_base64			= 	base64gzip(local_file.cloud-init[each.key].content)
 	tags 					= {
 								Name = each.key
-								px-deploy_name = var.config_name
-								px-deploy_username = var.PXDUSER
 	}
 
         connection {

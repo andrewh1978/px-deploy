@@ -26,8 +26,6 @@ resource "aws_vpc_dhcp_options" "dhcpopt" {
   domain_name_servers  = ["AmazonProvidedDNS"]
   tags = {
     Name = format("%s-%s-%s",var.name_prefix,var.config_name,"dhcp_opt")
-    px-deploy_name = var.config_name
-    px-deploy_username = var.PXDUSER
   }
 }
 
@@ -47,8 +45,6 @@ resource "aws_nat_gateway" "natgw" {
 
   tags = {
         Name = format("%s-%s-%s",var.name_prefix,var.config_name,"ngw")
-        px-deploy_name = var.config_name
-	px-deploy_username = var.PXDUSER
   }
   depends_on = [aws_internet_gateway.igw]
 }
@@ -61,8 +57,6 @@ resource "aws_subnet" "ocp4_private" {
   cidr_block = "192.168.${count.index + 151}.0/24"
   tags = {
     Name = format("%s-%s-ocp4-private-subnet-%s",var.name_prefix,var.config_name, count.index + 1)
-    px-deploy_name = var.config_name
-    px-deploy_username = var.PXDUSER
   }
 }
 
@@ -76,8 +70,6 @@ resource "aws_route_table" "rt_sn_private" {
 
   tags = {
     Name = format("%s-%s-ocp4-private-rt-%s",var.name_prefix,var.config_name, count.index + 1)
-    px-deploy_name = var.config_name
-    px-deploy_username = var.PXDUSER
   }
 }
 
