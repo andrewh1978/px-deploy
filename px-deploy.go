@@ -715,23 +715,23 @@ func create_deployment(config Config) int {
 		// other node ebs processing happens in cluster/node loop
 		
 		// AWS default tagging
-		tf_var_tags = append(tf_var_tags, "aws_tags = {\n")
+		tf_var_tags = append(tf_var_tags, "aws_tags = {")
 		
 		if config.Aws_Tags != "" {
 			tags := strings.Split(config.Aws_Tags,",")
 			for _,val := range tags {
 				entry := strings.Split(val,"=")
-				tf_var_tags = append(tf_var_tags, "  "+entry[0]+" = \""+entry[1]+"\"\n")
+				tf_var_tags = append(tf_var_tags, "  "+strings.TrimSpace(entry[0])+" = \""+strings.TrimSpace(entry[1])+"\"")
 			}
 		}
 		// get PXDUSER env and apply to tf_variables
 		pxduser = os.Getenv("PXDUSER")
 		if (pxduser != "") {
-			tf_var_tags = append (tf_var_tags, "  px-deploy_username = \"" + pxduser + "\"\n")	
+			tf_var_tags = append (tf_var_tags, "  px-deploy_username = \"" + pxduser + "\"")	
 		} else {
-			tf_var_tags = append (tf_var_tags, "  px-deploy_username = \"unknown\"\n")	
+			tf_var_tags = append (tf_var_tags, "  px-deploy_username = \"unknown\"")	
 		}
-		tf_var_tags = append (tf_var_tags, "  px-deploy_name = \""+ config.Name+ "\"\n")	
+		tf_var_tags = append (tf_var_tags, "  px-deploy_name = \""+ config.Name+ "\"")	
 		tf_var_tags = append(tf_var_tags, "}\n")
 
 		switch config.Platform {
@@ -840,6 +840,7 @@ func create_deployment(config Config) int {
 		cmd := exec.Command("terraform","-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-input=false", "-out=tfplan", "-var-file",".tfvars")
 		cmd.Stderr = os.Stderr
 		err = cmd.Run()
+		die("ende")
 		if err != nil {
 			fmt.Println(Yellow+"ERROR: terraform plan failed. Check validity of terraform scripts"+Reset)
 			die(err.Error())

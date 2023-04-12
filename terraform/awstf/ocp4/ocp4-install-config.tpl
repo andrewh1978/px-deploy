@@ -27,6 +27,9 @@ platform:
   aws:
     region: ${tpl_aws_region}
     userTags:
+%{ for tag_key, tag_value in tpl_aws_tag }
+      ${tag_key} : ${tag_value}
+%{ endfor ~}
       px-deploy_name: ${tpl_configname}-${tpl_cluster}
     subnets:
     - ${tpl_privsubnet}
