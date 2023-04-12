@@ -308,15 +308,15 @@ resource "aws_launch_template" "cluster" {
   }
   tag_specifications {
     resource_type = "instance"
-    tags = {
+    tags = merge(var.aws_tags, {
       Name = format("%s-%s-%s-node",var.name_prefix,var.config_name, each.key)
-    }
+    },)
   }
   tag_specifications {
     resource_type = "volume"
-    tags = {
+    tags = merge(var.aws_tags, {
       Name = format("%s-%s-%s-node",var.name_prefix,var.config_name, each.key)
-    }
+    },)
   }
   user_data = base64encode(local_file.eks_run_everywhere.content)
   key_name =  aws_key_pair.deploy_key.key_name
