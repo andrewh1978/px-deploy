@@ -1,6 +1,3 @@
-// 
-// vpc endpoint auf com.amazonaws.eu-west-1.s3
-
 variable "ocp4_domain" {
 	description = "domain used for ocp4 cluster"
 	type 		= string
@@ -82,13 +79,14 @@ resource "aws_route_table_association" "rta_private" {
 resource "local_file" "ocp4-install-config" {
         for_each = var.ocp4clusters
         content = templatefile("${path.module}/ocp4-install-config.tpl", {
-			tpl_sshkey 	=  tls_private_key.ssh.public_key_openssh  
+			                  tpl_sshkey 	=  tls_private_key.ssh.public_key_openssh  
                         tpl_aws_region  = var.aws_region
                         tpl_ocp4domain  = var.ocp4_domain
                         tpl_ocp4pullsecret = base64decode(var.ocp4_pull_secret)
                         tpl_cluster     = each.key
                         tpl_awstype     = each.value
                         tpl_configname  = var.config_name
+                        tpl_aws_tag     = var.aws_tags
                         tpl_nodes       = var.ocp4_nodes
                         tpl_cidr        = var.aws_cidr_vpc
                         tpl_privsubnet  = aws_subnet.ocp4_private[each.key - 1].id
