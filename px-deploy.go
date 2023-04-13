@@ -840,7 +840,6 @@ func create_deployment(config Config) int {
 		cmd := exec.Command("terraform","-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-input=false", "-out=tfplan", "-var-file",".tfvars")
 		cmd.Stderr = os.Stderr
 		err = cmd.Run()
-		die("ende")
 		if err != nil {
 			fmt.Println(Yellow+"ERROR: terraform plan failed. Check validity of terraform scripts"+Reset)
 			die(err.Error())
