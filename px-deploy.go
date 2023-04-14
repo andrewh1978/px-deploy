@@ -156,8 +156,8 @@ func main() {
 			}
 			config.Name = createName
 			if createCloud != "" {
-				if createCloud != "aws" && createCloud != "awstf" && createCloud != "gcp" && createCloud != "azure" && createCloud != "vsphere" {
-					die("Cloud must be 'awstf', 'aws', 'gcp', 'azure' or 'vsphere' (not '" + createCloud + "')")
+				if createCloud != "aws" && createCloud != "gcp" && createCloud != "azure" && createCloud != "vsphere" {
+					die("Cloud must be 'aws', 'gcp', 'azure' or 'vsphere' (not '" + createCloud + "')")
 				}
 				config.Cloud = createCloud
 			}
@@ -167,8 +167,6 @@ func main() {
 				}
 				switch config.Cloud {
 				case "aws":
-					config.Aws_Region = createRegion
-				case "awstf":
 					config.Aws_Region = createRegion
 				case "gcp":
 					config.Gcp_Region = createRegion
@@ -315,12 +313,9 @@ func main() {
 					die("Postscript '" + config.Post_Script + "' is not valid Bash")
 				}
 			}
-			// enable when ocp4/eks destroy is fixed for awstf
-			if config.Platform == "ocp4" && !(config.Cloud == "awstf") { die("Openshift 4 only supported on AWSTF (not " + config.Cloud + ")") }
-			if config.Platform == "eks" && !(config.Cloud == "awstf") { die("EKS only supported on AWSTF (not " + config.Cloud + ")") }
-			//if config.Platform == "eks" && !(config.Cloud == "aws" || config.Cloud == "awstf") { die("EKS only makes sense with AWS (not " + config.Cloud + ")") }
-			//if config.Platform == "ocp4" && config.Cloud != "aws" { die("Openshift 4 only supported on AWS (not " + config.Cloud + ")") }
-			//if config.Platform == "eks" && config.Cloud != "aws"  { die("EKS only makes sense with AWS (not " + config.Cloud + ")") }
+			
+			if config.Platform == "eks" && !(config.Cloud == "aws") { die("EKS only makes sense with AWS (not " + config.Cloud + ")") }
+			if config.Platform == "ocp4" && config.Cloud != "aws" { die("Openshift 4 only supported on AWS (not " + config.Cloud + ")") }
 			if config.Platform == "gke" && config.Cloud != "gcp" { die("GKE only makes sense with GCP (not " + config.Cloud + ")") }
 			if config.Platform == "aks" && config.Cloud != "azure" { die("AKS only makes sense with Azure (not " + config.Cloud + ")") }
 			y, _ := yaml.Marshal(config)
@@ -340,13 +335,11 @@ func main() {
 			os.Chdir("/px-deploy/vagrant")
 			os.Setenv("deployment", config.Name)
 			
-			// when using awstf everything should be up and running. other clouds now run vagrant
-			if config.Cloud != "awstf" {
+			// when using aws everything should be up and running. other clouds now run vagrant
+			if config.Cloud != "aws" {
 	
 			var provider string
 				switch config.Cloud {
-				case "aws":
-					provider = "aws"
 				case "gcp":
 					provider = "google"
 				case "azure":
@@ -463,8 +456,6 @@ func main() {
 				config := parse_yaml(file)
 				var region string
 				switch config.Cloud {
-				case "awstf":
-					region = config.Aws_Region
 				case "aws":
 					region = config.Aws_Region
 				case "gcp":
@@ -510,7 +501,7 @@ func main() {
 			Nodes, _ := strconv.Atoi(config.Nodes)
 			
 			switch config.Cloud {
-			case "awstf":
+			case "aws":
 				{
 					if (config.Platform == "ocp4") || (config.Platform == "eks") {
 						Nodes = 0
@@ -672,7 +663,7 @@ func create_deployment(config Config) int {
 	
 	fmt.Println(White + "Provisioning infrastructure..." + Reset)
 	switch config.Cloud {
-	case "awstf":
+	case "aws":
 	{
 		// create directory for deployment and copy terraform scripts 
 		err = os.Mkdir("/px-deploy/.px-deploy/tf-deployments/" + config.Name, 0755)
@@ -680,24 +671,24 @@ func create_deployment(config Config) int {
 			die(err.Error())
 		}
 		//maybe there is a better way to copy templates to working dir ?
-		exec.Command("cp", "-a", `/px-deploy/terraform/awstf/main.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
-		exec.Command("cp", "-a", `/px-deploy/terraform/awstf/variables.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
-		exec.Command("cp", "-a", `/px-deploy/terraform/awstf/cloud-init.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
-		exec.Command("cp", "-a", `/px-deploy/terraform/awstf/aws-returns.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+		exec.Command("cp", "-a", `/px-deploy/terraform/aws/main.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+		exec.Command("cp", "-a", `/px-deploy/terraform/aws/variables.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+		exec.Command("cp", "-a", `/px-deploy/terraform/aws/cloud-init.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+		exec.Command("cp", "-a", `/px-deploy/terraform/aws/aws-returns.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
 		// also copy terraform modules
-		exec.Command("cp", "-a", `/px-deploy/terraform/awstf/.terraform`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
-		exec.Command("cp", "-a", `/px-deploy/terraform/awstf/.terraform.lock.hcl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+		exec.Command("cp", "-a", `/px-deploy/terraform/aws/.terraform`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+		exec.Command("cp", "-a", `/px-deploy/terraform/aws/.terraform.lock.hcl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
 		
 		switch config.Platform {
 		  	case "ocp4": 
 		  	{
-		  	  exec.Command("cp", "-a", `/px-deploy/terraform/awstf/ocp4/ocp4.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
-			  exec.Command("cp", "-a", `/px-deploy/terraform/awstf/ocp4/ocp4-install-config.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+		  	  exec.Command("cp", "-a", `/px-deploy/terraform/aws/ocp4/ocp4.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+			  exec.Command("cp", "-a", `/px-deploy/terraform/aws/ocp4/ocp4-install-config.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
 		  	}
 		  	case "eks": 
 		  	{
-			  exec.Command("cp", "-a", `/px-deploy/terraform/awstf/eks/eks.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
-			  exec.Command("cp", "-a", `/px-deploy/terraform/awstf/eks/eks_run_everywhere.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+			  exec.Command("cp", "-a", `/px-deploy/terraform/aws/eks/eks.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+			  exec.Command("cp", "-a", `/px-deploy/terraform/aws/eks/eks_run_everywhere.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
 		  	} 			
 		}
 		
@@ -868,48 +859,6 @@ func create_deployment(config Config) int {
 			fmt.Println(Yellow + "Terraform infrastructure creation done. Please check master/node readiness/credentials using: px-deploy status -n "+config.Name+Reset)
 		}
 	}
-	case "aws":
-		{
-			output, err = exec.Command("bash", "-c", `
-        aws configure set default.region `+config.Aws_Region+`
-        yes | ssh-keygen -q -t rsa -b 2048 -f keys/id_rsa.aws.`+config.Name+` -N ''
-	aws ec2 describe-regions >&/dev/null
-	[ $? -ne 0 ] && echo "Invalid AWS credentials" && exit 1
-        aws ec2 describe-instance-types --instance-types `+config.Aws_Type+`>&/dev/null
-        [ $? -ne 0 ] && echo "Invalid AWS type '`+config.Aws_Type+`' for region '`+config.Aws_Region+`'" && exit 1
-	echo "Provisioning as user $(aws --output text iam get-user --query User.[UserName,UserId] --output text | sed 's/	/(/;s/$/)/')"
-        aws ec2 delete-key-pair --key-name px-deploy.`+config.Name+` >&/dev/null
-        aws ec2 import-key-pair --key-name px-deploy.`+config.Name+` --public-key-material file://keys/id_rsa.aws.`+config.Name+`.pub >&/dev/null
-        _AWS_vpc=$(aws --output text ec2 create-vpc --cidr-block 192.168.0.0/16 --query Vpc.VpcId)
-	[ $? -ne 0 ] && echo "Failed to create VPC in region '`+config.Aws_Region+`'" && exit 1
-        _AWS_subnet=$(aws --output text ec2 create-subnet --vpc-id $_AWS_vpc --cidr-block 192.168.0.0/16 --query Subnet.SubnetId)
-        _AWS_gw=$(aws --output text ec2 create-internet-gateway --query InternetGateway.InternetGatewayId)
-        aws ec2 attach-internet-gateway --vpc-id $_AWS_vpc --internet-gateway-id $_AWS_gw
-        _AWS_routetable=$(aws --output text ec2 create-route-table --vpc-id $_AWS_vpc --query RouteTable.RouteTableId)
-        aws ec2 create-route --route-table-id $_AWS_routetable --destination-cidr-block 0.0.0.0/0 --gateway-id $_AWS_gw >/dev/null
-        aws ec2 associate-route-table  --subnet-id $_AWS_subnet --route-table-id $_AWS_routetable >/dev/null
-        _AWS_sg=$(aws --output text ec2 create-security-group --group-name px-deploy --description "Security group for px-deploy" --vpc-id $_AWS_vpc --query GroupId)
-        aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 22 --cidr 0.0.0.0/0 &
-        aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 80 --cidr 0.0.0.0/0 &
-        aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 443 --cidr 0.0.0.0/0 &
-        aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 2382 --cidr 0.0.0.0/0 &
-        aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 5900 --cidr 0.0.0.0/0 &
-        aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 8080 --cidr 0.0.0.0/0 &
-        aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 8443 --cidr 0.0.0.0/0 &
-        aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol tcp --port 30000-32767 --cidr 0.0.0.0/0 &
-        aws ec2 authorize-security-group-ingress --group-id $_AWS_sg --protocol all --cidr 192.168.0.0/16 &
-        aws ec2 create-tags --resources $_AWS_vpc $_AWS_subnet $_AWS_gw $_AWS_routetable $_AWS_sg --tags Key=px-deploy_name,Value=`+config.Name+` &
-        aws ec2 create-tags --resources $_AWS_vpc --tags Key=Name,Value=px-deploy.`+config.Name+` &
-        _AWS_ami=$(aws --output text ec2 describe-images --include-deprecated --owners 679593333241 --filters Name=name,Values='CentOS Linux 7 x86_64 HVM EBS*' Name=architecture,Values=x86_64 Name=root-device-type,Values=ebs --query 'sort_by(Images, &Name)[-1].ImageId')
-        wait
-        echo aws__vpc: $_AWS_vpc >>deployments/`+config.Name+`.yml
-        echo aws__sg: $_AWS_sg >>deployments/`+config.Name+`.yml
-        echo aws__subnet: $_AWS_subnet >>deployments/`+config.Name+`.yml
-        echo aws__gw: $_AWS_gw >>deployments/`+config.Name+`.yml
-        echo aws__routetable: $_AWS_routetable >>deployments/`+config.Name+`.yml
-        echo aws__ami: $_AWS_ami >>deployments/`+config.Name+`.yml
-      `).CombinedOutput()
-		}
 	case "gcp":
 		{
 			output, _ = exec.Command("bash", "-c", `
@@ -981,9 +930,8 @@ func destroy_deployment(name string) {
 	var aws_instances []string
 	var aws_volumes []string
 	
-	ip := get_ip(config.Name)
 	fmt.Println(White + "Destroying deployment '" + config.Name + "'..." + Reset)
-	if config.Cloud == "awstf" {
+	if config.Cloud == "aws" {
 
 		// connect to aws API
 		cfg, err := awscfg.LoadDefaultConfig(context.TODO(), awscfg.WithRegion(config.Aws_Region))
@@ -1169,79 +1117,6 @@ func destroy_deployment(name string) {
 			}
 		}
 		os.RemoveAll("deployments/" + name)
-	} else if config.Cloud == "aws" {
-		if config.Platform == "ocp4" {
-			fmt.Println(White + "Destroying OCP4, wait about 5 minutes (per cluster)..." + Reset)
-			err := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, `
-				for i in $(seq 1 ` + config.Clusters + `); do
-				  ssh master-$i "cd /root/ocp4 ; openshift-install destroy cluster --log-level=debug"
-				done
-			`).Run()
-			if (err != nil) { fmt.Println(Yellow + "Failed to destroy OCP4 - please clean up VMs manually: " + err.Error() + Reset) }
-		} else if config.Platform == "eks" {
-			fmt.Println(White + "Destroying EKS, wait about 5 minutes (per cluster)..." + Reset)
-			err := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, `
-				for i in $(seq 1 ` + config.Clusters + `); do
-				  ssh master-$i <<\EOF
-				    vpc=$(eksctl utils describe-stacks --region ` + config.Aws_Region + ` --cluster px-deploy-` + config.Name + `-$(hostname | cut -f 2 -d -) | grep vpc- | cut -f 2 -d \")
-				    profile=$(aws ec2 describe-instances --filters "Name=vpc-id,Values=$vpc" --region ` + config.Aws_Region + ` --query Reservations[0].Instances[0].IamInstanceProfile.Arn --output text | cut -f 2 -d /)
-				    instances=$(aws ec2 describe-instances --filters "Name=vpc-id,Values=$vpc" --region ` + config.Aws_Region + ` --query Reservations[].Instances[].InstanceId --output text)
-				    volumes=$(for j in $instances; do aws ec2 describe-volumes --region ` + config.Aws_Region + ` --filters "Name=attachment.instance-id,Values=$j" "Name=tag:PWX_CLUSTER_ID,Values=px-deploy-$(hostname | cut -f 2 -d -)" --query Volumes[].Attachments[].VolumeId --output text; done)
-				    role=$(aws iam get-instance-profile --instance-profile-name $profile --region ` + config.Aws_Region + ` --query InstanceProfile.Roles[0].RoleName --output text)
-				    aws iam delete-role-policy --role-name $role --policy-name px-eks-policy --region ` + config.Aws_Region + `
-				    eksctl delete cluster --region ` + config.Aws_Region + ` --name px-deploy-` + config.Name + `-$(hostname | cut -f 2 -d -) --wait >&/tmp/delete
-				    for j in $volumes; do
-				      aws ec2 delete-volume --region ` + config.Aws_Region + ` --volume-id $j
-				    done
-EOF
-				done
-			`).Run()
-			if (err != nil) { die("Failed to destroy EKS cluster: " + err.Error()) }
-		}
-		c, _ := strconv.Atoi(config.Clusters)
-		n, _ := strconv.Atoi(config.Nodes)
-		if c < 3 && n < 5 {
-			_ = exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, `
-        for i in $(tail -n +3 /etc/hosts | cut -f 1 -d " "); do
-          ssh $i poweroff --force --force &
-        done
-        wait
-        poweroff --force --force
-        done
-			`).Start()
-			time.Sleep(5 * time.Second)
-		}
-		output, err = exec.Command("bash", "-c", `
-      aws configure set default.region `+config.Aws_Region+`
-      aws ec2 delete-key-pair --key-name px-deploy.`+config.Name+` >&/dev/null || exit 1
-      [ "`+config.Aws__Vpc+`" ] || exit
-      for i in $(aws elb describe-load-balancers --query "LoadBalancerDescriptions[].{a:VPCId,b:LoadBalancerName}" --output text | awk '/`+config.Aws__Vpc+`/{print$2}'); do
-        aws elb delete-load-balancer --load-balancer-name $i
-      done
-      while [ "$(aws elb describe-load-balancers --query "LoadBalancerDescriptions[].VPCId" --output text | grep `+config.Aws__Vpc+`)" ]; do
-        echo "waiting for ELB to disappear"
-        sleep 2
-      done
-      instances=$(aws ec2 describe-instances --filters "Name=network-interface.vpc-id,Values=`+config.Aws__Vpc+`" --query "Reservations[*].Instances[*].InstanceId" --output text)
-      [[ "$instances" ]] && {
-        volumes=$(for i in $instances; do aws ec2 describe-volumes --filters "Name=attachment.instance-id,Values=$i" --query "Volumes[*].{a:VolumeId,b:Tags}" --output text; done | awk '/PX-DO-NOT-DELETE/{print$1}')
-        aws ec2 terminate-instances --instance-ids $instances >/dev/null
-        aws ec2 wait instance-terminated --instance-ids $instances
-      }
-      for i in $volumes; do aws ec2 delete-volume --volume-id $i & done
-      aws ec2 delete-subnet --subnet-id `+config.Aws__Subnet+` &&
-      aws ec2 delete-security-group --group-id `+config.Aws__Sg+` &&
-      aws ec2 detach-internet-gateway --internet-gateway-id `+config.Aws__Gw+` --vpc-id `+config.Aws__Vpc+` &&
-      aws ec2 delete-internet-gateway --internet-gateway-id `+config.Aws__Gw+` &&
-      aws ec2 delete-route-table --route-table-id `+config.Aws__Routetable+` &&
-      aws ec2 describe-vpcs --vpc-id `+config.Aws__Vpc+` >&/dev/null
-      if [ $? -eq 0 ]; then
-        aws ec2 delete-vpc --vpc-id `+config.Aws__Vpc+`
-      else
-        echo "VPC already destroyed"
-      fi
-      wait
-    `).CombinedOutput()
 	} else if config.Cloud == "gcp" {
 		output, err = exec.Command("bash", "-c", `gcloud projects delete `+config.Gcp__Project+` --quiet
 		gcloud alpha billing projects unlink `+config.Gcp__Project).CombinedOutput()
@@ -1288,7 +1163,7 @@ func aws_get_node_ip(deployment string, node string) string {
 	var output []byte
 
 	switch config.Cloud {
-	case "awstf":
+	case "aws":
 		{
 		// connect to aws API
 		cfg, err := awscfg.LoadDefaultConfig(context.TODO(), awscfg.WithRegion(config.Aws_Region))
@@ -1351,8 +1226,6 @@ func get_ip(deployment string) string {
 	config := parse_yaml("/px-deploy/.px-deploy/deployments/" + deployment + ".yml")
 	var output []byte
 	if config.Cloud == "aws" {
-		output = []byte(aws_get_node_ip(deployment,"master-1"))
-	} else if config.Cloud == "awstf" { 
 		output = []byte(aws_get_node_ip(deployment,"master-1-1"))
 	} else if config.Cloud == "gcp" {
 		output, _ = exec.Command("bash", "-c", `gcloud compute instances list --project `+config.Gcp__Project+` --filter="name=('master-1')" --format 'flattened(networkInterfaces[0].accessConfigs[0].natIP)' | tail -1 | cut -f 2 -d " "`).Output()
@@ -1371,7 +1244,7 @@ func run_predelete(confCloud string, confName string, confNode string, confPath 
 	defer wg.Done()
 	
 	switch confCloud {
-	case "awstf":
+	case "aws":
 		{
 			ip = aws_get_node_ip(confName, confNode)
 		}
@@ -1725,7 +1598,6 @@ func write_nodescripts(config Config) {
 		die(err.Error())
 	}
 
-	// use aws vagrant scripts as awstf is just the tf implementation of aws
 	// prepare (single) cloud-init script for all nodes			
 	tf_node_scripts = []string{"all-common",config.Platform+"-common",config.Platform+"-node"}
 	tf_node_script = append(tf_node_script,"#!/bin/bash\n"...)
