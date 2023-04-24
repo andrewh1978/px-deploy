@@ -10,7 +10,7 @@ for i in $(govc find -k -u $url / -type m -runtime.powerState poweredOff -dc $vs
 done
 
 echo This will take a few minutes...
-cat <<EOF >/vsphere-centos.json
+cat <<EOF >/vsphere-rocky.json
 {
   "variables": {
     "vsphere-server": "$vsphere_host",
@@ -26,7 +26,7 @@ cat <<EOF >/vsphere-centos.json
     "vm-cpu-num": "4",
     "vm-mem-size": "8192",
     "vm-disk-size": "52000",
-    "iso_url": "https://vault.centos.org/7.8.2003/isos/x86_64/CentOS-7-x86_64-Minimal-2003.iso",
+    "iso_url": "https://download.rockylinux.org/pub/rocky/8/isos/x86_64/Rocky-x86_64-minimal.iso",
     "kickstart_file": "/vsphere-ks.cfg"
   },
   "builders": [
@@ -48,7 +48,7 @@ cat <<EOF >/vsphere-centos.json
         "{{user \`kickstart_file\`}}"
       ],
       "folder": "{{user \`vsphere-folder\`}}",
-      "guest_os_type": "centos7_64Guest",
+      "guest_os_type": "rhel8_64Guest",
       "insecure_connection": "true",
       "iso_url": "{{user \`iso_url\`}}",
       "iso_checksum": "md5:f99e2b01389c62a56bb0d3afdbc202f2",
@@ -144,4 +144,4 @@ reboot --eject
 EOF
 
 cd /
-/usr/bin/packer build /vsphere-centos.json
+/usr/bin/packer build /vsphere-rocky.json

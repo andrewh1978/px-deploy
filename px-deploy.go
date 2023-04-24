@@ -956,7 +956,7 @@ func create_deployment(config Config) int {
 		{
 			output, _ = exec.Command("bash", "-c", `
         yes | ssh-keygen -q -t rsa -b 2048 -f keys/id_rsa.vsphere.`+config.Name+` -N ''
-	_Vsphere_userdata=$(echo -e '#cloud-config\nusers:\n  - default\n  - name: centos\n    primary_group: centos\n    sudo: ALL=(ALL) NOPASSWD:ALL\n    groups: sudo, wheel\n    ssh_import_id: None\n    lock_passwd: true\n    ssh_authorized_keys:\n    - '$(cat keys/id_rsa.vsphere.`+config.Name+`.pub) | base64 -w0)
+	_Vsphere_userdata=$(echo -e '#cloud-config\nusers:\n  - default\n  - name: rocky\n    primary_group: rocky\n    sudo: ALL=(ALL) NOPASSWD:ALL\n    groups: sudo, wheel\n    ssh_import_id: None\n    lock_passwd: true\n    ssh_authorized_keys:\n    - '$(cat keys/id_rsa.vsphere.`+config.Name+`.pub) | base64 -w0)
 	echo vsphere__userdata: $_Vsphere_userdata >>deployments/`+config.Name+`.yml
       `).CombinedOutput()
 		}
