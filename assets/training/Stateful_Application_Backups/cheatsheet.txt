@@ -1,3 +1,5 @@
+kubectl get pod -l app=postgres -n backup-lab
+
 kubectl exec $POD -n backup-lab -- createdb pxdemo
 
 kubectl exec $POD -n backup-lab -- pgbench -i -s 50 pxdemo

@@ -1,6 +1,3 @@
-// 
-// vpc endpoint auf com.amazonaws.eu-west-1.s3
-
 variable "ocp4_domain" {
 	description = "domain used for ocp4 cluster"
 	type 		= string
@@ -26,8 +23,6 @@ resource "aws_vpc_dhcp_options" "dhcpopt" {
   domain_name_servers  = ["AmazonProvidedDNS"]
   tags = {
     Name = format("%s-%s-%s",var.name_prefix,var.config_name,"dhcp_opt")
-    px-deploy_name = var.config_name
-    px-deploy_username = var.PXDUSER
   }
 }
 
@@ -47,8 +42,6 @@ resource "aws_nat_gateway" "natgw" {
 
   tags = {
         Name = format("%s-%s-%s",var.name_prefix,var.config_name,"ngw")
-        px-deploy_name = var.config_name
-	px-deploy_username = var.PXDUSER
   }
   depends_on = [aws_internet_gateway.igw]
 }
@@ -61,8 +54,6 @@ resource "aws_subnet" "ocp4_private" {
   cidr_block = "192.168.${count.index + 151}.0/24"
   tags = {
     Name = format("%s-%s-ocp4-private-subnet-%s",var.name_prefix,var.config_name, count.index + 1)
-    px-deploy_name = var.config_name
-    px-deploy_username = var.PXDUSER
   }
 }
 
@@ -76,8 +67,6 @@ resource "aws_route_table" "rt_sn_private" {
 
   tags = {
     Name = format("%s-%s-ocp4-private-rt-%s",var.name_prefix,var.config_name, count.index + 1)
-    px-deploy_name = var.config_name
-    px-deploy_username = var.PXDUSER
   }
 }
 
@@ -90,13 +79,14 @@ resource "aws_route_table_association" "rta_private" {
 resource "local_file" "ocp4-install-config" {
         for_each = var.ocp4clusters
         content = templatefile("${path.module}/ocp4-install-config.tpl", {
-			tpl_sshkey 	=  tls_private_key.ssh.public_key_openssh  
+			                  tpl_sshkey 	=  tls_private_key.ssh.public_key_openssh  
                         tpl_aws_region  = var.aws_region
                         tpl_ocp4domain  = var.ocp4_domain
                         tpl_ocp4pullsecret = base64decode(var.ocp4_pull_secret)
                         tpl_cluster     = each.key
                         tpl_awstype     = each.value
                         tpl_configname  = var.config_name
+                        tpl_aws_tag     = var.aws_tags
                         tpl_nodes       = var.ocp4_nodes
                         tpl_cidr        = var.aws_cidr_vpc
                         tpl_privsubnet  = aws_subnet.ocp4_private[each.key - 1].id

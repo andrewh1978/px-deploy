@@ -1,0 +1,9 @@
+kubectl create ns pds-postgres
+
+kubectl label ns pds-postgres pds.portworx.com/available=true
+
+kubectl exec $(kubectl get pod -n pds-postgres -l role=master -o jsonpath='{.items[].metadata.name}') -n pds-postgres -c postgresql -- curl -s https://ipinfo.io/ip
+
+kubectl get service -n pgadmin
+
+kubectl get services -n pds-postgres

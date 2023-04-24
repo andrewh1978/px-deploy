@@ -517,7 +517,7 @@ func main() {
 					}
 					// loop clusters and add master name/ip to tf var
 					for c := 1; c <= Clusters ; c++ {
-						ip = get_node_ip(statusName,fmt.Sprintf("master-%v-1",c))
+						ip = aws_get_node_ip(statusName,fmt.Sprintf("master-%v-1",c))
 						// get content of node tracking file (-> each node will add its entry when finished cloud-init/vagrant scripts)
 						cmd := exec.Command("ssh", "-q", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa." + config.Cloud + "." + config.Name, "root@" + ip, "cat /var/log/px-deploy/completed/tracking")
     					out, err := cmd.CombinedOutput()
@@ -668,6 +668,7 @@ func create_deployment(config Config) int {
 	
 	var tf_cluster_aws_type string
 	var tf_var_ebs []string
+	var tf_var_tags []string
 	
 	fmt.Println(White + "Provisioning infrastructure..." + Reset)
 	switch config.Cloud {
@@ -696,6 +697,7 @@ func create_deployment(config Config) int {
 		  	case "eks": 
 		  	{
 			  exec.Command("cp", "-a", `/px-deploy/terraform/awstf/eks/eks.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+			  exec.Command("cp", "-a", `/px-deploy/terraform/awstf/eks/eks_run_everywhere.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
 		  	} 			
 		}
 		
@@ -711,7 +713,27 @@ func create_deployment(config Config) int {
 			tf_var_ebs = append(tf_var_ebs, "      {\n        ebs_type = \""+entry[0]+"\"\n        ebs_size = \""+entry[1]+"\"\n        ebs_device_name = \"/dev/sd"+string(i+98)+"\"\n      },")
 		}
 		// other node ebs processing happens in cluster/node loop
-						
+		
+		// AWS default tagging
+		tf_var_tags = append(tf_var_tags, "aws_tags = {")
+		
+		if config.Aws_Tags != "" {
+			tags := strings.Split(config.Aws_Tags,",")
+			for _,val := range tags {
+				entry := strings.Split(val,"=")
+				tf_var_tags = append(tf_var_tags, "  "+strings.TrimSpace(entry[0])+" = \""+strings.TrimSpace(entry[1])+"\"")
+			}
+		}
+		// get PXDUSER env and apply to tf_variables
+		pxduser = os.Getenv("PXDUSER")
+		if (pxduser != "") {
+			tf_var_tags = append (tf_var_tags, "  px-deploy_username = \"" + pxduser + "\"")	
+		} else {
+			tf_var_tags = append (tf_var_tags, "  px-deploy_username = \"unknown\"")	
+		}
+		tf_var_tags = append (tf_var_tags, "  px-deploy_name = \""+ config.Name+ "\"")	
+		tf_var_tags = append(tf_var_tags, "}\n")
+
 		switch config.Platform {
 		  	case "ocp4": 
 		  	{
@@ -722,6 +744,9 @@ func create_deployment(config Config) int {
 			{
 			  tf_variables = append (tf_variables, "eks_nodes = \"" + config.Nodes + "\"")
 			  config.Nodes="0"
+			  if config.Env["run_everywhere"] != "" {
+				tf_variables = append (tf_variables, "run_everywhere = \"" + strings.Replace(config.Env["run_everywhere"],"'","\\\"", -1) + "\"")
+			  } 
 		  	}
 		}
 
@@ -732,11 +757,7 @@ func create_deployment(config Config) int {
 		tf_variables = append (tf_variables, "config_name = \"" + config.Name + "\"")
 		tf_variables = append (tf_variables, "clusters = " + config.Clusters)
 		tf_variables = append (tf_variables, "aws_region = \"" + config.Aws_Region + "\"")
-		// get PXDUSER env and apply to tf_variables
-		pxduser = os.Getenv("PXDUSER")
-		if (pxduser != "") {
-			tf_variables = append (tf_variables, "PXDUSER = \"" + pxduser + "\"")	
-		}
+		
 		switch config.Platform {
 		  	case "ocp4": 
 		  	{		
@@ -812,6 +833,7 @@ func create_deployment(config Config) int {
 				tf_variables = append(tf_variables,tf_variables_eks...)
 			}
 		}
+		tf_variables = append(tf_variables,tf_var_tags...)
 		write_tf_file(config.Name, ".tfvars",tf_variables)
 		// now run terraform plan & terraform apply
 		fmt.Println(White+"running terraform PLAN"+Reset)
@@ -1260,27 +1282,78 @@ EOF
 	fmt.Println(White + "Destroyed." + Reset)
 }
 
-func get_node_ip(deployment string, node string) string {
+// get node ip implementation leveraging API calls
+func aws_get_node_ip(deployment string, node string) string {
 	config := parse_yaml("/px-deploy/.px-deploy/deployments/" + deployment + ".yml")
 	var output []byte
 
 	switch config.Cloud {
 	case "awstf":
-	{
-		output, _ = exec.Command("bash", "-c", `aws ec2 describe-instances --region `+config.Aws_Region+` --filters "Name=network-interface.vpc-id,Values=`+config.Aws__Vpc+`" "Name=tag:Name,Values=`+node+`" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PublicIpAddress" --output text`).Output()
-	}
+		{
+		// connect to aws API
+		cfg, err := awscfg.LoadDefaultConfig(context.TODO(), awscfg.WithRegion(config.Aws_Region))
+		if err != nil {
+			panic("aws configuration error, " + err.Error())
+		}
+	
+		client := ec2.NewFromConfig(cfg)
+	
+		// get running instances matching node name in current VPC
+		instances, err := client.DescribeInstances(context.TODO(), &ec2.DescribeInstancesInput{
+			Filters: []types.Filter {
+				{
+					Name:   aws.String("network-interface.vpc-id"),
+					Values: []string {
+						config.Aws__Vpc,
+					},
+				},
+				{
+					Name: aws.String("instance-state-name"),
+					Values: []string {
+							"running",
+					},
+				},
+				{
+					Name:   aws.String("tag:Name"),
+					Values: []string {
+						node,
+					},
+				},
+			},
+		})
+		
+		if err != nil {
+			fmt.Println("Got an error retrieving information about your Amazon EC2 instances:")
+			panic("Error getting IP of instance:"+err.Error())
+		}
+	
+		if len(instances.Reservations) == 1	{
+			if len(instances.Reservations[0].Instances) == 1 {
+				output = []byte(*instances.Reservations[0].Instances[0].PublicIpAddress)
+			} else {
+				// no [or multiple] instances found 
+				output = []byte("")
+			}
+			
+		} else {
+			// no [or multiple] instances found 
+			output = []byte("")
+		}
+		}
 	}
 	return strings.TrimSuffix(string(output), "\n")
-
 }
 
+// get node ip following old naming scheme (master-1)
+// terraform based deployments changed naming to master-1-1
+// this function can be replaced after all clouds run terraform based
 func get_ip(deployment string) string {
 	config := parse_yaml("/px-deploy/.px-deploy/deployments/" + deployment + ".yml")
 	var output []byte
 	if config.Cloud == "aws" {
-		output, _ = exec.Command("bash", "-c", `aws ec2 describe-instances --region `+config.Aws_Region+` --filters "Name=network-interface.vpc-id,Values=`+config.Aws__Vpc+`" "Name=tag:Name,Values=master-1" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PublicIpAddress" --output text`).Output()
+		output = []byte(aws_get_node_ip(deployment,"master-1"))
 	} else if config.Cloud == "awstf" { 
-		output, _ = exec.Command("bash", "-c", `aws ec2 describe-instances --region `+config.Aws_Region+` --filters "Name=network-interface.vpc-id,Values=`+config.Aws__Vpc+`" "Name=tag:Name,Values=master-1-1" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].PublicIpAddress" --output text`).Output()
+		output = []byte(aws_get_node_ip(deployment,"master-1-1"))
 	} else if config.Cloud == "gcp" {
 		output, _ = exec.Command("bash", "-c", `gcloud compute instances list --project `+config.Gcp__Project+` --filter="name=('master-1')" --format 'flattened(networkInterfaces[0].accessConfigs[0].natIP)' | tail -1 | cut -f 2 -d " "`).Output()
 	} else if config.Cloud == "azure" {
@@ -1293,8 +1366,21 @@ func get_ip(deployment string) string {
 }
 
 func run_predelete(confCloud string, confName string, confNode string, confPath string) {
+	var ip string
+
 	defer wg.Done()
-	ip := get_node_ip(confName, confNode)
+	
+	switch confCloud {
+	case "awstf":
+		{
+			ip = aws_get_node_ip(confName, confNode)
+		}
+	default :
+		{
+			panic(fmt.Sprintf("pre_delete not implemented for cloud %v",confCloud))
+		}
+	
+	}
 	fmt.Printf("Running pre-delete scripts on %v (%v)\n",confNode,ip)
 	
 	cmd := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+confCloud+"."+confName, "root@"+ip, `
