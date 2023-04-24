@@ -24,13 +24,13 @@ data "aws_availability_zones" "available" {
 	state = "available"
 }
 
-data "aws_ami" "centos" {
+data "aws_ami" "rocky" {
   owners = ["679593333241"]
   include_deprecated = true  
   most_recent = true
   filter {
     name   = "name"
-    values = ["CentOS Linux 7 x86_64 HVM EBS*"]
+    values = ["Rocky-8-ec2-8.6-20220515.0.x86_64-d6577ceb-8ea8-4e0e-84c6-f098fc302e82"]
   }
    
   filter {
@@ -222,7 +222,7 @@ locals {
 
 resource "aws_instance" "node" {
 	for_each 					=	{for server in local.instances: server.instance_name =>  server}
-	ami 						= 	data.aws_ami.centos.id
+	ami 						= 	data.aws_ami.rocky.id
 	instance_type				=	each.value.instance_type
 	vpc_security_group_ids 		=	[aws_security_group.sg_px-deploy.id]
 	subnet_id					=	aws_subnet.subnet[each.value.cluster - 1].id
@@ -262,7 +262,7 @@ resource "aws_instance" "node" {
 
         connection {
                         type = "ssh"
-                        user = "centos"
+                        user = "rocky"
                         host = "${self.public_ip}"
                         private_key = tls_private_key.ssh.private_key_openssh
         }
@@ -270,7 +270,7 @@ resource "aws_instance" "node" {
 		provisioner "remote-exec" {
             inline = [
         		"sudo mkdir /assets",
-                "sudo chown centos.users /assets"
+                "sudo chown rocky.users /assets"
             ]
         }
 
@@ -301,7 +301,7 @@ resource "local_file" "cloud-init" {
 		tpl_subnet = aws_subnet.subnet[each.value.cluster - 1].id,
 		tpl_gw = aws_internet_gateway.igw.id,
 		tpl_routetable = aws_route_table.rt.id,
-		tpl_ami = 	data.aws_ami.centos.id,
+		tpl_ami = 	data.aws_ami.rocky.id,
 		tpl_cluster = each.value.cluster
 		}	
 	)
@@ -315,7 +315,7 @@ resource "local_file" "aws-returns" {
 		tpl_sg = aws_security_group.sg_px-deploy.id,
 		tpl_gw = aws_internet_gateway.igw.id,
 		tpl_routetable = aws_route_table.rt.id,
-		tpl_ami = 	data.aws_ami.centos.id,
+		tpl_ami = 	data.aws_ami.rocky.id,
 		}
 	)
 	filename = "${path.module}/aws-returns-generated.yaml"

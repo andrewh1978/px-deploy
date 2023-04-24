@@ -12,5 +12,9 @@ curl -L https://github.com/containerd/containerd/releases/download/v1.6.15/conta
 curl -o /etc/systemd/system/containerd.service https://raw.githubusercontent.com/containerd/containerd/main/containerd.service
 curl -Lo /usr/sbin/runc https://github.com/opencontainers/runc/releases/download/v1.1.4/runc.amd64
 chmod 755 /usr/sbin/runc
+set -x
 systemctl daemon-reload
-systemctl enable --now containerd docker kubelet
+systemctl enable --now containerd
+systemctl enable --now docker
+systemctl enable --now podman
+systemctl enable --now kubelet

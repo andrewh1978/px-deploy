@@ -113,7 +113,7 @@ resource "null_resource" "ocp4cluster" {
  
         connection {
                 type = "ssh"
-                user = "centos"
+                user = "rocky"
                 host = each.value.public_ip
                 private_key = tls_private_key.ssh.private_key_openssh
         }
