@@ -10,6 +10,8 @@ on:
     branches: [ "master" ]
     # Publish  tags as releases.
     tags: [ '*' ]
+  release:
+    types: [published]
   pull_request:
     branches: [ "master" ]
 
@@ -66,8 +68,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
-      - name: Create tags (version and latest) if this is master branch
-        if: github.ref == 'refs/heads/master'
+      - name: Create tags (version and latest) if this is a release
+        if: github.event_name == 'release'
         id: tag-master
         run: |
           VERSION=$(cat VERSION)
@@ -75,8 +77,8 @@ jobs:
           TAGS=$(echo "ghcr.io/$GITHUB_REPOSITORY:$VERSION" , "ghcr.io/$GITHUB_REPOSITORY:latest")
           echo "TAGS=$TAGS" >> $GITHUB_ENV
           
-      - name: Create tags (version only) if this is NOT master branch
-        if: github.ref != 'refs/heads/master'
+      - name: Create tags (version only) if this is NOT a release
+        if: github.event_name != 'release'
         id: tag-non-master
         run: |
           VERSION=$(cat VERSION)
