@@ -71,7 +71,7 @@ jobs:
         run: |
           VERSION=$(cat VERSION)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          TAGS=$( awk '{print "ghcr.io/bplein/px-deploy:" $VERSION}')
+          TAGS=$(echo "ghcr.io/bplein/px-deploy:$VERSION")
           echo "TAGS=$TAGS" >> $GITHUB_ENV
           
       - name: Show versions and tags
