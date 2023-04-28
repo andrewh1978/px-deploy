@@ -72,7 +72,7 @@ jobs:
         run: |
           VERSION=$(cat VERSION)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          TAGS=$(echo "ghcr.io/$GITHUB_REPOSITORY_OWNER/GITHUB_REPOSITORY:$VERSION" "ghcr.io/$GITHUB_REPOSITORY_OWNER/GITHUB_REPOSITORY:latest" )
+          TAGS=$(echo "ghcr.io/$GITHUB_REPOSITORY_OWNER/GITHUB_REPOSITORY:$VERSION" , "ghcr.io/$GITHUB_REPOSITORY_OWNER/GITHUB_REPOSITORY:latest")
           echo "TAGS=$TAGS" >> $GITHUB_ENV
           
       - name: Create tags (version only) if this is NOT master branch
@@ -81,7 +81,7 @@ jobs:
         run: |
           VERSION=$(cat VERSION)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          TAGS=$(echo "ghcr.io/$GITHUB_REPOSITORY_OWNER/GITHUB_REPOSITORY:$VERSION" "ghcr.io/$GITHUB_REPOSITORY_OWNER/GITHUB_REPOSITORY:latest" )
+          TAGS=$(echo "ghcr.io/$GITHUB_REPOSITORY_OWNER/GITHUB_REPOSITORY:$VERSION")
           echo "TAGS=$TAGS" >> $GITHUB_ENV
           
       - name: Show versions and tags
