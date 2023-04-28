@@ -66,19 +66,28 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
-      - name: Extract versions from VERSION file in root
+      - name: Create tags (version and latest) if this is master branch
+        if: github.ref == 'refs/heads/master'
         id: get-version
         run: |
           VERSION=$(cat VERSION)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          TAGS=$(echo "ghcr.io/bplein/px-deploy:$VERSION")
+          TAGS=$(echo "ghcr.io/$GITHUB_REPOSITORY_OWNER/GITHUB_REPOSITORY:$VERSION" "ghcr.io/$GITHUB_REPOSITORY_OWNER/GITHUB_REPOSITORY:latest" )
+          echo "TAGS=$TAGS" >> $GITHUB_ENV
+          
+      - name: Create tags (version only) if this is NOT master branch
+        if: github.ref != 'refs/heads/master'
+        id: get-version
+        run: |
+          VERSION=$(cat VERSION)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          TAGS=$(echo "ghcr.io/$GITHUB_REPOSITORY_OWNER/GITHUB_REPOSITORY:$VERSION" "ghcr.io/$GITHUB_REPOSITORY_OWNER/GITHUB_REPOSITORY:latest" )
           echo "TAGS=$TAGS" >> $GITHUB_ENV
           
       - name: Show versions and tags
         run: |
           echo "Version: ${{ env.VERSION }}"
           echo "Tags: ${{ env.TAGS }}"
-          echo "SHA256: ${{ env.SHA256 }}"
           
       # Build and push Docker image with Buildx (don't push on PR)
       # https://github.com/docker/build-push-action
@@ -88,14 +97,11 @@ jobs:
         with:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
-#          tags: ${{ steps.meta.outputs.tags }}
           tags: ${{ env.TAGS }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-#          build-args: |
-#            VERSION=${{ env.VERSION }}
-#            SHA256=${{ env.SHA256 }}
+
       # Sign the resulting Docker image digest except on PRs.
       # This will only write to the public Rekor transparency log when the Docker
       # repository is public to avoid leaking data.  If you would like to publish
