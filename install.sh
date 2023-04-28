@@ -14,7 +14,7 @@ git clone https://github.com/andrewh1978/px-deploy >&/dev/null
 cd px-deploy
 git checkout $(cat VERSION)
 echo Building container
-docker build -t px-deploy . >&/dev/null
+docker build --network host -t px-deploy . >&/dev/null
 mkdir -p /.px-deploy/{keys,deployments,kubeconfig,tf-deployments}
 
 #remove remainders of terraform (outside container)
