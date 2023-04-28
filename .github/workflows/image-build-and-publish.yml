@@ -71,10 +71,8 @@ jobs:
         run: |
           VERSION=$(cat VERSION)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          TAGS=$( awk '{print "ghcr.io/bplein/px-deploy:" $VERSION}' | tr '\n' ','| tr -d \'|sed 's/\(.*\),/\1 /')
+          TAGS=$( awk '{print "ghcr.io/bplein/px-deploy:" $VERSION}')
           echo "TAGS=$TAGS" >> $GITHUB_ENV
-          SHA256=$(<buildinfo.json jq -r --arg version $VERSION '.[$version] | .sha256')
-          echo "SHA256=$SHA256" >> $GITHUB_ENV
           
       - name: Show versions and tags
         run: |
