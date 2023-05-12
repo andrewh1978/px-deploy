@@ -1,5 +1,6 @@
 description: Deploys 2 clusters with Portworx, sets up and configures a cluster pairing, and deploys a set of apps and a migration template.
 clusters: 2
+cloud: aws
 scripts: ["install-awscli", "install-px", "px-wait"]
 cluster:
   - id: 1
