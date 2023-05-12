@@ -290,11 +290,16 @@ resource "local_file" "cloud-init" {
 		tpl_routetable = aws_route_table.rt.id,
 		tpl_ami = 	data.aws_ami.rocky.id,
 		tpl_cluster = each.value.cluster
+		tpl_drbucket = aws_s3_bucket.drbucket.id
 		}	
 	)
 	filename = "${path.module}/cloud-init-${each.key}-generated.yaml"
 }
 
+resource "aws_s3_bucket" "drbucket" {
+  bucket = format("%s-%s",var.name_prefix,var.config_name)
+  force_destroy = true
+}
 
 resource "local_file" "aws-returns" {
 	content = templatefile("${path.module}/aws-returns.tpl", { 
