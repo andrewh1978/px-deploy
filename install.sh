@@ -7,8 +7,16 @@ BLUE='\033[1;34m'
 WHITE='\033[0;37m'
 NC='\033[0m'
 
-# find existing deployments being created by old aws code (no tf-deployments folder exists)
+# find existing deployments not supported by pxd5 
 found_legacy=false
+
+# find deployments with awstf
+for i in $(grep -l 'cloud: awstf' /.px-deploy/deployments/*.yml); do
+        echo -e "${RED} AWSTF Deployment $(basename $i .yml) is being created by px-deploy version < 5. Please remove prior to upgrading to version 5"
+        found_legacy=true
+done
+
+#find deployments being created by old aws code (no tf-deployments folder exists)
 for i in $(grep -l 'cloud: aws' /.px-deploy/deployments/*.yml); do
     if [ ! -d /.px-deploy/tf-deployments/$(basename $i .yml) ]; then
         echo -e "${RED} AWS Deployment $(basename $i .yml) is being created by px-deploy version < 5. Please remove prior to upgrading to version 5"
