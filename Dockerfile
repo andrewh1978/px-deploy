@@ -19,12 +19,8 @@ RUN vagrant plugin install vagrant-vsphere --plugin-version 1.13.5
 #RUN vagrant box add dummy https://github.com/mitchellh/vagrant-aws/raw/master/dummy.box --provider aws
 RUN vagrant box add google/gce https://vagrantcloud.com/google/boxes/gce/versions/0.1.0/providers/google.box --provider google
 RUN vagrant box add azure https://github.com/azure/vagrant-azure/raw/v2.0/dummy.box --provider azure --provider azure
-<<<<<<< HEAD
-#RUN pip3 install awscli
-=======
 RUN vagrant box add FEBO/oracle8 --provider vsphere
-RUN pip3 install awscli
->>>>>>> master
+#RUN pip3 install awscli
 RUN curl -Ls https://github.com/vmware/govmomi/releases/download/v0.23.0/govc_linux_amd64.gz | zcat >/usr/bin/govc
 RUN mkdir -p /root/go/src/px-deploy
 RUN curl -s https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo >/etc/yum.repos.d/terraform-repo.repo
