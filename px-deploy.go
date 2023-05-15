@@ -932,6 +932,10 @@ func destroy_deployment(name string) {
 	
 	fmt.Println(White + "Destroying deployment '" + config.Name + "'..." + Reset)
 	if config.Cloud == "aws" {
+		if _, err := os.Stat("/px-deploy/.px-deploy/tf-deployments/"+config.Name); os.IsNotExist(err) {
+			fmt.Println("Terraform Config for AWS deployment missing. If this has been created with a px-deploy Version <5.0.0 you need to destroy with the older version")
+			die("Error: outdated deployment")
+		}
 
 		// connect to aws API
 		cfg, err := awscfg.LoadDefaultConfig(context.TODO(), awscfg.WithRegion(config.Aws_Region))

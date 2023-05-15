@@ -13,19 +13,23 @@ echo Cloning repo
 git clone https://github.com/andrewh1978/px-deploy >&/dev/null
 cd px-deploy
 git checkout $(cat VERSION)
+PXDVERSION=$(cat VERSION)
 echo Building container
 docker build -t px-deploy . >&/dev/null
 mkdir -p /.px-deploy/{keys,deployments,kubeconfig,tf-deployments}
 
 #remove remainders of terraform (outside container)
-#*** can be removed after july 2023***
+#*** can be removed after sept 2023***
 rm -rf /.px-deploy/terraform*
 
+# backup existing directories and force copy from current branch
 time=$(date +%s)
-for i in scripts templates assets defaults.yml; do
-  [ -e /.px-deploy/$i ] && echo Backing up $home/.px-deploy/$i to $home/.px-deploy/$i.$time && mv /.px-deploy/$i /.px-deploy/$i.$time
-  cp -r $i /.px-deploy
+for i in scripts templates assets; do
+  [ -e /.px-deploy/$i ] && echo Backing up $home/.px-deploy/$i to $home/.px-deploy/$i.$time && cp -r /.px-deploy/$i /.px-deploy/$i.$time
+  cp -rf $i /.px-deploy
 done
+
+[ -e /.px-deploy/defaults.yml ] && cp defaults.yml /.px-deploy/defaults.yml.$PXDVERSION
 
 echo
 echo -e ${YELLOW}If you are using zsh, append this to your .zshrc:
