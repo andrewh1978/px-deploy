@@ -82,7 +82,7 @@ Vagrant.configure("2") do |config|
       azure.vm_size = yaml['azure_type']
     end
   elsif yaml['cloud'] == "vsphere"
-    config.vm.box = "rockylinux/8"
+    config.vm.box = "FEBO/oracle8"
     config.ssh.username = "rocky"
     config.vm.base_mac = nil
     config.vm.provider :vsphere do |vsphere, override|
