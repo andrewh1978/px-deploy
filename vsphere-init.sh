@@ -10,7 +10,7 @@ for i in $(govc find -k -u $url / -type m -runtime.powerState poweredOff -dc $vs
 done
 
 echo This will take a few minutes...
-cat <<EOF >/vsphere-centos.json
+cat <<EOF >/vsphere-rocky.json
 {
   "variables": {
     "vsphere-server": "$vsphere_host",
@@ -26,7 +26,7 @@ cat <<EOF >/vsphere-centos.json
     "vm-cpu-num": "4",
     "vm-mem-size": "8192",
     "vm-disk-size": "52000",
-    "iso_url": "https://vault.centos.org/7.8.2003/isos/x86_64/CentOS-7-x86_64-Minimal-2003.iso",
+    "iso_url": "https://download.rockylinux.org/pub/rocky/8/isos/x86_64/Rocky-8.7-x86_64-minimal.iso",
     "kickstart_file": "/vsphere-ks.cfg"
   },
   "builders": [
@@ -35,23 +35,32 @@ cat <<EOF >/vsphere-centos.json
       "RAM": "{{user \`vm-mem-size\`}}",
       "RAM_reserve_all": false,
       "boot_command": [
-        "<tab> text ks=hd:fd0:/{{user \`kickstart_file\`}}<enter><wait>"
+        "<wait>",
+        "<tab>",
+        "linux inst.ks=hd:/dev/sr1:vsphere-ks.cfg",
+        "<enter>"
       ],
-      "boot_order": "disk,cdrom,floppy",
+      "boot_order": "disk,cdrom",
       "boot_wait": "10s",
       "cluster": "{{user \`vsphere-cluster\`}}",
-      "resource_pool": "{{user \`vsphere-resource-pool\`}}",
+      "configuration_parameters": {
+          "guestinfo.metadata": "---",
+          "guestinfo.metadata.encoding": "---",
+          "guestinfo.userdata": "---",
+          "guestinfo.userdata.encoding": "---",
+          "pxd.deployment": "TEMPLATE",
+          "pxd.hostname": "---"
+      },
       "convert_to_template": true,
       "datastore": "{{user \`vsphere-datastore\`}}",
       "disk_controller_type": "pvscsi",
-      "floppy_files": [
-        "{{user \`kickstart_file\`}}"
-      ],
       "folder": "{{user \`vsphere-folder\`}}",
-      "guest_os_type": "centos7_64Guest",
+      "guest_os_type": "rhel8_64Guest",
       "insecure_connection": "true",
+      "iso_checksum": "sha256:13c3e7fca1fd32df61695584baafc14fa28d62816d0813116d23744f5394624b",
       "iso_url": "{{user \`iso_url\`}}",
-      "iso_checksum": "md5:f99e2b01389c62a56bb0d3afdbc202f2",
+      "cd_files": ["./vsphere-ks.cfg"],
+      "cd_label": "kickstart",
       "network_adapters": [
         {
           "network": "{{user \`vsphere-network\`}}",
@@ -60,6 +69,9 @@ cat <<EOF >/vsphere-centos.json
       ],
       "notes": "Build via Packer",
       "password": "{{user \`vsphere-password\`}}",
+      "resource_pool": "{{user \`vsphere-resource-pool\`}}",
+      "ssh_username": "root",
+      "ssh_password": "portworx",
       "storage": [
         {
           "disk_size": "{{user \`vm-disk-size\`}}",
@@ -69,26 +81,17 @@ cat <<EOF >/vsphere-centos.json
       "type": "vsphere-iso",
       "username": "{{user \`vsphere-user\`}}",
       "vcenter_server": "{{user \`vsphere-server\`}}",
-      "vm_name": "{{user \`vm-name\`}}",
-      "ssh_username": "root",
-      "ssh_password": "portworx",
-      "configuration_parameters": {
-          "guestinfo.metadata": "---",
-          "guestinfo.metadata.encoding": "---",
-          "guestinfo.userdata": "---",
-          "guestinfo.userdata.encoding": "---",
-          "pxd.deployment": "TEMPLATE",
-          "pxd.hostname": "---"
-      }
+      "vm_name": "{{user \`vm-name\`}}"
     }
   ],
   "provisioners": [
     {
       "inline": [
-        "sudo yum upgrade -y",
-        "sudo yum install -y cloud-init",
-        "sudo yum install -y epel-release",
-        "sudo yum install -y python-pip",
+        "sudo dnf upgrade -y",
+        "sudo dnf install -y cloud-init",
+        "sudo dnf install -y epel-release",
+        "sudo dnf install -y python3-devel",
+        "sudo dnf install -y python3-pip",
         "sudo curl -sSL https://raw.githubusercontent.com/vmware/cloud-init-vmware-guestinfo/master/install.sh | sudo sh -"
       ],
       "type": "shell"
@@ -98,33 +101,33 @@ cat <<EOF >/vsphere-centos.json
 EOF
 
 cat <<\EOF >/vsphere-ks.cfg
-auth --enableshadow --passalgo=sha512
-cdrom
+repo --name=BaseOS --baseurl=https://download.rockylinux.org/pub/rocky/8/BaseOS/x86_64/os/
+repo --name=AppStream --baseurl=https://download.rockylinux.org/pub/rocky/8/AppStream/x86_64/os/
 text
 firstboot --enable
 ignoredisk --only-use=sda
 keyboard --vckeymap=us --xlayouts='us'
 lang en_US.UTF-8
-network  --bootproto=dhcp --device=ens192 --onboot=yes --noipv6
+network  --bootproto=dhcp --device=link --onboot=true --noipv6
 network  --hostname=localhost.localdomain
 rootpw --iscrypted $6$oHCngZUb/uEBImIf$Og9pS/av0PCXBOd2saohkK0P8yFl72QG4ei3467bIaGFFfNxyoTW8KZevE6AhkXrDMgvbeOSchAS5c.NNaWLJ0
-services --disabled="chronyd"
+services --disabled="chronyd,avahi-daemon.service,bluetooth.service,rhnsd.service,rhsmcertd.service"
 timezone UTC --isUtc --nontp
-bootloader --append=" crashkernel=auto" --location=mbr --boot-drive=sda
-clearpart --none --initlabel
-part /boot --fstype="xfs" --ondisk=sda --size=1024
+clearpart --all --initlabel
+part /boot/efi --fstype=vfat --fsoptions='defaults,umask=0027,fmask=0077,uid=0,gid=0' --size=600 --ondisk=/dev/sda
+part /boot --fstype=xfs --fsoptions='nosuid,nodev' --size=1024 --ondisk=/dev/sda
 part / --fstype="xfs" --ondisk=sda --size=50000
+bootloader --append="rd.driver.blacklist=dm-multipath,crashkernel=auto systemd.unified_cgroup_hierarchy=1" --location=mbr --boot-drive=sda
+
+cdrom
 
 %packages
-@^minimal
+@base
 @core
 kexec-tools
 
 %end
 
-%addon com_redhat_kdump --enable --reserve-mb='auto'
-
-%end
 
 %anaconda
 pwpolicy root --minlen=6 --minquality=1 --notstrict --nochanges --notempty
@@ -133,15 +136,15 @@ pwpolicy luks --minlen=6 --minquality=1 --notstrict --nochanges --notempty
 %end
 
 %post
-yum -y install open-vm-tools
+dnf -y install open-vm-tools
 systemctl enable vmtoolsd
 systemctl start vmtoolsd
-yum -y install kernel-headers nfs-utils dnf jq bash-completion nfs-utils chrony docker vim-enhanced git
-yum update -y glib2
+dnf -y install kernel-headers nfs-utils jq bash-completion nfs-utils chrony docker vim-enhanced git
+dnf update -y glib2
 %end
 
 reboot --eject
 EOF
 
 cd /
-/usr/bin/packer build /vsphere-centos.json
+/usr/bin/packer build /vsphere-rocky.json

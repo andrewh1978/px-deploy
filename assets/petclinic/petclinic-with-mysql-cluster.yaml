@@ -12,7 +12,7 @@ parameters:
   #openstorage.io/auth-secret-name: px-user-token
   #openstorage.io/auth-secret-namespace: portworx
   repl: "2"
-  io_profile: "db"
+  io_profile: "db_remote"
 ---
 # Headless service for stable DNS entries of StatefulSet members.
 apiVersion: v1

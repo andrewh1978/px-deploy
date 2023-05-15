@@ -1,5 +1,6 @@
 # Run an etcd container
-docker run -d --restart unless-stopped -v /etcd:/etcd -v /usr/share/ca-certificates/:/etc/ssl/certs -p 2382:2382 \
+mkdir /etcd
+docker run -d --restart unless-stopped -v /etcd:/etcd -p 2382:2382 \
  --name etcd quay.io/coreos/etcd:latest \
  /usr/local/bin/etcd \
  -name etcd0 -data-dir /etcd \

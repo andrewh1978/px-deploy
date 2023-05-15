@@ -7,7 +7,7 @@ parameters:
   #openstorage.io/auth-secret-name: px-user-token
   #openstorage.io/auth-secret-namespace: portworx
   repl: "3"
-  io_profile: "db"
+  io_profile: "db_remote"
   priority_io: "high"
 allowVolumeExpansion: true
 ---
