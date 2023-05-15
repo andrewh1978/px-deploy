@@ -1,5 +1,5 @@
 docker run --help | grep -q -- "--platform string" && PLATFORM="--platform=linux/amd64"
-docker run $PLATFORM --rm --privileged -i -e home=$HOME -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.px-deploy:/.px-deploy rockylinux:8 <<\EOF
+docker run $PLATFORM --rm --privileged --network host -i -e home=$HOME -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.px-deploy:/.px-deploy rockylinux:8 <<\EOF
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -8,13 +8,15 @@ WHITE='\033[0;37m'
 NC='\033[0m'
 
 echo -e ${BLUE}Setting up installation container
-dnf install -y git docker >&/dev/null
+dnf install -y dnf-plugins-core >&/dev/null
+dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo >&/dev/null
+dnf install -y git docker-ce >&/dev/null
 echo Cloning repo
 git clone https://github.com/andrewh1978/px-deploy >&/dev/null
 cd px-deploy
 git checkout $(cat VERSION)
 echo Building container
-docker build --network host -t px-deploy . >&/dev/null
+docker build $PLATFORM --network host -t px-deploy . >&/dev/null
 mkdir -p /.px-deploy/{keys,deployments,kubeconfig,tf-deployments}
 
 #remove remainders of terraform (outside container)
@@ -29,9 +31,9 @@ done
 
 echo
 echo -e ${YELLOW}If you are using zsh, append this to your .zshrc:
-echo -e ${WHITE}'px-deploy() { docker run --help | grep -q -- "--platform string" && PLATFORM="--platform=linux/amd64" ; [ "$DEFAULTS" ] && params="-v $DEFAULTS:/px-deploy/.px-deploy/defaults.yml" ; docker run $PLATFORM -it -e PXDUSER=$USER --rm --name px-deploy.$$ $=params -v $HOME/.px-deploy:/px-deploy/.px-deploy -v $HOME/.aws/credentials:/root/.aws/credentials -v $HOME/.config/gcloud:/root/.config/gcloud -v $HOME/.azure:/root/.azure -v /etc/localtime:/etc/localtime px-deploy /root/go/bin/px-deploy $* ; }'
+echo -e ${WHITE}'px-deploy() { docker run --help | grep -q -- "--platform string" && PLATFORM="--platform=linux/amd64" ; [ "$DEFAULTS" ] && params="-v $DEFAULTS:/px-deploy/.px-deploy/defaults.yml" ; docker run $PLATFORM --network host -it -e PXDUSER=$USER --rm --name px-deploy.$$ $=params -v $HOME/.px-deploy:/px-deploy/.px-deploy -v $HOME/.aws/credentials:/root/.aws/credentials -v $HOME/.config/gcloud:/root/.config/gcloud -v $HOME/.azure:/root/.azure -v /etc/localtime:/etc/localtime px-deploy /root/go/bin/px-deploy $* ; }'
 echo -e ${YELLOW}If you are using bash, append this to your .bash_profile:
-echo -e ${WHITE}'px-deploy() { docker run --help | grep -q -- "--platform string" && PLATFORM="--platform linux/amd64" ; [ "$DEFAULTS" ] && params="-v $DEFAULTS:/px-deploy/.px-deploy/defaults.yml" ; docker run $PLATFORM -it -e PXDUSER=$USER --rm --name px-deploy.$$ $params -v $HOME/.px-deploy:/px-deploy/.px-deploy -v $HOME/.aws/credentials:/root/.aws/credentials -v $HOME/.config/gcloud:/root/.config/gcloud -v $HOME/.azure:/root/.azure -v /etc/localtime:/etc/localtime px-deploy /root/go/bin/px-deploy $* ; }'
+echo -e ${WHITE}'px-deploy() { docker run --help | grep -q -- "--platform string" && PLATFORM="--platform linux/amd64" ; [ "$DEFAULTS" ] && params="-v $DEFAULTS:/px-deploy/.px-deploy/defaults.yml" ; docker run $PLATFORM --network host -it -e PXDUSER=$USER --rm --name px-deploy.$$ $params -v $HOME/.px-deploy:/px-deploy/.px-deploy -v $HOME/.aws/credentials:/root/.aws/credentials -v $HOME/.config/gcloud:/root/.config/gcloud -v $HOME/.azure:/root/.azure -v /etc/localtime:/etc/localtime px-deploy /root/go/bin/px-deploy $* ; }'
 echo
 echo -e ${GREEN}When your px-deploy function is set, create a deployment with:
 echo -e "${WHITE}px-deploy create --name myDeployment --template px$NC"
