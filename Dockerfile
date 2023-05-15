@@ -29,6 +29,6 @@ COPY go.mod go.sum px-deploy.go /root/go/src/px-deploy/
 COPY vagrant /px-deploy/vagrant
 COPY terraform /px-deploy/terraform
 COPY vsphere-init.sh VERSION /
-# RUN terraform -chdir=/px-deploy/terraform/awstf/ init
+RUN terraform -chdir=/px-deploy/terraform/awstf/ init
 RUN chmod 755 /usr/bin/govc /vsphere-init.sh
 RUN cd /root/go/src/px-deploy ; go install
