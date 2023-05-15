@@ -7,6 +7,20 @@ BLUE='\033[1;34m'
 WHITE='\033[0;37m'
 NC='\033[0m'
 
+# find existing deployments being created by old aws code (no tf-deployments folder exists)
+found_legacy=false
+for i in $(grep -l 'cloud: aws' /.px-deploy/deployments/*.yml); do
+    if [ ! -d /.px-deploy/tf-deployments/$(basename $i .yml) ]; then
+        echo -e "${RED} AWS Deployment $(basename $i .yml) is being created by px-deploy version < 5. Please remove prior to upgrading to version 5"
+        found_legacy=true
+    fi
+done
+if [ "$found_legacy" = true ]; then
+        echo -e "${RED}Old AWS deployment(s) found. Please destroy before updating"
+        exit
+fi
+
+
 echo -e ${BLUE}Setting up installation container
 dnf install -y git docker >&/dev/null
 echo Cloning repo
@@ -29,7 +43,11 @@ for i in scripts templates assets; do
   cp -rf $i /.px-deploy
 done
 
-[ -e /.px-deploy/defaults.yml ] && cp defaults.yml /.px-deploy/defaults.yml.$PXDVERSION
+# existing defaults.yml found. Dont replace, but ask for updating versions
+if [ -e /.px-deploy/defaults.yml ]; then
+  cp defaults.yml /.px-deploy/defaults.yml.$PXDVERSION
+  echo -e ${YELLOW}Existing defaults.yml found. Please consider updating k8s/px Versions to release settings. Can be found in ./px-deploy/defaults.yml.$PXDVERSION
+fi
 
 echo
 echo -e ${YELLOW}If you are using zsh, append this to your .zshrc:
