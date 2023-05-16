@@ -5,7 +5,7 @@ This will deploy one or more clusters in the cloud, with optional post-install t
 # Supported platforms
 
 ## Container
- * Kubernetes (choose a version < 1.24)
+ * Kubernetes
  * K3s
  * Docker EE
  * Openshift 4 (only on AWS at this time)
@@ -22,11 +22,10 @@ This will deploy one or more clusters in the cloud, with optional post-install t
 ## Install & Update
 
 1. Install the CLI for your choice of cloud provider and ensure it is configured:
- * AWS: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
  * GCP: https://cloud.google.com/sdk/docs/quickstarts
  * Azure: https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest
 
-2. Install and enable Docker.
+2. Install and enable a container runtime such as Docker. On MacOS with Apple Silicon, it is recommended you use [Colima](https://github.com/abiosoft/colima). Start it with `colima start -a x86_64 -m 8 -c 8  --vz-rosetta`.
 
 3. Install bash-completion (optional), eg:
 ```
@@ -51,18 +50,23 @@ Review the various cloud settings in `~/.px-deploy/defaults.yml`.
 
 ### Notes for Updating
 
-* run the same steps to update your px-deploy installation
+* Run the same steps to update your px-deploy installation
 
-* please dont change the default scripts / templates as they will be overwritten during update. feel free to create your own scripts / templates
+* Please don't change the default scripts / templates as they will be overwritten during update. Feel free to create your own scripts / templates
 
-* your defaults.yml will not be replaced. After updating please check if the new release supports newer k8s / px versions and update your defaults.yml
+* Your defaults.yml will no longer be replaced. After updating please check if the new release supports newer Kubernetes / Portworx versions and update your defaults.yml
 * You'll find this information in the defaults.yml.VERSION file your .px-deploy folder 
 
-* when updating from a Version < 5.0.0 please destroy all AWS / AWSTF Cloud based deployments in advance. Version 5 cannot destroy these deployments any longer
+* When updating from a Version < 5.0.0 please destroy all AWS / AWSTF Cloud based deployments in advance. Version 5 cannot destroy these deployments any longer.
+
+* Update your .bashrc or .zshrc with the new px-deploy alias
 
 ## Use
 
 If you are using AWS and you have not accepted the Rocky Linux 8 terms, browse to https://aws.amazon.com/marketplace/pp/prodview-2otariyxb3mqu
+
+Edit your defaults.yml to set `aws_access_key_id` and `aws_secret_access_key`
+
 ```
 px-deploy create --name=my-deployment --template=clusterpair
 ```
