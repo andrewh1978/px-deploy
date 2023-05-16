@@ -19,7 +19,7 @@ This will deploy one or more clusters in the cloud, with optional post-install t
  * Azure
  * Vsphere
 
-## Getting started
+## Install & Update
 
 1. Install the CLI for your choice of cloud provider and ensure it is configured:
  * AWS: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
@@ -34,7 +34,7 @@ $ brew install bash-completion
 ```
 You will need to restart your shell.
 
-4. Run the install script:
+4. Run the install / update script:
 ```
 curl https://raw.githubusercontent.com/andrewh1978/px-deploy/master/install.sh | bash
 ```
@@ -49,25 +49,36 @@ Update your `.bash_profile` or `.zshrc` as directed. Source them or login again.
 
 Review the various cloud settings in `~/.px-deploy/defaults.yml`.
 
-5. Deploy something:
+### Notes for Updating
 
-If you are using AWS and you have not accepted the CentOS terms, browse to https://aws.amazon.com/marketplace/pp?sku=aw0evgkw8e5c1q413zgy5pjce.
+* run the same steps to update your px-deploy installation
+
+* please dont change the default scripts / templates as they will be overwritten during update. feel free to create your own scripts / templates
+
+* your defaults.yml will not be replaced. After updating please check if the new release supports newer k8s / px versions and update your defaults.yml
+* You'll find this information in the defaults.yml.VERSION file your .px-deploy folder 
+
+* when updating from a Version < 5.0.0 please destroy all AWS / AWSTF Cloud based deployments in advance. Version 5 cannot destroy these deployments any longer
+
+## Use
+
+If you are using AWS and you have not accepted the Rocky Linux 8 terms, browse to https://aws.amazon.com/marketplace/pp/prodview-2otariyxb3mqu
 ```
 px-deploy create --name=my-deployment --template=clusterpair
 ```
 This will provision a VPC and some other objects, and deploy into it from the template.
 
-6. Connect via SSH:
+Connect via SSH:
 ```
 px-deploy connect --name my-deployment
 ```
 
-7. Execute a command:
+Execute a command:
 ```
 px-deploy connect --name my-deployment "storkctl get clusterpair"
 ```
 
-8. Tear down the deployment:
+Tear down the deployment:
 ```
 px-deploy destroy --name my-deployment
 ```

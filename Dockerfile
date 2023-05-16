@@ -13,14 +13,14 @@ RUN gcloud components install alpha -q
 RUN rpm -i https://releases.hashicorp.com/vagrant/2.2.19/vagrant_2.2.19_x86_64.rpm
 RUN rpm -i https://rpm.releases.hashicorp.com/RHEL/7/x86_64/stable/packer-1.6.5-1.x86_64.rpm
 RUN vagrant plugin install vagrant-google --plugin-version 2.5.0
-RUN vagrant plugin install vagrant-aws
+#RUN vagrant plugin install vagrant-aws
 RUN vagrant plugin install vagrant-azure
 RUN vagrant plugin install vagrant-vsphere --plugin-version 1.13.5
-RUN vagrant box add dummy https://github.com/mitchellh/vagrant-aws/raw/master/dummy.box --provider aws
+#RUN vagrant box add dummy https://github.com/mitchellh/vagrant-aws/raw/master/dummy.box --provider aws
 RUN vagrant box add google/gce https://vagrantcloud.com/google/boxes/gce/versions/0.1.0/providers/google.box --provider google
 RUN vagrant box add azure https://github.com/azure/vagrant-azure/raw/v2.0/dummy.box --provider azure --provider azure
 RUN vagrant box add FEBO/oracle8 --provider vsphere
-RUN pip3 install awscli
+#RUN pip3 install awscli
 RUN curl -Ls https://github.com/vmware/govmomi/releases/download/v0.23.0/govc_linux_amd64.gz | zcat >/usr/bin/govc
 RUN mkdir -p /root/go/src/px-deploy
 RUN curl -s https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo >/etc/yum.repos.d/terraform-repo.repo
@@ -29,6 +29,6 @@ COPY go.mod go.sum px-deploy.go /root/go/src/px-deploy/
 COPY vagrant /px-deploy/vagrant
 COPY terraform /px-deploy/terraform
 COPY vsphere-init.sh VERSION /
-RUN terraform -chdir=/px-deploy/terraform/awstf/ init
+RUN terraform -chdir=/px-deploy/terraform/aws/ init
 RUN chmod 755 /usr/bin/govc /vsphere-init.sh
 RUN cd /root/go/src/px-deploy ; go install

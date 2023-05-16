@@ -7,6 +7,28 @@ BLUE='\033[1;34m'
 WHITE='\033[0;37m'
 NC='\033[0m'
 
+# find existing deployments not supported by pxd5 
+found_legacy=false
+
+# find deployments with awstf
+for i in $(grep -l 'cloud: awstf' /.px-deploy/deployments/*.yml); do
+        echo -e "${RED} AWSTF Deployment $(basename $i .yml) is being created by px-deploy version < 5. Please remove prior to upgrading to version 5"
+        found_legacy=true
+done
+
+#find deployments being created by old aws code (no tf-deployments folder exists)
+for i in $(grep -l 'cloud: aws' /.px-deploy/deployments/*.yml); do
+    if [ ! -d /.px-deploy/tf-deployments/$(basename $i .yml) ]; then
+        echo -e "${RED} AWS Deployment $(basename $i .yml) is being created by px-deploy version < 5. Please remove prior to upgrading to version 5"
+        found_legacy=true
+    fi
+done
+if [ "$found_legacy" = true ]; then
+        echo -e "${RED}Old AWS deployment(s) found. Please destroy before updating"
+        exit
+fi
+
+
 echo -e ${BLUE}Setting up installation container
 dnf install -y dnf-plugins-core >&/dev/null
 dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo >&/dev/null
@@ -15,19 +37,27 @@ echo Cloning repo
 git clone https://github.com/andrewh1978/px-deploy >&/dev/null
 cd px-deploy
 git checkout $(cat VERSION)
+PXDVERSION=$(cat VERSION)
 echo Building container
 docker build $PLATFORM --network host -t px-deploy . >&/dev/null
 mkdir -p /.px-deploy/{keys,deployments,kubeconfig,tf-deployments}
 
 #remove remainders of terraform (outside container)
-#*** can be removed after july 2023***
+#*** can be removed after sept 2023***
 rm -rf /.px-deploy/terraform*
 
+# backup existing directories and force copy from current branch
 time=$(date +%s)
-for i in scripts templates assets defaults.yml; do
-  [ -e /.px-deploy/$i ] && echo Backing up $home/.px-deploy/$i to $home/.px-deploy/$i.$time && mv /.px-deploy/$i /.px-deploy/$i.$time
-  cp -r $i /.px-deploy
+for i in scripts templates assets; do
+  [ -e /.px-deploy/$i ] && echo Backing up $home/.px-deploy/$i to $home/.px-deploy/$i.$time && cp -r /.px-deploy/$i /.px-deploy/$i.$time
+  cp -rf $i /.px-deploy
 done
+
+# existing defaults.yml found. Dont replace, but ask for updating versions
+if [ -e /.px-deploy/defaults.yml ]; then
+  cp defaults.yml /.px-deploy/defaults.yml.$PXDVERSION
+  echo -e ${YELLOW}Existing defaults.yml found. Please consider updating k8s/px Versions to release settings. Can be found in ./px-deploy/defaults.yml.$PXDVERSION
+fi
 
 echo
 echo -e ${YELLOW}If you are using zsh, append this to your .zshrc:

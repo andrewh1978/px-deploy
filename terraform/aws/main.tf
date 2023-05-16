@@ -55,13 +55,13 @@ resource "tls_private_key" "ssh" {
 resource "local_file" "ssh_private_key" {
 	content = tls_private_key.ssh.private_key_openssh
 	file_permission = "0600"
-	filename = format("/px-deploy/.px-deploy/keys/id_rsa.awstf.%s",var.config_name)
+	filename = format("/px-deploy/.px-deploy/keys/id_rsa.aws.%s",var.config_name)
 }
 
 resource "local_file" "ssh_public_key" {
 	content = tls_private_key.ssh.public_key_openssh
 	file_permission = "0644"
-	filename = format("/px-deploy/.px-deploy/keys/id_rsa.awstf.%s.pub",var.config_name)
+	filename = format("/px-deploy/.px-deploy/keys/id_rsa.aws.%s.pub",var.config_name)
 }
 
 resource "aws_key_pair" "deploy_key" {
