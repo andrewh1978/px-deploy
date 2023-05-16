@@ -17,11 +17,11 @@ This will deploy one or more clusters in the cloud, with optional post-install t
  * AWS
  * GCP
  * Azure
- * Vsphere
+ * vSphere
 
 ## Install & Update
 
-1. Install the CLI for your choice of cloud provider and ensure it is configured:
+1. If you are using GCP or Azure, install the CLI and ensure it is configured:
  * GCP: https://cloud.google.com/sdk/docs/quickstarts
  * Azure: https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest
 
@@ -52,25 +52,25 @@ Review the various cloud settings in `~/.px-deploy/defaults.yml`.
 
 * Run the same steps to update your px-deploy installation
 
-* Please don't change the default scripts / templates as they will be overwritten during update. Feel free to create your own scripts / templates
+* Please don't change the default scripts / templates as they will be overwritten during update. Feel free to create your own scripts / templates.
 
-* Your defaults.yml will no longer be replaced. After updating please check if the new release supports newer Kubernetes / Portworx versions and update your defaults.yml
-* You'll find this information in the defaults.yml.VERSION file your .px-deploy folder 
+* Your `defaults.yml` will no longer be replaced. After updating please check if the new release supports newer Kubernetes / Portworx versions and update it manually.
+* You'll find this information in `$HOME/.px-deploy/defaults.yml.VERSION`
 
-* When updating from a Version < 5.0.0 please destroy all AWS / AWSTF Cloud based deployments in advance. Version 5 cannot destroy these deployments any longer.
+* When updating from version < 5.0.0, please destroy all AWS / AWSTF Cloud based deployments in advance. Version 5 cannot destroy these deployments any longer.
 
-* Update your .bashrc or .zshrc with the new px-deploy alias
+* Update your `.bashrc` or `.zshrc` with the new px-deploy alias.
 
 ## Use
 
 If you are using AWS and you have not accepted the Rocky Linux 8 terms, browse to https://aws.amazon.com/marketplace/pp/prodview-2otariyxb3mqu
 
-Edit your defaults.yml to set `aws_access_key_id` and `aws_secret_access_key`
+Edit your `defaults.yml` to set `aws_access_key_id` and `aws_secret_access_key`.
 
+This will provision a VPC and some other objects, and deploy into it from the template:
 ```
 px-deploy create --name=my-deployment --template=clusterpair
 ```
-This will provision a VPC and some other objects, and deploy into it from the template.
 
 Connect via SSH:
 ```
@@ -119,13 +119,6 @@ px-vs-storageos-fio-example  An example fio benchmark on a gp2 disk, a Portworx 
 px                           A single Kubernetes cluster with Portworx installed
 storageos                    A single Kubernetes cluster with StorageOS installed
 training                     Deploys training clusters
-```
-
-Generate a list of IP address, suitable for training:
-```
-$ px-deploy status --name trainingDeployment
-master-1 34.247.219.101 ec2-34-247-219-101.eu-west-1.compute.amazonaws.com
-master-2 34.254.155.6 ec2-34-254-155-6.eu-west-1.compute.amazonaws.com
 ```
 
 Generate kubeconfig files so you can run kubectl from your laptop:
