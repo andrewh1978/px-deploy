@@ -137,6 +137,8 @@ The `defaults.yml` file sets a number of deployment variables:
  * `aws_region` - AWS region
  * `aws_tags` - a list of tags to be applied to each node. This is a comma-separate list of name=value pairs, for example: `"Owner=Bob,Purpose=Demo"`
  * `aws_type` - the AWS machine type for each node
+ * `aws_access_key_id` - your AWS API access key
+ * `aws_secret_access_key` - your AWS API secret access key
  * `cloud` - the cloud on which to deploy (aws, gcp, azure or vsphere)
  * `clusters` - the number of clusters to deploy
  * `k8s_version` - the version of Kubernetes to deploy

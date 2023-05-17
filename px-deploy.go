@@ -28,6 +28,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awscfg "github.com/aws/aws-sdk-go-v2/config"
+	awscredentials "github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go-v2/service/eks"
@@ -54,6 +55,8 @@ type Config struct {
 	Aws_Type                 string
 	Aws_Ebs                  string
 	Aws_Tags                 string
+	Aws_Access_Key_Id        string
+	Aws_Secret_Access_Key    string
 	Gcp_Type                 string
 	Gcp_Disks                string
 	Gcp_Zone                 string
@@ -108,7 +111,7 @@ var Blue   = "\033[34m"
 var wg sync.WaitGroup
 
 func main() {
-	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createAwsTags, createGcpType, createGcpDisks, createGcpZone, createGkeVersion, createAzureType, createAzureDisks, createTemplate, createRegion, createCloud, createEnv, connectName, kubeconfigName, destroyName, statusName, historyNumber string
+	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createAwsAccessKeyId, createAwsSecretAccessKey, createAwsTags, createGcpType, createGcpDisks, createGcpZone, createGkeVersion, createAzureType, createAzureDisks, createTemplate, createRegion, createCloud, createEnv, connectName, kubeconfigName, destroyName, statusName, historyNumber string
 	var createQuiet, createDryRun, destroyAll bool
 	os.Chdir("/px-deploy/.px-deploy")
 	rootCmd := &cobra.Command{Use: "px-deploy"}
@@ -233,6 +236,12 @@ func main() {
 				}
 				config.Aws_Type = createAwsType
 			}
+			if createAwsAccessKeyId != "" {
+				config.Aws_Access_Key_Id = createAwsAccessKeyId
+			}
+			if createAwsSecretAccessKey != "" {
+				config.Aws_Secret_Access_Key = createAwsSecretAccessKey
+			}
 			if createAwsEbs != "" {
 				if !regexp.MustCompile(`^[0-9a-z\ :]+$`).MatchString(createAwsEbs) {
 					die("Invalid AWS EBS volumes '" + createAwsEbs + "'")
@@ -313,7 +322,9 @@ func main() {
 					die("Postscript '" + config.Post_Script + "' is not valid Bash")
 				}
 			}
-			
+
+			if config.Cloud == "aws" && ( (config.Aws_Access_Key_Id=="") || (config.Aws_Secret_Access_Key=="")) { die("Please provide AWS Access Key ID / AWS Secret Key")}
+
 			if config.Platform == "eks" && !(config.Cloud == "aws") { die("EKS only makes sense with AWS (not " + config.Cloud + ")") }
 			if config.Platform == "ocp4" && config.Cloud != "aws" { die("Openshift 4 only supported on AWS (not " + config.Cloud + ")") }
 			if config.Platform == "gke" && config.Cloud != "gcp" { die("GKE only makes sense with GCP (not " + config.Cloud + ")") }
@@ -615,6 +626,8 @@ func main() {
 	cmdCreate.Flags().StringVarP(&createStopAfter, "stop_after", "s", "", "Stop instances after this many hours (default "+defaults.Stop_After+")")
 	cmdCreate.Flags().StringVarP(&createAwsType, "aws_type", "", "", "AWS type for each node (default "+defaults.Aws_Type+")")
 	cmdCreate.Flags().StringVarP(&createAwsEbs, "aws_ebs", "", "", "space-separated list of EBS volumes to be attached to worker nodes, eg \"gp2:20 standard:30\" (default "+defaults.Aws_Ebs+")")
+	cmdCreate.Flags().StringVarP(&createAwsAccessKeyId, "aws_access_key_id", "", "", "your AWS API access key id (default \""+defaults.Aws_Access_Key_Id+"\")")
+	cmdCreate.Flags().StringVarP(&createAwsSecretAccessKey, "aws_secret_access_key", "", "", "your AWS API secret access key (default \""+defaults.Aws_Secret_Access_Key+"\")")
 	cmdCreate.Flags().StringVarP(&createAwsTags, "aws_tags", "", "", "comma-separated list of tags to be applies to AWS nodes, eg \"Owner=Bob,Purpose=Demo\"")
 	cmdCreate.Flags().StringVarP(&createGcpType, "gcp_type", "", "", "GCP type for each node (default "+defaults.Gcp_Type+")")
 	cmdCreate.Flags().StringVarP(&createGcpDisks, "gcp_disks", "", "", "space-separated list of EBS volumes to be attached to worker nodes, eg \"pd-standard:20 pd-ssd:30\" (default "+defaults.Gcp_Disks+")")
@@ -748,6 +761,8 @@ func create_deployment(config Config) int {
 		tf_variables = append (tf_variables, "config_name = \"" + config.Name + "\"")
 		tf_variables = append (tf_variables, "clusters = " + config.Clusters)
 		tf_variables = append (tf_variables, "aws_region = \"" + config.Aws_Region + "\"")
+		tf_variables = append (tf_variables, "aws_access_key_id = \"" + config.Aws_Access_Key_Id + "\"")
+		tf_variables = append (tf_variables, "aws_secret_access_key = \"" + config.Aws_Secret_Access_Key + "\"")
 		
 		switch config.Platform {
 		  	case "ocp4": 
@@ -938,7 +953,7 @@ func destroy_deployment(name string) {
 		}
 
 		// connect to aws API
-		cfg, err := awscfg.LoadDefaultConfig(context.TODO(), awscfg.WithRegion(config.Aws_Region))
+		cfg, err := awscfg.LoadDefaultConfig(context.TODO(), awscfg.WithRegion(config.Aws_Region),awscfg.WithCredentialsProvider(awscredentials.NewStaticCredentialsProvider(config.Aws_Access_Key_Id, config.Aws_Secret_Access_Key, "")),)
 		if err != nil {
 			panic("aws configuration error, " + err.Error())
 		}
@@ -1170,7 +1185,7 @@ func aws_get_node_ip(deployment string, node string) string {
 	case "aws":
 		{
 		// connect to aws API
-		cfg, err := awscfg.LoadDefaultConfig(context.TODO(), awscfg.WithRegion(config.Aws_Region))
+		cfg, err := awscfg.LoadDefaultConfig(context.TODO(), awscfg.WithRegion(config.Aws_Region),awscfg.WithCredentialsProvider(awscredentials.NewStaticCredentialsProvider(config.Aws_Access_Key_Id, config.Aws_Secret_Access_Key,"")),)
 		if err != nil {
 			panic("aws configuration error, " + err.Error())
 		}
@@ -1626,6 +1641,8 @@ func write_nodescripts(config Config) {
 	tf_common_master_script = append(tf_common_master_script,"mkdir /px-deploy\n"...)
 	tf_common_master_script = append(tf_common_master_script,"mkdir /px-deploy/platform-delete\n"...)
 	tf_common_master_script = append(tf_common_master_script,"mkdir /px-deploy/script-delete\n"...)
+	tf_common_master_script = append(tf_common_master_script,"touch /px-deploy/script-delete/dummy.sh\n"...)
+	tf_common_master_script = append(tf_common_master_script,"touch /px-deploy/platform-delete/dummy.sh\n"...)
 	tf_common_master_script = append(tf_common_master_script,"mkdir /var/log/px-deploy\n"...)
 	tf_common_master_script = append(tf_common_master_script,"mkdir /var/log/px-deploy/completed\n"...)
 	tf_common_master_script = append(tf_common_master_script,"touch /var/log/px-deploy/completed/tracking\n"...)
