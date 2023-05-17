@@ -18,6 +18,8 @@ terraform {
 
 provider "aws" {
 	region 	= var.aws_region
+	access_key = var.aws_access_key_id
+	secret_key = var.aws_secret_access_key
 	default_tags {
 		tags = var.aws_tags
 	  }
@@ -281,7 +283,8 @@ resource "local_file" "cloud-init" {
 	for_each 					=	{for server in local.instances: server.instance_name =>  server}
 	content = templatefile("${path.module}/cloud-init.tpl", {
 		tpl_priv_key = base64encode(tls_private_key.ssh.private_key_openssh),
-		tpl_credentials = local.aws_credentials_array,
+		tpl_aws_access_key_id = var.aws_access_key_id
+		tpl_aws_secret_access_key = var.aws_secret_access_key
 		tpl_name = each.key
 		tpl_vpc = aws_vpc.vpc.id,
 		tpl_sg = aws_security_group.sg_px-deploy.id,

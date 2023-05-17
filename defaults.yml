@@ -11,6 +11,8 @@ quiet: false
 aws_region: eu-west-1
 aws_type: t3.large
 aws_ebs: "gp2:50"
+aws_access_key_id: 
+aws_secret_access_key: 
 #aws_ebs: "gp2:20 standard:30"
 
 gcp_region: europe-west1
