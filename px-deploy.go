@@ -26,6 +26,7 @@ import (
 	"github.com/imdario/mergo"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+	version_hashicorp "github.com/hashicorp/go-version"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awscfg "github.com/aws/aws-sdk-go-v2/config"
 	awscredentials "github.com/aws/aws-sdk-go-v2/credentials"
@@ -138,6 +139,47 @@ func main() {
 				die("Invalid arguments")
 			}
 			config := parse_yaml("defaults.yml")
+
+			// check for "recommended" version in default.yaml.[version_current]
+			if _, err := os.Stat("defaults.yml."+version_current); os.IsNotExist(err) {
+				fmt.Printf("%sdefaults.yml.%s not found. No recommended versions available to be shown%s \n",Yellow,version_current, Reset)
+			} else {
+				fmt.Printf("checking your defaults.yml for recommended version settings (from defaults.yml.%s) \n",version_current)
+				recommended_versions := parse_yaml(fmt.Sprintf("defaults.yml.%s",version_current))
+				recVers := reflect.ValueOf(recommended_versions)
+				curDef := reflect.ValueOf(config) 
+				typeOfS := recVers.Type()
+				for i := 0; i< recVers.NumField(); i++ {
+					// get all fields from recommended defaults.yml.VERSION with name "version" inside and check against current default settings
+					if strings.Contains(strings.ToLower(typeOfS.Field(i).Name),"version") {
+						versioning_field := typeOfS.Field(i).Name
+						versioning_current := fmt.Sprintf("%s",reflect.Indirect(curDef).FieldByName(typeOfS.Field(i).Name))
+						versioning_recommended := fmt.Sprintf("%s",recVers.Field(i).Interface())
+						//fmt.Printf("(Field: %s\t Value: %s \t\t Recommended: %s)\n", versioning_field , versioning_current, versioning_recommended)
+						if versioning_recommended != "" && versioning_current != "" {
+							if (versioning_recommended != versioning_current) {
+								
+								v1, err := version_hashicorp.NewVersion(versioning_current)
+								if err != nil {
+									fmt.Printf("Error processing current Versioning %s : %s\n",versioning_field,versioning_current)
+								}
+								v2, err := version_hashicorp.NewVersion(versioning_recommended)
+								if err != nil {
+									fmt.Printf("Error processing recommended Versioning %s : %s",versioning_field,versioning_recommended)
+								}
+								if v1.LessThan(v2)	{
+									fmt.Printf("%s %s: %s in defaults.yml is lower than recommended setting %s %s\n",Red,versioning_field,versioning_current,versioning_recommended,Reset)
+								}
+							}
+						} else if versioning_recommended == "" {
+							fmt.Printf("Field %s has no recommended version information available\n",versioning_field)
+						} else if versioning_current == "" {
+							fmt.Printf("%s please add field %s: %s in defaults.yml (recommended setting) %s\n",Red,versioning_field,versioning_recommended,Reset)
+						}
+					}
+				}								
+			}	
+			
 			env := config.Env
 			var env_template map[string]string
 			if createTemplate != "" {
