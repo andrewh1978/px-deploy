@@ -11,19 +11,16 @@ This will deploy one or more clusters in the cloud, with optional post-install t
  * Openshift 4 (only on AWS at this time)
  * EKS (only makes sense on AWS)
  * GKE (only makes sense on GCP)
- * AKS (only makes sense on Azure)
 
 ## Cloud
  * AWS
  * GCP
- * Azure
  * vSphere
 
 ## Install & Update
 
-1. If you are using GCP or Azure, install the CLI and ensure it is configured:
+1. If you are using GCP, install the CLI and ensure it is configured:
  * GCP: https://cloud.google.com/sdk/docs/quickstarts
- * Azure: https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest
 
 2. Install and enable a container runtime such as Docker. On MacOS with Apple Silicon, it is recommended you use [Colima](https://github.com/abiosoft/colima). Start it with `colima start -a x86_64 -m 8 -c 8  --vz-rosetta`.
 
@@ -139,7 +136,7 @@ The `defaults.yml` file sets a number of deployment variables:
  * `aws_type` - the AWS machine type for each node
  * `aws_access_key_id` - your AWS API access key
  * `aws_secret_access_key` - your AWS API secret access key
- * `cloud` - the cloud on which to deploy (aws, gcp, azure or vsphere)
+ * `cloud` - the cloud on which to deploy (aws, gcp, or vsphere)
  * `clusters` - the number of clusters to deploy
  * `k8s_version` - the version of Kubernetes to deploy
  * `stop_after` - stop the intances after this many hours
@@ -147,15 +144,13 @@ The `defaults.yml` file sets a number of deployment variables:
  * `quiet` - if "true", hide provisioning output
  * `auto_destroy` - if set to `true`, destroy deployment immediately after deploying (usually used with a `post_script` to output the results of a test or benchmark)
  * `nodes` - the number of worker nodes on each cluster
- * `platform` - can be set to either k8s, k3s, none, dockeree, ocp4, eks, gke, aks or nomad
+ * `platform` - can be set to either k8s, k3s, none, dockeree, ocp4, eks, gke or nomad
  * `px_version` - the version of Portworx to install
  * `gcp_disks` - similar to aws_ebs, for example: `"pd-standard:20 pd-ssd:30"`
  * `gcp_region` - GCP region
  * `gcp_type` - the GCP machine type for each node
  * `gcp_zone` - GCP zone
  * `gke_version` - GKE k8s Version
- * `azure_disks` - similar to aws_ebs, for example: `"20 30"`
- * `azure_type` - the Azure machine type for each node
  * `vsphere_host` - endpoint
  * `vsphere_compute_resource` - compute resource
  * `vsphere_user` - user with which to provision VMs
@@ -248,7 +243,6 @@ The `install-px` script looks for an environment variable called `cloud_drive`. 
 px-deploy create -n foo -t px -e cloud_drive=type%3Dgp2%2Csize%3D150
 px-deploy create -n bar -t px --platform ocp4 -e cloud_drive=type%3Dgp2%2Csize%3D150
 px-deploy create -n baz -t px --platform gke --cloud gcp -e cloud_drive="type%3Dpd-standard%2Csize%3D150"
-px-deploy create -n qux -t px --platform aks --cloud azure -e cloud_drive="type%3DPremium_LRS%2Csize%3D150"
 ```
 
 # Notes for vSphere
@@ -287,8 +281,3 @@ openshift.example.com name server ns-730.awsdns-27.net.
 $ host -t soa openshift.example.com
 openshift.example.com has SOA record ns-730.awsdns-227.net. awsdns-hostmaster.amazon.com. 1 7200 900 1209600 86400
 ```
-
-# Bugs
-
- * The Azure Vagrant plugin will [fail when provisioning VMs in parallel](https://github.com/Azure/vagrant-azure/issues/229), so px-deploy disables parallel provisioning. This is really slow, and if a template uses a script that will not terminate until another VM is up, then it will never finish provisioning.
- * Provisioning multiple deployments in an Azure region at the same time gives DNS errors and fails.
