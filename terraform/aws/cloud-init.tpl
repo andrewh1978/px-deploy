@@ -22,7 +22,6 @@ runcmd:
 - export aws__gw="${tpl_gw}"
 - export aws__routetable="${tpl_routetable}"
 - export aws__ami="${tpl_ami}"
-- export aws__drbucket="${tpl_drbucket}"
 - export cloud="aws"
 - export cluster="${tpl_cluster}"
 - export KUBECONFIG=/root/.kube/config
