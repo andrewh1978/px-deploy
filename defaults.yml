@@ -15,11 +15,11 @@ aws_access_key_id:
 aws_secret_access_key: 
 #aws_ebs: "gp2:20 standard:30"
 
-gcp_region: europe-west1
+gcp_region: europe-north1
 gcp_zone: b
-gcp_type: n1-standard-2
+gcp_type: e2-standard-2
 gcp_disks: "pd-standard:50"
-gke_version: "1.24.5-gke.600"
+gke_version: "1.25.8-gke.500"
 #gcp_disks: "pd-standard:20 pd-ssd:30"
 
 vsphere_host: XXX
