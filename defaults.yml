@@ -2,8 +2,8 @@ cloud: aws
 platform: k8s
 clusters: 1
 nodes: 3
-k8s_version: 1.24.12
-px_version: 2.13.2
+k8s_version: 1.24.13
+px_version: 2.13.5
 stop_after: 6
 post_script: show-ip
 quiet: false
@@ -21,11 +21,6 @@ gcp_type: n1-standard-2
 gcp_disks: "pd-standard:50"
 gke_version: "1.24.5-gke.600"
 #gcp_disks: "pd-standard:20 pd-ssd:30"
-
-azure_region: uksouth
-azure_type: Standard_B2ms
-azure_disks: "50"
-#azure_disks: "100 200"
 
 vsphere_host: XXX
 vsphere_compute_resource: XXX
