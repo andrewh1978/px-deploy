@@ -11,13 +11,13 @@ NC='\033[0m'
 found_legacy=false
 
 # find deployments with awstf
-for i in $(grep -l 'cloud: awstf' /.px-deploy/deployments/*.yml); do
+for i in $(grep -l 'cloud: awstf' /.px-deploy/deployments/*.yml 2>/dev/null); do
         echo -e "${RED} AWSTF Deployment $(basename $i .yml) is being created by px-deploy version < 5. Please remove prior to upgrading to version 5"
         found_legacy=true
 done
 
 #find deployments being created by old aws code (no tf-deployments folder exists)
-for i in $(grep -l 'cloud: aws' /.px-deploy/deployments/*.yml); do
+for i in $(grep -l 'cloud: aws' /.px-deploy/deployments/*.yml 2>/dev/null); do
     if [ ! -d /.px-deploy/tf-deployments/$(basename $i .yml) ]; then
         echo -e "${RED} AWS Deployment $(basename $i .yml) is being created by px-deploy version < 5. Please remove prior to upgrading to version 5"
         found_legacy=true
