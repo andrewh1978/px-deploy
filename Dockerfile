@@ -1,6 +1,6 @@
 FROM rockylinux:8
 #RUN echo W2F6dXJlLWNsaV0KbmFtZT1BenVyZSBDTEkKYmFzZXVybD1odHRwczovL3BhY2thZ2VzLm1pY3Jvc29mdC5jb20veXVtcmVwb3MvYXp1cmUtY2xpCmVuYWJsZWQ9MQpncGdjaGVjaz0xCmdwZ2tleT1odHRwczovL3BhY2thZ2VzLm1pY3Jvc29mdC5jb20va2V5cy9taWNyb3NvZnQuYXNjCg== | base64 -d >/etc/yum.repos.d/azure-cli.repo
-RUN dnf install -y gcc make openssh-clients python3-pip golang-1.18.9 git epel-release openssl gcc-c++ mkisofs # azure-cli
+RUN dnf install -y gcc make openssh-clients python3-pip golang git epel-release openssl gcc-c++ mkisofs # azure-cli
 RUN dnf install -y jq
 RUN echo ServerAliveInterval 300 >/etc/ssh/ssh_config
 RUN echo ServerAliveCountMax 2 >>/etc/ssh/ssh_config
