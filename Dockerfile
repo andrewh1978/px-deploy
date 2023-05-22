@@ -23,7 +23,7 @@ RUN mkdir -p /root/go/src/px-deploy
 RUN curl -s https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo >/etc/yum.repos.d/terraform-repo.repo
 RUN dnf install -y terraform-1.3.9
 COPY go.mod go.sum px-deploy.go /root/go/src/px-deploy/
-COPY vagrant /px-deploy/vagrantgo install -v golang.org/x/tools/gopls@latest
+COPY vagrant /px-deploy/vagrant
 COPY terraform /px-deploy/terraform
 COPY vsphere-init.sh VERSION /
 RUN terraform -chdir=/px-deploy/terraform/aws/ init
