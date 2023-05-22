@@ -1,3 +1,15 @@
+# 5.0
+
+## Improvements
+ * Migrate AWS to Terraform
+ * Move from CentOS 7 to Rocky Linux 8
+ * Bump Kubernetes to 1.24.13
+ * Bump Portworx to 2.13.5
+ * Bump PX-Central to 2.4.2
+ 
+## Fixes
+ * Update templates to use external objectstore
+
 # 4.17.1
 
 ## Improvements

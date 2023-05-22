@@ -18,6 +18,8 @@ terraform {
 
 provider "aws" {
 	region 	= var.aws_region
+	access_key = var.aws_access_key_id
+	secret_key = var.aws_secret_access_key
 	default_tags {
 		tags = var.aws_tags
 	  }
@@ -55,13 +57,13 @@ resource "tls_private_key" "ssh" {
 resource "local_file" "ssh_private_key" {
 	content = tls_private_key.ssh.private_key_openssh
 	file_permission = "0600"
-	filename = format("/px-deploy/.px-deploy/keys/id_rsa.awstf.%s",var.config_name)
+	filename = format("/px-deploy/.px-deploy/keys/id_rsa.aws.%s",var.config_name)
 }
 
 resource "local_file" "ssh_public_key" {
 	content = tls_private_key.ssh.public_key_openssh
 	file_permission = "0644"
-	filename = format("/px-deploy/.px-deploy/keys/id_rsa.awstf.%s.pub",var.config_name)
+	filename = format("/px-deploy/.px-deploy/keys/id_rsa.aws.%s.pub",var.config_name)
 }
 
 resource "aws_key_pair" "deploy_key" {
@@ -281,7 +283,8 @@ resource "local_file" "cloud-init" {
 	for_each 					=	{for server in local.instances: server.instance_name =>  server}
 	content = templatefile("${path.module}/cloud-init.tpl", {
 		tpl_priv_key = base64encode(tls_private_key.ssh.private_key_openssh),
-		tpl_credentials = local.aws_credentials_array,
+		tpl_aws_access_key_id = var.aws_access_key_id
+		tpl_aws_secret_access_key = var.aws_secret_access_key
 		tpl_name = each.key
 		tpl_vpc = aws_vpc.vpc.id,
 		tpl_sg = aws_security_group.sg_px-deploy.id,
@@ -295,6 +298,10 @@ resource "local_file" "cloud-init" {
 	filename = "${path.module}/cloud-init-${each.key}-generated.yaml"
 }
 
+#resource "aws_s3_bucket" "drbucket" {
+#  bucket = format("%s-%s",var.name_prefix,var.config_name)
+#  force_destroy = true
+#}
 
 resource "local_file" "aws-returns" {
 	content = templatefile("${path.module}/aws-returns.tpl", { 

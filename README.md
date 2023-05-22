@@ -5,28 +5,24 @@ This will deploy one or more clusters in the cloud, with optional post-install t
 # Supported platforms
 
 ## Container
- * Kubernetes (choose a version < 1.24)
+ * Kubernetes
  * K3s
  * Docker EE
  * Openshift 4 (only on AWS at this time)
  * EKS (only makes sense on AWS)
  * GKE (only makes sense on GCP)
- * AKS (only makes sense on Azure)
 
 ## Cloud
  * AWS
  * GCP
- * Azure
- * Vsphere
+ * vSphere
 
-## Getting started
+## Install & Update
 
-1. Install the CLI for your choice of cloud provider and ensure it is configured:
- * AWS: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
+1. If you are using GCP, install the CLI and ensure it is configured:
  * GCP: https://cloud.google.com/sdk/docs/quickstarts
- * Azure: https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest
 
-2. Install and enable Docker.
+2. Install and enable a container runtime such as Docker. On MacOS with Apple Silicon, it is recommended you use [Colima](https://github.com/abiosoft/colima). Start it with `colima start -a x86_64 -m 8 -c 8  --vz-rosetta`.
 
 3. Install bash-completion (optional), eg:
 ```
@@ -34,7 +30,7 @@ $ brew install bash-completion
 ```
 You will need to restart your shell.
 
-4. Run the install script:
+4. Run the install / update script:
 ```
 curl https://raw.githubusercontent.com/andrewh1978/px-deploy/master/install.sh | bash
 ```
@@ -49,25 +45,41 @@ Update your `.bash_profile` or `.zshrc` as directed. Source them or login again.
 
 Review the various cloud settings in `~/.px-deploy/defaults.yml`.
 
-5. Deploy something:
+### Notes for Updating
 
-If you are using AWS and you have not accepted the CentOS terms, browse to https://aws.amazon.com/marketplace/pp?sku=aw0evgkw8e5c1q413zgy5pjce.
+* Run the same steps to update your px-deploy installation
+
+* Please don't change the default scripts / templates as they will be overwritten during update. Feel free to create your own scripts / templates.
+
+* Your `defaults.yml` will no longer be replaced. After updating please check if the new release supports newer Kubernetes / Portworx versions and update it manually.
+* You'll find this information in `$HOME/.px-deploy/defaults.yml.VERSION`
+
+* When updating from version < 5.0.0, please destroy all AWS / AWSTF Cloud based deployments in advance. Version 5 cannot destroy these deployments any longer.
+
+* Update your `.bashrc` or `.zshrc` with the new px-deploy alias.
+
+## Use
+
+If you are using AWS and you have not accepted the Rocky Linux 8 terms, browse to https://aws.amazon.com/marketplace/pp/prodview-2otariyxb3mqu
+
+Edit your `defaults.yml` to set `aws_access_key_id` and `aws_secret_access_key`.
+
+This will provision a VPC and some other objects, and deploy into it from the template:
 ```
 px-deploy create --name=my-deployment --template=clusterpair
 ```
-This will provision a VPC and some other objects, and deploy into it from the template.
 
-6. Connect via SSH:
+Connect via SSH:
 ```
 px-deploy connect --name my-deployment
 ```
 
-7. Execute a command:
+Execute a command:
 ```
 px-deploy connect --name my-deployment "storkctl get clusterpair"
 ```
 
-8. Tear down the deployment:
+Tear down the deployment:
 ```
 px-deploy destroy --name my-deployment
 ```
@@ -106,13 +118,6 @@ storageos                    A single Kubernetes cluster with StorageOS installe
 training                     Deploys training clusters
 ```
 
-Generate a list of IP address, suitable for training:
-```
-$ px-deploy status --name trainingDeployment
-master-1 34.247.219.101 ec2-34-247-219-101.eu-west-1.compute.amazonaws.com
-master-2 34.254.155.6 ec2-34-254-155-6.eu-west-1.compute.amazonaws.com
-```
-
 Generate kubeconfig files so you can run kubectl from your laptop:
 ```
 $ px-deploy kubeconfig --name exampleDeployment
@@ -129,7 +134,9 @@ The `defaults.yml` file sets a number of deployment variables:
  * `aws_region` - AWS region
  * `aws_tags` - a list of tags to be applied to each node. This is a comma-separate list of name=value pairs, for example: `"Owner=Bob,Purpose=Demo"`
  * `aws_type` - the AWS machine type for each node
- * `cloud` - the cloud on which to deploy (aws, gcp, azure or vsphere)
+ * `aws_access_key_id` - your AWS API access key
+ * `aws_secret_access_key` - your AWS API secret access key
+ * `cloud` - the cloud on which to deploy (aws, gcp, or vsphere)
  * `clusters` - the number of clusters to deploy
  * `k8s_version` - the version of Kubernetes to deploy
  * `stop_after` - stop the intances after this many hours
@@ -137,15 +144,13 @@ The `defaults.yml` file sets a number of deployment variables:
  * `quiet` - if "true", hide provisioning output
  * `auto_destroy` - if set to `true`, destroy deployment immediately after deploying (usually used with a `post_script` to output the results of a test or benchmark)
  * `nodes` - the number of worker nodes on each cluster
- * `platform` - can be set to either k8s, k3s, none, dockeree, ocp4, eks, gke, aks or nomad
+ * `platform` - can be set to either k8s, k3s, none, dockeree, ocp4, eks, gke or nomad
  * `px_version` - the version of Portworx to install
  * `gcp_disks` - similar to aws_ebs, for example: `"pd-standard:20 pd-ssd:30"`
  * `gcp_region` - GCP region
  * `gcp_type` - the GCP machine type for each node
  * `gcp_zone` - GCP zone
  * `gke_version` - GKE k8s Version
- * `azure_disks` - similar to aws_ebs, for example: `"20 30"`
- * `azure_type` - the Azure machine type for each node
  * `vsphere_host` - endpoint
  * `vsphere_compute_resource` - compute resource
  * `vsphere_user` - user with which to provision VMs
@@ -238,7 +243,6 @@ The `install-px` script looks for an environment variable called `cloud_drive`. 
 px-deploy create -n foo -t px -e cloud_drive=type%3Dgp2%2Csize%3D150
 px-deploy create -n bar -t px --platform ocp4 -e cloud_drive=type%3Dgp2%2Csize%3D150
 px-deploy create -n baz -t px --platform gke --cloud gcp -e cloud_drive="type%3Dpd-standard%2Csize%3D150"
-px-deploy create -n qux -t px --platform aks --cloud azure -e cloud_drive="type%3DPremium_LRS%2Csize%3D150"
 ```
 
 # Notes for vSphere
@@ -277,8 +281,3 @@ openshift.example.com name server ns-730.awsdns-27.net.
 $ host -t soa openshift.example.com
 openshift.example.com has SOA record ns-730.awsdns-227.net. awsdns-hostmaster.amazon.com. 1 7200 900 1209600 86400
 ```
-
-# Bugs
-
- * The Azure Vagrant plugin will [fail when provisioning VMs in parallel](https://github.com/Azure/vagrant-azure/issues/229), so px-deploy disables parallel provisioning. This is really slow, and if a template uses a script that will not terminate until another VM is up, then it will never finish provisioning.
- * Provisioning multiple deployments in an Azure region at the same time gives DNS errors and fails.
