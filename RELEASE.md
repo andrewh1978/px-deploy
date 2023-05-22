@@ -1,3 +1,8 @@
+# 5.0.1
+
+## Fixes
+ * Bump golang version
+
 # 5.0
 
 ## Improvements
