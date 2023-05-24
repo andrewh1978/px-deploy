@@ -9,7 +9,6 @@ cat <<EOF | ssh node-1-1
 pxctl volume create testVol --repl 3 --size 20
 pxctl host attach testVol
 mount /dev/nvme3n1 /mnt
-docker pull antonipx/fio
 EOF
 cat <<EOF | ssh node-1-1 >&/tmp/output
 echo Disk test:

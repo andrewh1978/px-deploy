@@ -1,4 +1,4 @@
-kubeadm config images list --kubernetes-version $k8s_version | xargs -n1 -P0 docker pull
+kubeadm config images list --kubernetes-version $k8s_version | xargs -n1 -P0 ctr -n k8s.io images pull
 kubeadm init --apiserver-advertise-address=$(hostname -i) --pod-network-cidr=10.244.0.0/16 --kubernetes-version $k8s_version
 mkdir /root/.kube
 cp /etc/kubernetes/admin.conf /root/.kube/config
