@@ -57,6 +57,8 @@ done
 if [ -e /.px-deploy/defaults.yml ]; then
   cp defaults.yml /.px-deploy/defaults.yml.$PXDVERSION
   echo -e ${YELLOW}Existing defaults.yml found. Please consider updating k8s/px Versions to release settings. Can be found in ./px-deploy/defaults.yml.$PXDVERSION
+else
+  cp defaults.yml /.px-deploy/defaults.yml
 fi
 
 echo
