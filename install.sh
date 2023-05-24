@@ -39,7 +39,7 @@ cd px-deploy
 git checkout $(cat VERSION)
 PXDVERSION=$(cat VERSION)
 echo Building container
-docker build $PLATFORM --network host -t px-deploy . >&/dev/null
+docker build $PLATFORM --network host -t px-deploy . >&/dev/null || exit 1
 mkdir -p /.px-deploy/{keys,deployments,kubeconfig,tf-deployments}
 
 #remove remainders of terraform (outside container)
@@ -75,3 +75,4 @@ echo -e ${WHITE}'px-deploy completion | tr -d "\\r" >$HOME/.px-deploy/bash-compl
 echo -e ${YELLOW}and append this to your .bash_profile:
 echo -e "${WHITE}[ -n \$BASH_COMPLETION ] && . \$HOME/.px-deploy/bash-completion"
 EOF
+[ $? -eq 0 ] || echo -e ${RED}Image build failed${RESET}
