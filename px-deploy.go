@@ -365,7 +365,7 @@ func main() {
 				}
 			}
 
-			if config.Cloud == "aws" && ( (config.Aws_Access_Key_Id=="") || (config.Aws_Secret_Access_Key=="")) { die("Please provide AWS Access Key ID / AWS Secret Key")}
+			if config.Cloud == "aws" && ( (config.Aws_Access_Key_Id=="") || (config.Aws_Secret_Access_Key=="")) { die("Please set aws_access_key_id and aws_secret_access_key in defaults.yml")}
 
 			if config.Platform == "eks" && !(config.Cloud == "aws") { die("EKS only makes sense with AWS (not " + config.Cloud + ")") }
 			if config.Platform == "ocp4" && config.Cloud != "aws" { die("Openshift 4 only supported on AWS (not " + config.Cloud + ")") }
