@@ -40,6 +40,10 @@ git checkout $(cat VERSION)
 PXDVERSION=$(cat VERSION)
 echo Building container
 docker build $PLATFORM --network host -t px-deploy . >&/dev/null
+if [ $? -ne 0 ]; then
+  echo -e ${RED}Image build failed${NC}
+  exit
+fi
 mkdir -p /.px-deploy/{keys,deployments,kubeconfig,tf-deployments}
 
 #remove remainders of terraform (outside container)
@@ -55,9 +59,11 @@ done
 
 # existing defaults.yml found. Dont replace, but ask for updating versions
 if [ -e /.px-deploy/defaults.yml ]; then
-  cp defaults.yml /.px-deploy/defaults.yml.$PXDVERSION
-  echo -e ${YELLOW}Existing defaults.yml found. Please consider updating k8s/px Versions to release settings. Can be found in ./px-deploy/defaults.yml.$PXDVERSION
+  echo -e ${YELLOW}Existing defaults.yml found. Please consider updating k8s_version and px_version to release settings (check $HOME/px-deploy/defaults.yml.$PXDVERSION).
+else
+  cp defaults.yml /.px-deploy/defaults.yml
 fi
+cp defaults.yml /.px-deploy/defaults.yml.$PXDVERSION
 
 echo
 echo -e ${YELLOW}If you are using zsh, append this to your .zshrc:
