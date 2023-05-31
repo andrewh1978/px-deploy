@@ -81,7 +81,7 @@ jobs:
         if: github.event_name != 'release'
         id: tag-non-master
         run: |
-          VERSION=$(cat VERSION)
+          VERSION="dev"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           TAGS=$(echo "ghcr.io/$GITHUB_REPOSITORY:$VERSION")
           echo "TAGS=$TAGS" >> $GITHUB_ENV
