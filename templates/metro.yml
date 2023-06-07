@@ -2,16 +2,16 @@ description: Deploys 2 K8s clusters in AWS with a stretched Portworx cluster. It
 cloud: aws
 clusters: 2
 nodes: 3
-scripts: ["install-awscli", "install-px"]
+scripts: ["install-awscli"]
 env:
   #licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
   px_suffix: "c=metro-cluster&b=false"
   etcd: "EXTERNAL"
 cluster:
   - id: 1
-    scripts: ["etcd", "metro", "aws-elb", "licenses", "petclinic"]
+    scripts: ["etcd", "install-px", "metro", "aws-elb", "licenses", "petclinic"]
   - id: 2
-    scripts: ["metro", "clusterpair-metro"]
+    scripts: ["install-px", "metro", "clusterpair-metro"]
 
 # NOTE: edit env.licenses above, or define in defaults.yml
 # Verify all is working with `storkctl get clusterdomainsstatus` (take around 7 minutes)

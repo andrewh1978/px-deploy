@@ -159,7 +159,7 @@ if [ "$operator" != false ]; then
     done
     curl -s -X PUT -H "Content-Type: application/json" -d '{"oldPassword":"admin","newPassword":"admin","confirmNew":"admin"}' http://admin:admin@localhost:30112/api/user/password
   fi
-  while ! kubectl wait storageclusters.core.libopenstorage.org/px-deploy-$cluster -n $namespace --for=jsonpath='{status.phase}'=Online --timeout=60s; do
-    echo "Waiting for PX Storagecluster px-deploy-$cluster status online"
+  while ! kubectl wait stc --all -n $namespace --for=jsonpath='{status.phase}'=Online --timeout=60s; do
+    echo "Waiting for StorageCluster status online"
   done
 fi
