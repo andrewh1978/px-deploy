@@ -27,5 +27,6 @@ COPY vagrant /px-deploy/vagrant
 COPY terraform /px-deploy/terraform
 COPY vsphere-init.sh VERSION /
 RUN terraform -chdir=/px-deploy/terraform/aws/ init
+RUN terraform -chdir=/px-deploy/terraform/azure/ init
 RUN chmod 755 /usr/bin/govc /vsphere-init.sh
 RUN cd /root/go/src/px-deploy ; go install

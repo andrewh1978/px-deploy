@@ -46,7 +46,7 @@ StrictHostKeyChecking no
 LogLevel ERROR
 EOF
 
-if [ $cloud = "aws" -o $cloud = "gcp" ]; then
+if [ $cloud = "aws" -o $cloud = "gcp" -o $cloud = "azure" ]; then
   echo 127.0.0.1 localhost >/etc/hosts
   for i in $(seq 1 $clusters); do
     echo 192.168.$[100+$i].90 master-$i >>/etc/hosts
