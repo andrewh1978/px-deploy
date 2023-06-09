@@ -13,6 +13,7 @@ runcmd:
 - export azure_client_id="${tpl_azure_client}"
 - export azure_client_secret="${tpl_azure_secret}"
 - export azure_tentant_id="${tpl_azure_tenant}"
+- export azure__group="${tpl_azure_group}"
 - export cloud="azure"
 - export cluster="${tpl_cluster}"
 - export KUBECONFIG=/root/.kube/config

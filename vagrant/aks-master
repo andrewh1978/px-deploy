@@ -1,4 +1,4 @@
-CLUSTER=px-deploy-$name-$cluster
+#CLUSTER=px-deploy-$name-$cluster
 JQ="docker run -i --rm --name jq endeveit/docker-jq jq"
 
 cat <<EOF >/etc/yum.repos.d/azure-cli.repo
@@ -13,13 +13,16 @@ EOF
 while ! dnf install -y docker azure-cli; do
   sleep 2
 done
-systemctl enable --now docker
+#systemctl enable --now docker
 curl -sL -o /usr/bin/kubectl "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
 chmod 755 /usr/bin/kubectl
 
-az provider register --namespace Microsoft.OperationsManagement
-az provider register --namespace Microsoft.OperationalInsights
-while ! az provider show -n Microsoft.OperationsManagement | $JQ -r .registrationState | grep -q '^Registered$'; do sleep 1 ; done
-while ! az provider show -n Microsoft.OperationalInsights | $JQ -r .registrationState | grep -q '^Registered$'; do sleep 1 ; done
-az aks create --resource-group $azure__group --name $CLUSTER --node-count $nodes --enable-addons monitoring --generate-ssh-keys --node-vm-size $azure_type --location $azure_region
-az aks get-credentials --resource-group $azure__group --name $CLUSTER
+az login --service-principal -u $azure_client_id -p=$azure_client_secret --tenant $azure_tenant_id
+az aks get-credentials --resource-group $azure__group --name px-deploy-$name-$cluster
+
+#az provider register --namespace Microsoft.OperationsManagement
+#az provider register --namespace Microsoft.OperationalInsights
+#while ! az provider show -n Microsoft.OperationsManagement | $JQ -r .registrationState | grep -q '^Registered$'; do sleep 1 ; done
+#while ! az provider show -n Microsoft.OperationalInsights | $JQ -r .registrationState | grep -q '^Registered$'; do sleep 1 ; done
+#az aks create --resource-group $azure__group --name $CLUSTER --node-count $nodes --enable-addons monitoring --generate-ssh-keys --node-vm-size $azure_type --location $azure_region
+#az aks get-credentials --resource-group $azure__group --name $CLUSTER
