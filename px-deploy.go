@@ -71,6 +71,7 @@ type Config struct {
 	Azure_Client_Secret      string
 	Azure_Subscription_Id    string
 	Azure_Tenant_Id          string
+	Aks_Version              string
 	Vsphere_Host             string
 	Vsphere_Compute_Resource string
 	Vsphere_Resource_Pool    string
@@ -119,7 +120,7 @@ var Blue = "\033[34m"
 var wg sync.WaitGroup
 
 func main() {
-	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createAwsAccessKeyId, createAwsSecretAccessKey, createAwsTags, createGcpType, createGcpDisks, createGcpZone, createGkeVersion, createAzureType, createAzureDisks, createAzureClientSecret, createAzureClientId, createAzureTenantId, createAzureSubscriptionId, createTemplate, createRegion, createCloud, createEnv, connectName, kubeconfigName, destroyName, statusName, historyNumber string
+	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createAwsAccessKeyId, createAwsSecretAccessKey, createAwsTags, createGcpType, createGcpDisks, createGcpZone, createGkeVersion, createAzureType, createAksVersion, createAzureDisks, createAzureClientSecret, createAzureClientId, createAzureTenantId, createAzureSubscriptionId, createTemplate, createRegion, createCloud, createEnv, connectName, kubeconfigName, destroyName, statusName, historyNumber string
 	var createQuiet, createDryRun, destroyAll bool
 	os.Chdir("/px-deploy/.px-deploy")
 	rootCmd := &cobra.Command{Use: "px-deploy"}
@@ -338,6 +339,12 @@ func main() {
 					die("Invalid GKE version '" + createGkeVersion + "'")
 				}
 				config.Gke_Version = createGkeVersion
+			}
+			if createAksVersion != "" {
+				if !regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+-gke\.[0-9]+$`).MatchString(createAksVersion) {
+					die("Invalid AKS version '" + createAksVersion + "'")
+				}
+				config.Aks_Version = createAksVersion
 			}
 			if createAzureType != "" {
 				if !regexp.MustCompile(`^[0-9a-z\-]+$`).MatchString(createAzureType) {
@@ -701,6 +708,7 @@ func main() {
 	cmdCreate.Flags().StringVarP(&createGcpType, "gcp_type", "", "", "GCP type for each node (default "+defaults.Gcp_Type+")")
 	cmdCreate.Flags().StringVarP(&createGcpDisks, "gcp_disks", "", "", "space-separated list of EBS volumes to be attached to worker nodes, eg \"pd-standard:20 pd-ssd:30\" (default "+defaults.Gcp_Disks+")")
 	cmdCreate.Flags().StringVarP(&createGcpZone, "gcp_zone", "", defaults.Gcp_Zone, "GCP zone (a, b or c)")
+	cmdCreate.Flags().StringVarP(&createAksVersion, "aks_version", "", "", "AKS Version (default "+defaults.Aks_Version+")")
 	cmdCreate.Flags().StringVarP(&createAzureType, "azure_type", "", "", "Azure type for each node (default "+defaults.Azure_Type+")")
 	cmdCreate.Flags().StringVarP(&createAzureClientSecret, "azure_client_secret", "", "", "Azure Client Secret (default "+defaults.Azure_Client_Secret+")")
 	cmdCreate.Flags().StringVarP(&createAzureClientId, "azure_client_id", "", "", "Azure client ID (default "+defaults.Azure_Client_Id+")")
@@ -986,8 +994,7 @@ func create_deployment(config Config) int {
 			switch config.Platform {
 			case "aks":
 				{
-					die("aks not yet supported")
-					//exec.Command("cp", "-a", `/px-deploy/terraform/aws/eks/eks.tf`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+					exec.Command("cp", "-a", `/px-deploy/terraform/azure/aks/aks.tf`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
 					//exec.Command("cp", "-a", `/px-deploy/terraform/aws/eks/eks_run_everywhere.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
 				}
 			}
@@ -1026,18 +1033,17 @@ func create_deployment(config Config) int {
 			tf_var_tags = append(tf_var_tags, "}\n")
 			*/
 
-			/* aks not yet implemented
-				switch config.Platform {
-				  	case "aks":
-					{
-			  			tf_variables = append (tf_variables, "eks_nodes = \"" + config.Nodes + "\"")
-			  			config.Nodes="0"
-			  			if config.Env["run_everywhere"] != "" {
-							tf_variables = append (tf_variables, "run_everywhere = \"" + strings.Replace(config.Env["run_everywhere"],"'","\\\"", -1) + "\"")
-				  		}
-				  	}
+			switch config.Platform {
+			case "aks":
+				{
+					tf_variables = append(tf_variables, "aks_nodes = \""+config.Nodes+"\"")
+					tf_variables = append(tf_variables, "aks_version = \""+config.Aks_Version+"\"")
+					config.Nodes = "0"
+					if config.Env["run_everywhere"] != "" {
+						tf_variables = append(tf_variables, "run_everywhere = \""+strings.Replace(config.Env["run_everywhere"], "'", "\\\"", -1)+"\"")
+					}
 				}
-			*/
+			}
 
 			Clusters, err := strconv.Atoi(config.Clusters)
 			Nodes, err := strconv.Atoi(config.Nodes)
@@ -1051,14 +1057,12 @@ func create_deployment(config Config) int {
 			tf_variables = append(tf_variables, "azure_tenant_id = \""+config.Azure_Tenant_Id+"\"")
 			tf_variables = append(tf_variables, "azure_subscription_id = \""+config.Azure_Subscription_Id+"\"")
 
-			/* aks not yet implemented
-				switch config.Platform {
-					case "aks":
-			 		{
-						tf_variables_eks = append(tf_variables_eks,"eksclusters = {")
-			  		}
+			switch config.Platform {
+			case "aks":
+				{
+					tf_variables_eks = append(tf_variables_eks, "aksclusters = {")
 				}
-			*/
+			}
 
 			tf_variables = append(tf_variables, "nodeconfig = [")
 
@@ -1097,25 +1101,24 @@ func create_deployment(config Config) int {
 				tf_variables = append(tf_variables, tf_var_ebs...)
 				tf_variables = append(tf_variables, "    ]\n  },")
 
-				/* aks not yet implemented
 				switch config.Platform {
-					case "aks":
+				case "aks":
 					{
-				  		tf_variables_eks = append(tf_variables_eks, "  \""+masternum+"\" = \""+tf_cluster_instance_type+"\",")
-				  	}
+						tf_variables_eks = append(tf_variables_eks, "  \""+masternum+"\" = \""+tf_cluster_instance_type+"\",")
+					}
 				}
-				*/
+
 			}
 			tf_variables = append(tf_variables, "]")
-			/* aks not yet implemented
+
 			switch config.Platform {
-				case "eks":
-			{
-				tf_variables_eks = append(tf_variables_eks, "}")
-				tf_variables = append(tf_variables,tf_variables_eks...)
+			case "aks":
+				{
+					tf_variables_eks = append(tf_variables_eks, "}")
+					tf_variables = append(tf_variables, tf_variables_eks...)
+				}
 			}
-			}
-			*/
+
 			tf_variables = append(tf_variables, tf_var_tags...)
 			write_tf_file(config.Name, ".tfvars", tf_variables)
 			// now run terraform plan & terraform apply

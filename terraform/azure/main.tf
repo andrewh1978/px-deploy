@@ -322,7 +322,8 @@ resource "local_file" "cloud-init" {
 		tpl_azure_client = var.azure_client_id,
 		tpl_azure_secret = var.azure_client_secret,
 		tpl_azure_tenant = var.azure_tenant_id,
-		tpl_cluster = each.value.cluster
+    tpl_azure_group = azurerm_resource_group.rg.name,
+  	tpl_cluster = each.value.cluster
 		}	
 	)
 	filename = "${path.module}/cloud-init-${each.key}-generated.yaml"
