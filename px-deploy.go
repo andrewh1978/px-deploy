@@ -986,7 +986,6 @@ func create_deployment(config Config) int {
 			exec.Command("cp", "-a", `/px-deploy/terraform/azure/main.tf`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
 			exec.Command("cp", "-a", `/px-deploy/terraform/azure/variables.tf`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
 			exec.Command("cp", "-a", `/px-deploy/terraform/azure/cloud-init.tpl`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
-			//exec.Command("cp", "-a", `/px-deploy/terraform/azure/aws-returns.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
 			// also copy terraform modules
 			exec.Command("cp", "-a", `/px-deploy/terraform/azure/.terraform`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
 			exec.Command("cp", "-a", `/px-deploy/terraform/azure/.terraform.lock.hcl`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
@@ -995,7 +994,7 @@ func create_deployment(config Config) int {
 			case "aks":
 				{
 					exec.Command("cp", "-a", `/px-deploy/terraform/azure/aks/aks.tf`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
-					//exec.Command("cp", "-a", `/px-deploy/terraform/aws/eks/eks_run_everywhere.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+					//exec.Command("cp", "-a", `/px-deploy/terraform/azure/aks/aks_run_everywhere.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
 				}
 			}
 			write_nodescripts(config)
@@ -1011,27 +1010,25 @@ func create_deployment(config Config) int {
 			}
 			// other node ebs processing happens in cluster/node loop
 
-			/* tagging not yet implemented
-			// AWS default tagging
+			// take from AWS default tagging
 			tf_var_tags = append(tf_var_tags, "aws_tags = {")
 
 			if config.Aws_Tags != "" {
-				tags := strings.Split(config.Aws_Tags,",")
-				for _,val := range tags {
-					entry := strings.Split(val,"=")
+				tags := strings.Split(config.Aws_Tags, ",")
+				for _, val := range tags {
+					entry := strings.Split(val, "=")
 					tf_var_tags = append(tf_var_tags, "  "+strings.TrimSpace(entry[0])+" = \""+strings.TrimSpace(entry[1])+"\"")
 				}
 			}
 			// get PXDUSER env and apply to tf_variables
 			pxduser = os.Getenv("PXDUSER")
-			if (pxduser != "") {
-				tf_var_tags = append (tf_var_tags, "  px-deploy_username = \"" + pxduser + "\"")
+			if pxduser != "" {
+				tf_var_tags = append(tf_var_tags, "  px-deploy_username = \""+pxduser+"\"")
 			} else {
-				tf_var_tags = append (tf_var_tags, "  px-deploy_username = \"unknown\"")
+				tf_var_tags = append(tf_var_tags, "  px-deploy_username = \"unknown\"")
 			}
-			tf_var_tags = append (tf_var_tags, "  px-deploy_name = \""+ config.Name+ "\"")
+			tf_var_tags = append(tf_var_tags, "  px-deploy_name = \""+config.Name+"\"")
 			tf_var_tags = append(tf_var_tags, "}\n")
-			*/
 
 			switch config.Platform {
 			case "aks":
