@@ -279,6 +279,8 @@ value of `id` is your `azure_subscription_id` value
 
 value of `tenant` is your `azure_tenant_id` value
 
+create application secret
+
 ```
 $ az ad sp create-for-rbac --role="Contributor" --scopes="/subscriptions/[your azure_subscription_id]"
 ```
@@ -287,8 +289,10 @@ value of `appId` is your `azure_client_id`
 
 value of `password` is your `azure_client_secret`
 
+accept RockyLinux EULA:
+
 ```
-$ az vm image terms accept --urn "erockyenterprisesoftwarefoundationinc1653071250513:rockylinux:free:8.6.0"` to accept RockyLinux EULA
+$ az vm image terms accept --urn "erockyenterprisesoftwarefoundationinc1653071250513:rockylinux:free:8.6.0" 
 ```
 
 # Notes for GCP
