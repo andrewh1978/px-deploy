@@ -55,7 +55,7 @@ variable "ip_base" {
 	default = "192.168"
 }
 
-variable "aws_tags" {
-	description = "user-defined custom azure/aws tags"
+variable "azure_tags" {
+	description = "user-defined custom azure tags"
 	type 		= map(string)
 }
