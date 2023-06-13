@@ -1,3 +1,10 @@
+# 5.x
+
+# Improvements
+* re-added Azure support, now terraform based
+* replace parameter aws_tags with parameter tags (now valid for AWS & Azure)
+
+
 # 5.0.1
 
 ## Fixes
