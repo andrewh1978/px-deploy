@@ -269,7 +269,7 @@ Edit your `defaults.yml` to set `aws_access_key_id` and `aws_secret_access_key`.
 
 Get access to Azure cli (either you install or use Cloud Shell on Azure UI)
 
-Edit your `defaults.yml` to set `azure_tenant_id`, `azure_subscription_id`, `azure_subscription_id`, `azure_client_id`, `azure_client_secret`.
+Edit your `defaults.yml` to set `azure_tenant_id`, `azure_subscription_id`, `azure_client_id`, `azure_client_secret`.
 
 ```
 $ az account list
@@ -280,7 +280,7 @@ value of `id` is your `azure_subscription_id` value
 value of `tenant` is your `azure_tenant_id` value
 
 ```
-$ az ad sp create-for-rbac --role="Contributor" --scopes="/subscriptions/[azure_subscription_id]"
+$ az ad sp create-for-rbac --role="Contributor" --scopes="/subscriptions/[your azure_subscription_id]"
 ```
 
 value of `appId` is your `azure_client_id`
