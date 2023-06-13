@@ -21,18 +21,15 @@ This will deploy one or more clusters in the cloud, with optional post-install t
 
 ## Install & Update
 
-1. If you are using GCP, install the CLI and ensure it is configured:
- * GCP: https://cloud.google.com/sdk/docs/quickstarts
+1. Install and enable a container runtime such as Docker. On MacOS with Apple Silicon, it is recommended you use [Colima](https://github.com/abiosoft/colima). Start it with `colima start -a x86_64 -m 8 -c 8  --vz-rosetta`.
 
-2. Install and enable a container runtime such as Docker. On MacOS with Apple Silicon, it is recommended you use [Colima](https://github.com/abiosoft/colima). Start it with `colima start -a x86_64 -m 8 -c 8  --vz-rosetta`.
-
-3. Install bash-completion (optional), eg:
+2. Install bash-completion (optional), eg:
 ```
 $ brew install bash-completion
 ```
 You will need to restart your shell.
 
-4. Run the install / update script:
+3. Run the install / update script:
 ```
 curl https://raw.githubusercontent.com/andrewh1978/px-deploy/master/install.sh | bash
 ```
@@ -46,6 +43,14 @@ It may take 10-20 minutes to complete.
 Update your `.bash_profile` or `.zshrc` as directed. Source them or login again. Validate it is complete with `px-deploy -h`.
 
 Review the various cloud settings in `~/.px-deploy/defaults.yml`.
+
+4. Configure Cloud specific settings
+
+**[Notes for AWS](#notes-for-aws)**<br>
+**[Notes for Azure](#notes-for-azure)**<br>
+**[Notes for GCP](#notes-for-gcp)**<br>
+**[Notes for vSphere](#notes-for-vsphere)**<br>
+**[Notes for OCP4 + AWS](#notes-for-ocp4-+-aws)**<br>
 
 ### Notes for Updating
 
@@ -262,19 +267,30 @@ Get access to Azure cli (either you install or use Cloud Shell on Azure UI)
 
 Edit your `defaults.yml` to set `azure_tenant_id`, `azure_subscription_id`, `azure_subscription_id`, `azure_client_id`, `azure_client_secret`.
 
-run `az account list`
+```
+$ az account list
+```
 
 value of `id` is your `azure_subscription_id` value
 
 value of `tenant` is your `azure_tenant_id` value
 
-run `az ad sp create-for-rbac --role="Contributor" --scopes="/subscriptions/[azure_subscription_id]"`
+```
+$ az ad sp create-for-rbac --role="Contributor" --scopes="/subscriptions/[azure_subscription_id]"
+```
 
 value of `appId` is your `azure_client_id`
 
 value of `password` is your `azure_client_secret`
 
-run `az vm image terms accept --urn "erockyenterprisesoftwarefoundationinc1653071250513:rockylinux:free:8.6.0"` to accept RockyLinux EULA
+```
+$ az vm image terms accept --urn "erockyenterprisesoftwarefoundationinc1653071250513:rockylinux:free:8.6.0"` to accept RockyLinux EULA
+```
+
+# Notes for GCP
+
+If you are using GCP, install the CLI and ensure it is configured:
+ * GCP: https://cloud.google.com/sdk/docs/quickstarts
 
 # Notes for vSphere
 
