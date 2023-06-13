@@ -267,9 +267,9 @@ Edit your `defaults.yml` to set `aws_access_key_id` and `aws_secret_access_key`.
 
 # Notes for Azure
 
-Get access to Azure cli (either you install or use Cloud Shell on Azure UI)
+1. Get access to Azure cli (either you install or use Cloud Shell on Azure UI)
 
-Edit your `defaults.yml` to set `azure_tenant_id`, `azure_subscription_id`, `azure_client_id`, `azure_client_secret`.
+2. Edit your `defaults.yml` to set `azure_tenant_id`, `azure_subscription_id`, `azure_client_id`, `azure_client_secret`.
 
 ```
 $ az account list
@@ -279,7 +279,7 @@ value of `id` is your `azure_subscription_id` value
 
 value of `tenant` is your `azure_tenant_id` value
 
-create application secret
+3. create application secret
 
 ```
 $ az ad sp create-for-rbac --role="Contributor" --scopes="/subscriptions/[your azure_subscription_id]"
@@ -289,7 +289,7 @@ value of `appId` is your `azure_client_id`
 
 value of `password` is your `azure_client_secret`
 
-accept RockyLinux EULA:
+4. accept RockyLinux EULA
 
 ```
 $ az vm image terms accept --urn "erockyenterprisesoftwarefoundationinc1653071250513:rockylinux:free:8.6.0" 
