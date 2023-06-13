@@ -46,11 +46,15 @@ Review the various cloud settings in `~/.px-deploy/defaults.yml`.
 
 4. Configure Cloud specific settings
 
-**[Notes for AWS](#notes-for-aws)**<br>
-**[Notes for Azure](#notes-for-azure)**<br>
-**[Notes for GCP](#notes-for-gcp)**<br>
-**[Notes for vSphere](#notes-for-vsphere)**<br>
-**[Notes for OCP4 + AWS](#notes-for-ocp4-+-aws)**<br>
+[Notes for AWS](#notes-for-aws)
+
+[Notes for Azure](#notes-for-azure)
+
+[Notes for GCP](#notes-for-gcp)
+
+[Notes for vSphere](#notes-for-vsphere)
+
+[Notes for OCP4 + AWS](#notes-for-ocp4-on-aws)
 
 ### Notes for Updating
 
@@ -300,7 +304,7 @@ $ px-deploy vsphere-init
 ```
 will read the vsphere variables from `defaults.yml` and provision a template at the path defined in `vsphere_template`.
 
-# Notes for OCP4 + AWS
+# Notes for OCP4 on AWS
 
 A "master" node will be provisioned for each cluster. This is not really a master node - it is just where `openshift-install` is run. The root user will have a kubeconfig, so it can be treated as a master node for the purposes of the scripts used in the templates.
 
