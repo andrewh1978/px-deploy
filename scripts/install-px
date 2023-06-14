@@ -158,7 +158,8 @@ if [ "$operator" != false ]; then
     done
     curl -s -X PUT -H "Content-Type: application/json" -d '{"oldPassword":"admin","newPassword":"admin","confirmNew":"admin"}' http://admin:admin@localhost:30112/api/user/password
   fi
-  while ! kubectl wait stc --all -n $namespace --for=jsonpath='{status.phase}'=Online --timeout=60s; do
+  while ! kubectl get stc -A -n $namespace | grep -q 'Running\|Online'; do
     echo "Waiting for StorageCluster status online"
+    sleep 1
   done
 fi
