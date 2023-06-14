@@ -160,6 +160,6 @@ if [ "$operator" != false ]; then
   fi
   while ! kubectl get stc -A -n $namespace | grep -q 'Running\|Online'; do
     echo "Waiting for StorageCluster status online"
-    sleep 1
+    sleep 3
   done
 fi
