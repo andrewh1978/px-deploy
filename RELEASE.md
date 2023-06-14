@@ -1,9 +1,10 @@
-# 5.x (dev)
+# 5.1
 
 ## Fixes
  * Kubernetes and Portworx image pre-pull now uses containerd
  * Fix Apple Silicon platform build issue
  * Fix metro template deadlock
+ * Fix install problem with operator 23.5.0
 
 ## Improvements
  * Re-added Azure support, now Terraform based
