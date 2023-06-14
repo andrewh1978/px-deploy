@@ -1,3 +1,8 @@
+# dev
+
+## Improvements
+ *** install.sh no longer runs in a container, so is much faster
+
 # 5.1
 
 ## Fixes
