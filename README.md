@@ -34,11 +34,11 @@ You will need to restart your shell.
 curl https://raw.githubusercontent.com/andrewh1978/px-deploy/master/install.sh | bash
 ```
 This will:
- * build the Docker image
+ * pull the Docker image from Github
  * create and populate `$HOME/.px-deploy`
  * provide instructions to configure `.bash_profile`/`.zshrc`
 
-It may take 10-20 minutes to complete.
+It may take 5-10 minutes to complete, longer with a slow Internet connection.
 
 Update your `.bash_profile` or `.zshrc` as directed. Source them or login again. Validate it is complete with `px-deploy -h`.
 

@@ -6,8 +6,10 @@
  * Fix metro template deadlock
 
 ## Improvements
-* Re-added Azure support, now Terraform based
-* Replace parameter aws_tags with parameter tags (now valid for AWS & Azure)
+ * Re-added Azure support, now Terraform based
+ * Replace parameter aws_tags with parameter tags (now valid for AWS & Azure)
+ * Add Github action trigger builds on commit and release
+ * Update install.sh to pull prebuild image
 
 # 5.0.1
 
