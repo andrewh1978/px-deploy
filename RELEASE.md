@@ -1,9 +1,13 @@
 # 5.x (dev)
 
-# Improvements
-* re-added Azure support, now terraform based
-* replace parameter aws_tags with parameter tags (now valid for AWS & Azure)
+## Fixes
+ * Kubernetes and Portworx image pre-pull now uses containerd
+ * Fix Apple Silicon platform build issue
+ * Fix metro template deadlock
 
+## Improvements
+* Re-added Azure support, now Terraform based
+* Replace parameter aws_tags with parameter tags (now valid for AWS & Azure)
 
 # 5.0.1
 
