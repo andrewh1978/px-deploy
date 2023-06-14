@@ -1,5 +1,5 @@
 docker run --help | grep -q -- "--platform string" && PLATFORM="--platform=linux/amd64"
-docker run $PLATFORM --rm --privileged --network host -i -e home=$HOME -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.px-deploy:/.px-deploy rockylinux:8 <<\EOF
+docker run $PLATFORM --rm --privileged --network host -i -e home=$HOME -e ver=$1 -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.px-deploy:/.px-deploy rockylinux:8 <<\EOF
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -29,21 +29,26 @@ if [ "$found_legacy" = true ]; then
 fi
 
 
-echo -e ${BLUE}Setting up installation container
-dnf install -y dnf-plugins-core >&/dev/null
-dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo >&/dev/null
-dnf install -y git docker-ce >&/dev/null
+echo -e ${BLUE}Setting up installation container${NC}
+dnf install -qy dnf-plugins-core
+dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+dnf install -qy git docker-ce
 echo Cloning repo
-git clone https://github.com/andrewh1978/px-deploy >&/dev/null
+git clone https://github.com/andrewh1978/px-deploy
 cd px-deploy
-git checkout $(cat VERSION)
-PXDVERSION=$(cat VERSION)
-echo Building container
-docker build $PLATFORM --network host -t px-deploy . >&/dev/null
-if [ $? -ne 0 ]; then
-  echo -e ${RED}Image build failed${NC}
-  exit
+if [ -z "$ver" ]; then
+  ver=$(cat VERSION)
 fi
+echo "Pulling image (version $ver)"
+docker pull ghcr.io/andrewh1978/px-deploy:$ver
+docker tag ghcr.io/andrewh1978/px-deploy:$ver px-deploy
+
+#echo Building container
+#docker build $PLATFORM --network host -t px-deploy . >&/dev/null
+#if [ $? -ne 0 ]; then
+#  echo -e ${RED}Image build failed${NC}
+#  exit
+#fi
 mkdir -p /.px-deploy/{keys,deployments,kubeconfig,tf-deployments}
 
 #remove remainders of terraform (outside container)
@@ -67,9 +72,9 @@ cp defaults.yml /.px-deploy/defaults.yml.$PXDVERSION
 
 echo
 echo -e ${YELLOW}If you are using zsh, append this to your .zshrc:
-echo -e ${WHITE}'px-deploy() { docker run --help | grep -q -- "--platform string" && PLATFORM="--platform=linux/amd64" ; [ "$DEFAULTS" ] && params="-v $DEFAULTS:/px-deploy/.px-deploy/defaults.yml" ; docker run $PLATFORM --network host -it -e PXDUSER=$USER --rm --name px-deploy.$$ $=params -v $HOME/.px-deploy:/px-deploy/.px-deploy -v $HOME/.config/gcloud:/root/.config/gcloud -v $HOME/.azure:/root/.azure px-deploy /root/go/bin/px-deploy $* ; }'
+echo -e ${WHITE}'px-deploy() { docker run --help | grep -q -- "--platform string" && PLATFORM="--platform=linux/amd64" ; [ "$DEFAULTS" ] && params="-v $DEFAULTS:/px-deploy/.px-deploy/defaults.yml" ; docker run $PLATFORM --network host -it -e PXDUSER=$USER --rm --name px-deploy.$$ $=params -v $HOME/.px-deploy:/px-deploy/.px-deploy -v $HOME/.config/gcloud:/root/.config/gcloud px-deploy /root/go/bin/px-deploy $* ; }'
 echo -e ${YELLOW}If you are using bash, append this to your .bash_profile:
-echo -e ${WHITE}'px-deploy() { docker run --help | grep -q -- "--platform string" && PLATFORM="--platform linux/amd64" ; [ "$DEFAULTS" ] && params="-v $DEFAULTS:/px-deploy/.px-deploy/defaults.yml" ; docker run $PLATFORM --network host -it -e PXDUSER=$USER --rm --name px-deploy.$$ $params -v $HOME/.px-deploy:/px-deploy/.px-deploy -v $HOME/.config/gcloud:/root/.config/gcloud -v $HOME/.azure:/root/.azure px-deploy /root/go/bin/px-deploy $* ; }'
+echo -e ${WHITE}'px-deploy() { docker run --help | grep -q -- "--platform string" && PLATFORM="--platform linux/amd64" ; [ "$DEFAULTS" ] && params="-v $DEFAULTS:/px-deploy/.px-deploy/defaults.yml" ; docker run $PLATFORM --network host -it -e PXDUSER=$USER --rm --name px-deploy.$$ $params -v $HOME/.px-deploy:/px-deploy/.px-deploy -v $HOME/.config/gcloud:/root/.config/gcloud px-deploy /root/go/bin/px-deploy $* ; }'
 echo
 echo -e ${GREEN}When your px-deploy function is set, create a deployment with:
 echo -e "${WHITE}px-deploy create --name myDeployment --template px$NC"
