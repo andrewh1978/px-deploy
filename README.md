@@ -10,27 +10,26 @@ This will deploy one or more clusters in the cloud, with optional post-install t
  * Docker EE
  * Openshift 4 (only on AWS at this time)
  * EKS (only makes sense on AWS)
+ * AKS (only makes sense on Azure)
  * GKE (only makes sense on GCP)
 
 ## Cloud
  * AWS
+ * Azure
  * GCP
  * vSphere
 
 ## Install & Update
 
-1. If you are using GCP, install the CLI and ensure it is configured:
- * GCP: https://cloud.google.com/sdk/docs/quickstarts
+1. Install and enable a container runtime such as Docker. On MacOS with Apple Silicon, it is recommended you use [Colima](https://github.com/abiosoft/colima). Start it with `colima start -a x86_64 -m 8 -c 8  --vz-rosetta`.
 
-2. Install and enable a container runtime such as Docker. On MacOS with Apple Silicon, it is recommended you use [Colima](https://github.com/abiosoft/colima). Start it with `colima start -a x86_64 -m 8 -c 8  --vz-rosetta`.
-
-3. Install bash-completion (optional), eg:
+2. Install bash-completion (optional), eg:
 ```
 $ brew install bash-completion
 ```
 You will need to restart your shell.
 
-4. Run the install / update script:
+3. Run the install / update script:
 ```
 curl https://raw.githubusercontent.com/andrewh1978/px-deploy/master/install.sh | bash
 ```
@@ -44,6 +43,18 @@ It may take 10-20 minutes to complete.
 Update your `.bash_profile` or `.zshrc` as directed. Source them or login again. Validate it is complete with `px-deploy -h`.
 
 Review the various cloud settings in `~/.px-deploy/defaults.yml`.
+
+4. Configure Cloud specific settings
+
+[Notes for AWS](#notes-for-aws)
+
+[Notes for Azure](#notes-for-azure)
+
+[Notes for GCP](#notes-for-gcp)
+
+[Notes for vSphere](#notes-for-vsphere)
+
+[Notes for OCP4 + AWS](#notes-for-ocp4-on-aws)
 
 ### Notes for Updating
 
@@ -59,10 +70,6 @@ Review the various cloud settings in `~/.px-deploy/defaults.yml`.
 * Update your `.bashrc` or `.zshrc` with the new px-deploy alias.
 
 ## Use
-
-If you are using AWS and you have not accepted the Rocky Linux 8 terms, browse to https://aws.amazon.com/marketplace/pp/prodview-2otariyxb3mqu
-
-Edit your `defaults.yml` to set `aws_access_key_id` and `aws_secret_access_key`.
 
 This will provision a VPC and some other objects, and deploy into it from the template:
 ```
@@ -132,19 +139,26 @@ Note this is currently only tested with EKS.
 The `defaults.yml` file sets a number of deployment variables:
  * `aws_ebs` - a list of EBS volumes to be attached to each worker node. This is a space-separated list of type:size pairs, for example: `"gp2:30 standard:20"` will provision a gp2 volume of 30 GB and a standard volume of 20GB
  * `aws_region` - AWS region
- * `aws_tags` - a list of tags to be applied to each node. This is a comma-separate list of name=value pairs, for example: `"Owner=Bob,Purpose=Demo"`
  * `aws_type` - the AWS machine type for each node
  * `aws_access_key_id` - your AWS API access key
  * `aws_secret_access_key` - your AWS API secret access key
  * `cloud` - the cloud on which to deploy (aws, gcp, or vsphere)
  * `clusters` - the number of clusters to deploy
  * `k8s_version` - the version of Kubernetes to deploy
+ * `tags` - a list of tags to be applied to each node. This is a comma-separate list of name=value pairs, for example: `"Owner=Bob,Purpose=Demo"`
  * `stop_after` - stop the intances after this many hours
  * `post_script` - script to run on each master after deployment, output will go to stdout
  * `quiet` - if "true", hide provisioning output
  * `auto_destroy` - if set to `true`, destroy deployment immediately after deploying (usually used with a `post_script` to output the results of a test or benchmark)
  * `nodes` - the number of worker nodes on each cluster
  * `platform` - can be set to either k8s, k3s, none, dockeree, ocp4, eks, gke or nomad
+ * `azure_type` - the Azure machine type for each node
+ * `azure_disks` - similar to aws_ebs, for example: `"Standard_LRS:49 Premium_LRS:50"` 
+ * `azure_client_id` - Azure Client ID
+ * `azure_client_secret` - Azure Access Secret
+ * `azure_subscription_id` - Azure Subscription ID
+ * `azure_tenant_id` - Azure Tenant ID
+ * `aks_version` - AKS k8s Version
  * `px_version` - the version of Portworx to install
  * `gcp_disks` - similar to aws_ebs, for example: `"pd-standard:20 pd-ssd:30"`
  * `gcp_region` - GCP region
@@ -241,9 +255,50 @@ px-deploy create -n foo -t migration -e install_apps=true,foo=bar
 The `install-px` script looks for an environment variable called `cloud_drive`. If it exists, it will deploy Portworx using a clouddrive rather than looking for all attached devices. Note that this is a requirement for Openshift 4. For example:
 ```
 px-deploy create -n foo -t px -e cloud_drive=type%3Dgp2%2Csize%3D150
-px-deploy create -n bar -t px --platform ocp4 -e cloud_drive=type%3Dgp2%2Csize%3D150
+px-deploy create -n bar -t px --platform ocp4 --cloud aws -e cloud_drive=type%3Dgp2%2Csize%3D150
 px-deploy create -n baz -t px --platform gke --cloud gcp -e cloud_drive="type%3Dpd-standard%2Csize%3D150"
+px-deploy create -n foo -t px --platform aks --cloud azure -e cloud_drive="type%3DStandard_LRS%2Csize%3D150"
 ```
+# Notes for AWS
+
+If you are using AWS and you have not accepted the Rocky Linux 8 terms, browse to https://aws.amazon.com/marketplace/pp/prodview-2otariyxb3mqu
+
+Edit your `defaults.yml` to set `aws_access_key_id` and `aws_secret_access_key`.
+
+# Notes for Azure
+
+1. Get access to Azure cli (either you install or use Cloud Shell on Azure UI)
+
+2. Edit your `defaults.yml` to set `azure_tenant_id`, `azure_subscription_id`, `azure_client_id`, `azure_client_secret`.
+
+```
+$ az account list
+```
+
+value of `id` is your `azure_subscription_id` value
+
+value of `tenant` is your `azure_tenant_id` value
+
+3. create application secret
+
+```
+$ az ad sp create-for-rbac --role="Contributor" --scopes="/subscriptions/[your azure_subscription_id]"
+```
+
+value of `appId` is your `azure_client_id`
+
+value of `password` is your `azure_client_secret`
+
+4. accept RockyLinux EULA
+
+```
+$ az vm image terms accept --urn "erockyenterprisesoftwarefoundationinc1653071250513:rockylinux:free:8.6.0" 
+```
+
+# Notes for GCP
+
+If you are using GCP, install the CLI and ensure it is configured:
+ * GCP: https://cloud.google.com/sdk/docs/quickstarts
 
 # Notes for vSphere
 
@@ -253,7 +308,7 @@ $ px-deploy vsphere-init
 ```
 will read the vsphere variables from `defaults.yml` and provision a template at the path defined in `vsphere_template`.
 
-# Notes for OCP4 + AWS
+# Notes for OCP4 on AWS
 
 A "master" node will be provisioned for each cluster. This is not really a master node - it is just where `openshift-install` is run. The root user will have a kubeconfig, so it can be treated as a master node for the purposes of the scripts used in the templates.
 

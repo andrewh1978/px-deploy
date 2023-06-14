@@ -2,7 +2,7 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "=3.58.0"
+      version = "=3.60.0"
     }
     local = {
       source = "hashicorp/local"
@@ -31,6 +31,7 @@ provider "azurerm" {
 resource "azurerm_resource_group" "rg" {
   name     = format("%s.%s",var.name_prefix,var.config_name)
   location = var.azure_region
+  tags                = var.azure_tags
 }
 
 resource "tls_private_key" "ssh" {
@@ -55,6 +56,7 @@ resource "azurerm_ssh_public_key" "deploy_key" {
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   public_key          = tls_private_key.ssh.public_key_openssh
+  tags                = var.azure_tags
 }
 
 resource "azurerm_virtual_network" "vnet" {
@@ -62,6 +64,7 @@ resource "azurerm_virtual_network" "vnet" {
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   address_space       = [var.azure_cidr_vnet]
+  tags                = var.azure_tags
 }
 
 resource "azurerm_subnet" "subnet" {
@@ -82,7 +85,7 @@ resource "azurerm_network_security_group" "sg_default" {
   name                = format("px-deploy-%s",var.config_name)
   resource_group_name  = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
-
+  tags                = var.azure_tags
   security_rule {
     name                       = "ssh"
     priority                   = 100
@@ -199,6 +202,7 @@ resource "azurerm_public_ip" "pub_ip" {
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   allocation_method   = "Static"
+  tags                = var.azure_tags
 }
 
 data "azurerm_public_ip" "pub_ip" {
@@ -212,6 +216,7 @@ resource "azurerm_network_interface" "nic" {
   name                = format("%s.%s.%s",var.name_prefix,var.config_name,each.key)
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
+  tags                = var.azure_tags
 
   ip_configuration {
     name                          = "internal"
@@ -227,7 +232,8 @@ resource "azurerm_virtual_machine" "node" {
   name                = each.key
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
-  vm_size                = each.value.instance_type
+  vm_size             = each.value.instance_type
+  tags                = var.azure_tags
   delete_os_disk_on_termination = true
   delete_data_disks_on_termination = true
   network_interface_ids = [

@@ -59,6 +59,7 @@ type Config struct {
 	Aws_Type                 string
 	Aws_Ebs                  string
 	Aws_Tags                 string
+	Tags                     string
 	Aws_Access_Key_Id        string
 	Aws_Secret_Access_Key    string
 	Gcp_Type                 string
@@ -120,7 +121,7 @@ var Blue = "\033[34m"
 var wg sync.WaitGroup
 
 func main() {
-	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createAwsAccessKeyId, createAwsSecretAccessKey, createAwsTags, createGcpType, createGcpDisks, createGcpZone, createGkeVersion, createAzureType, createAksVersion, createAzureDisks, createAzureClientSecret, createAzureClientId, createAzureTenantId, createAzureSubscriptionId, createTemplate, createRegion, createCloud, createEnv, connectName, kubeconfigName, destroyName, statusName, historyNumber string
+	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createAwsAccessKeyId, createAwsSecretAccessKey, createTags, createGcpType, createGcpDisks, createGcpZone, createGkeVersion, createAzureType, createAksVersion, createAzureDisks, createAzureClientSecret, createAzureClientId, createAzureTenantId, createAzureSubscriptionId, createTemplate, createRegion, createCloud, createEnv, connectName, kubeconfigName, destroyName, statusName, historyNumber string
 	var createQuiet, createDryRun, destroyAll bool
 	os.Chdir("/px-deploy/.px-deploy")
 	rootCmd := &cobra.Command{Use: "px-deploy"}
@@ -147,6 +148,10 @@ func main() {
 				die("Invalid arguments")
 			}
 			config := parse_yaml("defaults.yml")
+
+			if config.Aws_Tags != "" {
+				fmt.Printf("Parameter 'aws_tags: %s' is deprecated and will be ignored. Please change to 'tags: %s'  in ~/.px-deploy/defaults.yml \n", config.Aws_Tags, config.Aws_Tags)
+			}
 
 			// check for "recommended" version in default.yaml.[version_current]
 			if _, err := os.Stat("defaults.yml." + version_current); os.IsNotExist(err) {
@@ -310,11 +315,12 @@ func main() {
 				}
 				config.Aws_Ebs = createAwsEbs
 			}
-			if createAwsTags != "" {
-				if !regexp.MustCompile(`^[0-9a-zA-Z,=\ ]+$`).MatchString(createAwsTags) {
-					die("Invalid AWS tags '" + createAwsTags + "'")
+
+			if createTags != "" {
+				if !regexp.MustCompile(`^[0-9a-zA-Z,=\ ]+$`).MatchString(createTags) {
+					die("Invalid tags '" + createTags + "'")
 				}
-				config.Aws_Tags = createAwsTags
+				config.Tags = createTags
 			}
 			if createGcpType != "" {
 				if !regexp.MustCompile(`^[0-9a-z\-]+$`).MatchString(createGcpType) {
@@ -704,7 +710,7 @@ func main() {
 	cmdCreate.Flags().StringVarP(&createAwsEbs, "aws_ebs", "", "", "space-separated list of EBS volumes to be attached to worker nodes, eg \"gp2:20 standard:30\" (default "+defaults.Aws_Ebs+")")
 	cmdCreate.Flags().StringVarP(&createAwsAccessKeyId, "aws_access_key_id", "", "", "your AWS API access key id (default \""+defaults.Aws_Access_Key_Id+"\")")
 	cmdCreate.Flags().StringVarP(&createAwsSecretAccessKey, "aws_secret_access_key", "", "", "your AWS API secret access key (default \""+defaults.Aws_Secret_Access_Key+"\")")
-	cmdCreate.Flags().StringVarP(&createAwsTags, "aws_tags", "", "", "comma-separated list of tags to be applies to AWS nodes, eg \"Owner=Bob,Purpose=Demo\"")
+	cmdCreate.Flags().StringVarP(&createTags, "tags", "", "", "comma-separated list of tags to be applies to cloud nodes, eg \"Owner=Bob,Purpose=Demo\"")
 	cmdCreate.Flags().StringVarP(&createGcpType, "gcp_type", "", "", "GCP type for each node (default "+defaults.Gcp_Type+")")
 	cmdCreate.Flags().StringVarP(&createGcpDisks, "gcp_disks", "", "", "space-separated list of EBS volumes to be attached to worker nodes, eg \"pd-standard:20 pd-ssd:30\" (default "+defaults.Gcp_Disks+")")
 	cmdCreate.Flags().StringVarP(&createGcpZone, "gcp_zone", "", defaults.Gcp_Zone, "GCP zone (a, b or c)")
@@ -801,8 +807,8 @@ func create_deployment(config Config) int {
 			// AWS default tagging
 			tf_var_tags = append(tf_var_tags, "aws_tags = {")
 
-			if config.Aws_Tags != "" {
-				tags := strings.Split(config.Aws_Tags, ",")
+			if config.Tags != "" {
+				tags := strings.Split(config.Tags, ",")
 				for _, val := range tags {
 					entry := strings.Split(val, "=")
 					tf_var_tags = append(tf_var_tags, "  "+strings.TrimSpace(entry[0])+" = \""+strings.TrimSpace(entry[1])+"\"")
@@ -986,7 +992,6 @@ func create_deployment(config Config) int {
 			exec.Command("cp", "-a", `/px-deploy/terraform/azure/main.tf`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
 			exec.Command("cp", "-a", `/px-deploy/terraform/azure/variables.tf`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
 			exec.Command("cp", "-a", `/px-deploy/terraform/azure/cloud-init.tpl`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
-			//exec.Command("cp", "-a", `/px-deploy/terraform/azure/aws-returns.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
 			// also copy terraform modules
 			exec.Command("cp", "-a", `/px-deploy/terraform/azure/.terraform`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
 			exec.Command("cp", "-a", `/px-deploy/terraform/azure/.terraform.lock.hcl`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
@@ -995,7 +1000,7 @@ func create_deployment(config Config) int {
 			case "aks":
 				{
 					exec.Command("cp", "-a", `/px-deploy/terraform/azure/aks/aks.tf`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
-					//exec.Command("cp", "-a", `/px-deploy/terraform/aws/eks/eks_run_everywhere.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
+					//exec.Command("cp", "-a", `/px-deploy/terraform/azure/aks/aks_run_everywhere.tpl`,`/px-deploy/.px-deploy/tf-deployments/`+ config.Name).Run()
 				}
 			}
 			write_nodescripts(config)
@@ -1011,27 +1016,25 @@ func create_deployment(config Config) int {
 			}
 			// other node ebs processing happens in cluster/node loop
 
-			/* tagging not yet implemented
-			// AWS default tagging
-			tf_var_tags = append(tf_var_tags, "aws_tags = {")
+			// set default tagging
+			tf_var_tags = append(tf_var_tags, "azure_tags = {")
 
-			if config.Aws_Tags != "" {
-				tags := strings.Split(config.Aws_Tags,",")
-				for _,val := range tags {
-					entry := strings.Split(val,"=")
+			if config.Tags != "" {
+				tags := strings.Split(config.Tags, ",")
+				for _, val := range tags {
+					entry := strings.Split(val, "=")
 					tf_var_tags = append(tf_var_tags, "  "+strings.TrimSpace(entry[0])+" = \""+strings.TrimSpace(entry[1])+"\"")
 				}
 			}
 			// get PXDUSER env and apply to tf_variables
 			pxduser = os.Getenv("PXDUSER")
-			if (pxduser != "") {
-				tf_var_tags = append (tf_var_tags, "  px-deploy_username = \"" + pxduser + "\"")
+			if pxduser != "" {
+				tf_var_tags = append(tf_var_tags, "  px-deploy_username = \""+pxduser+"\"")
 			} else {
-				tf_var_tags = append (tf_var_tags, "  px-deploy_username = \"unknown\"")
+				tf_var_tags = append(tf_var_tags, "  px-deploy_username = \"unknown\"")
 			}
-			tf_var_tags = append (tf_var_tags, "  px-deploy_name = \""+ config.Name+ "\"")
+			tf_var_tags = append(tf_var_tags, "  px-deploy_name = \""+config.Name+"\"")
 			tf_var_tags = append(tf_var_tags, "}\n")
-			*/
 
 			switch config.Platform {
 			case "aks":

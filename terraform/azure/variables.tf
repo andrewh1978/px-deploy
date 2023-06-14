@@ -54,3 +54,8 @@ variable "ip_base" {
 	description = "default first to ip octets"
 	default = "192.168"
 }
+
+variable "azure_tags" {
+	description = "user-defined custom azure tags"
+	type 		= map(string)
+}
