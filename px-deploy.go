@@ -1227,35 +1227,46 @@ func destroy_deployment(name string) {
 			}
 		}
 
-		//get list of attached volumes, filter for PX Clouddrive Volumes
-		volumes, err := client.DescribeVolumes(context.TODO(), &ec2.DescribeVolumesInput{
-			Filters: []types.Filter{
-				{
-					Name:   aws.String("attachment.instance-id"),
-					Values: aws_instances,
-				},
-				{
-					Name: aws.String("tag:pxtype"),
-					Values: []string{
-						"data",
-						"kvdb",
-						"journal",
+		// split aws_instances into chunks of 197 elements
+		// because of the aws DescribeVolumes Filter limit of 200 (197 instances + pxtype: data/kvdb/journal)
+
+		// build slice of slices
+		aws_instances_split := make([]([]string), len(aws_instances)/197+1)
+		for i, val := range aws_instances {
+			aws_instances_split[i/197] = append(aws_instances_split[i/197], val)
+		}
+
+		for i, _ := range aws_instances_split {
+			//get list of attached volumes, filter for PX Clouddrive Volumes
+			volumes, err := client.DescribeVolumes(context.TODO(), &ec2.DescribeVolumesInput{
+				Filters: []types.Filter{
+					{
+						Name:   aws.String("attachment.instance-id"),
+						Values: aws_instances_split[i],
+					},
+					{
+						Name: aws.String("tag:pxtype"),
+						Values: []string{
+							"data",
+							"kvdb",
+							"journal",
+						},
 					},
 				},
-			},
-		})
+			})
 
-		if err != nil {
-			fmt.Println("Got an error retrieving information about volumes:")
-			fmt.Println(err)
-			return
-		}
+			if err != nil {
+				fmt.Println("Got an error retrieving information about volumes:")
+				fmt.Println(err)
+				return
+			}
 
-		fmt.Printf("Found %d portworx clouddrive volumes: \n", len(volumes.Volumes))
-		for _, i := range volumes.Volumes {
-			fmt.Println("  " + *i.VolumeId)
-			aws_volumes = append(aws_volumes, *i.VolumeId)
+			for _, i := range volumes.Volumes {
+				fmt.Println("  " + *i.VolumeId)
+				aws_volumes = append(aws_volumes, *i.VolumeId)
+			}
 		}
+		fmt.Printf("Found %d portworx clouddrive volumes: \n", len(aws_volumes))
 
 		switch config.Platform {
 		case "ocp4":
