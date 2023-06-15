@@ -1235,8 +1235,8 @@ func destroy_deployment(name string) {
 		for i, val := range aws_instances {
 			aws_instances_split[i/197] = append(aws_instances_split[i/197], val)
 		}
-
-		for i, _ := range aws_instances_split {
+		fmt.Printf("Searching for portworx clouddrive volumes:\n")
+		for i := range aws_instances_split {
 			//get list of attached volumes, filter for PX Clouddrive Volumes
 			volumes, err := client.DescribeVolumes(context.TODO(), &ec2.DescribeVolumesInput{
 				Filters: []types.Filter{
@@ -1266,7 +1266,7 @@ func destroy_deployment(name string) {
 				aws_volumes = append(aws_volumes, *i.VolumeId)
 			}
 		}
-		fmt.Printf("Found %d portworx clouddrive volumes: \n", len(aws_volumes))
+		fmt.Printf("Found %d portworx clouddrive volumes. \n", len(aws_volumes))
 
 		switch config.Platform {
 		case "ocp4":
