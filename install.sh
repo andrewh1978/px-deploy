@@ -1,3 +1,4 @@
+set -x
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -55,7 +56,7 @@ rm -rf $HOME/.px-deploy/terraform*
 # backup existing directories and force copy from current branch
 time=$(date +%s)
 for i in scripts templates assets; do
-  [ -e $HOME/.px-deploy/$i ] && echo Backing up $HOME/.px-deploy/$i to $HOME/.px-deploy/$i.$time && cp -r $HOME/.px-deploy/$i /.px-deploy/$i.$time
+  [ -e $HOME/.px-deploy/$i ] && echo Backing up $HOME/.px-deploy/$i to $HOME/.px-deploy/$i.$time && cp -r $HOME/.px-deploy/$i $HOME/.px-deploy/$i.$time
   cp -rf $i $HOME/.px-deploy
 done
 
