@@ -25,7 +25,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resourcegraph/armresourcegraph"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/aws/retry"
 	awscfg "github.com/aws/aws-sdk-go-v2/config"
 	awscredentials "github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
@@ -1199,7 +1198,7 @@ func destroy_deployment(name string) {
 		// connect to aws API
 		cfg, err := awscfg.LoadDefaultConfig(
 			context.TODO(),
-			awscfg.WithRetryer(func() aws.Retryer { return retry.AddWithMaxAttempts(retry.NewStandard(), 15) }),
+			//awscfg.WithRetryer(func() aws.Retryer { return retry.AddWithMaxAttempts(retry.NewStandard(), 15) }),
 			awscfg.WithRegion(config.Aws_Region),
 			awscfg.WithCredentialsProvider(awscredentials.NewStaticCredentialsProvider(config.Aws_Access_Key_Id, config.Aws_Secret_Access_Key, "")))
 		if err != nil {
@@ -1342,8 +1341,17 @@ func destroy_deployment(name string) {
 				if len(aws_volumes) > 0 {
 					fmt.Println("Waiting for termination of instances: (timeout 5min)")
 					wg.Add(len(aws_instances))
-					for _, instanceID := range aws_instances {
-						go terminate_and_wait_ec2(client, instanceID, 5)
+
+					// terminate instances in chunks of 197 to prevent API rate limiting
+					for i := range aws_instances_split {
+						// there are more than 197 instances. Wait 10sec to refill api buckets (20/sec)
+						if (len(aws_instances_split) > 1) && (i > 0) {
+							time.Sleep(10 * time.Second)
+							fmt.Println("Wait 10sec to refill API bucket")
+						}
+						for _, instanceID := range aws_instances_split[i] {
+							go terminate_and_wait_ec2(client, instanceID, 5)
+						}
 					}
 					wg.Wait()
 					fmt.Println("EC2 instances terminated")
@@ -1459,7 +1467,7 @@ func aws_get_node_ip(deployment string, node string) string {
 	// connect to aws API
 	cfg, err := awscfg.LoadDefaultConfig(
 		context.TODO(),
-		awscfg.WithRetryer(func() aws.Retryer { return retry.AddWithMaxAttempts(retry.NewStandard(), 15) }),
+		//awscfg.WithRetryer(func() aws.Retryer { return retry.AddWithMaxAttempts(retry.NewStandard(), 15) }),
 		awscfg.WithRegion(config.Aws_Region),
 		awscfg.WithCredentialsProvider(awscredentials.NewStaticCredentialsProvider(config.Aws_Access_Key_Id, config.Aws_Secret_Access_Key, "")))
 	if err != nil {
