@@ -25,6 +25,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resourcegraph/armresourcegraph"
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/retry"
 	awscfg "github.com/aws/aws-sdk-go-v2/config"
 	awscredentials "github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
@@ -929,7 +930,7 @@ func create_deployment(config Config) int {
 			write_tf_file(config.Name, ".tfvars", tf_variables)
 			// now run terraform plan & terraform apply
 			fmt.Println(White + "running terraform PLAN" + Reset)
-			cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-input=false", "-out=tfplan", "-var-file", ".tfvars")
+			cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-input=false", "-parallelism=50", "-out=tfplan", "-var-file", ".tfvars")
 			cmd.Stderr = os.Stderr
 			err = cmd.Run()
 			if err != nil {
@@ -937,7 +938,7 @@ func create_deployment(config Config) int {
 				die(err.Error())
 			} else {
 				fmt.Println(White + "running terraform APPLY" + Reset)
-				cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "apply", "-input=false", "-auto-approve", "tfplan")
+				cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "apply", "-input=false", "-parallelism=50", "-auto-approve", "tfplan")
 				cmd.Stdout = os.Stdout
 				cmd.Stderr = os.Stderr
 				errapply = cmd.Run()
@@ -1196,7 +1197,11 @@ func destroy_deployment(name string) {
 		}
 
 		// connect to aws API
-		cfg, err := awscfg.LoadDefaultConfig(context.TODO(), awscfg.WithRegion(config.Aws_Region), awscfg.WithCredentialsProvider(awscredentials.NewStaticCredentialsProvider(config.Aws_Access_Key_Id, config.Aws_Secret_Access_Key, "")))
+		cfg, err := awscfg.LoadDefaultConfig(
+			context.TODO(),
+			awscfg.WithRetryer(func() aws.Retryer { return retry.AddWithMaxAttempts(retry.NewStandard(), 15) }),
+			awscfg.WithRegion(config.Aws_Region),
+			awscfg.WithCredentialsProvider(awscredentials.NewStaticCredentialsProvider(config.Aws_Access_Key_Id, config.Aws_Secret_Access_Key, "")))
 		if err != nil {
 			panic("aws configuration error, " + err.Error())
 		}
@@ -1368,7 +1373,7 @@ func destroy_deployment(name string) {
 		}
 
 		fmt.Println(White + "running Terraform PLAN" + Reset)
-		cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-destroy", "-input=false", "-out=tfplan", "-var-file", ".tfvars")
+		cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-destroy", "-input=false", "-parallelism=50", "-out=tfplan", "-var-file", ".tfvars")
 		cmd.Stderr = os.Stderr
 		err = cmd.Run()
 		if err != nil {
@@ -1376,7 +1381,7 @@ func destroy_deployment(name string) {
 			die(err.Error())
 		} else {
 			fmt.Println(White + "running Terraform DESTROY" + Reset)
-			cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "apply", "-input=false", "-auto-approve", "tfplan")
+			cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "apply", "-input=false", "-parallelism=50", "-auto-approve", "tfplan")
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			errdestroy = cmd.Run()
@@ -1452,7 +1457,11 @@ func aws_get_node_ip(deployment string, node string) string {
 	var output []byte
 
 	// connect to aws API
-	cfg, err := awscfg.LoadDefaultConfig(context.TODO(), awscfg.WithRegion(config.Aws_Region), awscfg.WithCredentialsProvider(awscredentials.NewStaticCredentialsProvider(config.Aws_Access_Key_Id, config.Aws_Secret_Access_Key, "")))
+	cfg, err := awscfg.LoadDefaultConfig(
+		context.TODO(),
+		awscfg.WithRetryer(func() aws.Retryer { return retry.AddWithMaxAttempts(retry.NewStandard(), 15) }),
+		awscfg.WithRegion(config.Aws_Region),
+		awscfg.WithCredentialsProvider(awscredentials.NewStaticCredentialsProvider(config.Aws_Access_Key_Id, config.Aws_Secret_Access_Key, "")))
 	if err != nil {
 		panic("aws configuration error, " + err.Error())
 	}
