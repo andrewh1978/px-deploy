@@ -1338,21 +1338,13 @@ func destroy_deployment(name string) {
 				}
 				wg.Wait()
 				fmt.Println("pre-delete scripts done")
-				if len(aws_volumes) > 0 {
-					fmt.Println("Waiting for termination of instances: (timeout 5min)")
-					//wg.Add(len(aws_instances_split))
 
+				if len(aws_volumes) > 0 {
+					fmt.Printf("Waiting for termination of %v instances: (timeout 5min) \n", len(aws_instances))
 					// terminate instances in chunks of 197 to prevent API rate limiting
 					for i := range aws_instances_split {
-						// there are more than 197 instances. Wait 10sec to refill api buckets (20/sec)
-						//	if (len(aws_instances_split) > 1) && (i > 0) {
-						//		time.Sleep(10 * time.Second)
-						//		fmt.Println("Wait 10sec to refill API bucket")
-						//	}
-						//	for _, instanceID := range aws_instances_split[i] {
 						go terminate_ec2_instances(client, aws_instances_split[i])
-						//	}
-
+						// create waiter for each instance
 						for j := range aws_instances_split[i] {
 							wg.Add(1)
 							go wait_ec2_termination(client, aws_instances_split[i][j], 5)
@@ -1851,7 +1843,7 @@ func delete_and_wait_sgrule(client *ec2.Client, groupId string, ruleId string, i
 }
 
 func terminate_ec2_instances(client *ec2.Client, instanceIDs []string) {
-	fmt.Printf("  %s \n", instanceIDs)
+	//fmt.Printf("  %s \n", instanceIDs)
 	_, err := client.TerminateInstances(context.TODO(), &ec2.TerminateInstancesInput{
 		InstanceIds: instanceIDs,
 	})
