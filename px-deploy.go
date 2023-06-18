@@ -1340,18 +1340,24 @@ func destroy_deployment(name string) {
 				fmt.Println("pre-delete scripts done")
 				if len(aws_volumes) > 0 {
 					fmt.Println("Waiting for termination of instances: (timeout 5min)")
-					wg.Add(len(aws_instances))
+					//wg.Add(len(aws_instances_split))
 
 					// terminate instances in chunks of 197 to prevent API rate limiting
 					for i := range aws_instances_split {
 						// there are more than 197 instances. Wait 10sec to refill api buckets (20/sec)
-						if (len(aws_instances_split) > 1) && (i > 0) {
-							time.Sleep(10 * time.Second)
-							fmt.Println("Wait 10sec to refill API bucket")
+						//	if (len(aws_instances_split) > 1) && (i > 0) {
+						//		time.Sleep(10 * time.Second)
+						//		fmt.Println("Wait 10sec to refill API bucket")
+						//	}
+						//	for _, instanceID := range aws_instances_split[i] {
+						go terminate_ec2_instances(client, aws_instances_split[i])
+						//	}
+
+						for j := range aws_instances_split[i] {
+							wg.Add(1)
+							go wait_ec2_termination(client, aws_instances_split[i][j], 5)
 						}
-						for _, instanceID := range aws_instances_split[i] {
-							go terminate_and_wait_ec2(client, instanceID, 5)
-						}
+
 					}
 					wg.Wait()
 					fmt.Println("EC2 instances terminated")
@@ -1844,24 +1850,22 @@ func delete_and_wait_sgrule(client *ec2.Client, groupId string, ruleId string, i
 	}
 }
 
-func terminate_and_wait_ec2(client *ec2.Client, instanceID string, timeout_min time.Duration) {
-	defer wg.Done()
-
-	fmt.Printf("  %s \n", instanceID)
+func terminate_ec2_instances(client *ec2.Client, instanceIDs []string) {
+	fmt.Printf("  %s \n", instanceIDs)
 	_, err := client.TerminateInstances(context.TODO(), &ec2.TerminateInstancesInput{
-		InstanceIds: []string{
-			instanceID,
-		},
+		InstanceIds: instanceIDs,
 	})
 
 	if err != nil {
-		fmt.Println("error terminating ec2 instance:")
+		fmt.Printf("error terminating ec2 instances %s \n", instanceIDs)
 		fmt.Println(err)
 		return
 	}
+}
 
+func wait_ec2_termination(client *ec2.Client, instanceID string, timeout_min time.Duration) {
+	defer wg.Done()
 	waiter := ec2.NewInstanceTerminatedWaiter(client)
-
 	params := &ec2.DescribeInstancesInput{
 		Filters: []types.Filter{
 			{
@@ -1880,9 +1884,10 @@ func terminate_and_wait_ec2(client *ec2.Client, instanceID string, timeout_min t
 	}
 
 	maxWaitTime := timeout_min * time.Minute
-	err = waiter.Wait(context.TODO(), params, maxWaitTime)
+	err := waiter.Wait(context.TODO(), params, maxWaitTime)
 	if err != nil {
-		fmt.Println("waiter error:", err)
+		fmt.Printf("waiter error: %s \n", instanceID)
+		fmt.Println(err)
 		return
 	}
 }
