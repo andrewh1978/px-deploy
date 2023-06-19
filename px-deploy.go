@@ -929,7 +929,7 @@ func create_deployment(config Config) int {
 			write_tf_file(config.Name, ".tfvars", tf_variables)
 			// now run terraform plan & terraform apply
 			fmt.Println(White + "running terraform PLAN" + Reset)
-			cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-input=false", "-out=tfplan", "-var-file", ".tfvars")
+			cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-input=false", "-parallelism=50", "-out=tfplan", "-var-file", ".tfvars")
 			cmd.Stderr = os.Stderr
 			err = cmd.Run()
 			if err != nil {
@@ -937,7 +937,7 @@ func create_deployment(config Config) int {
 				die(err.Error())
 			} else {
 				fmt.Println(White + "running terraform APPLY" + Reset)
-				cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "apply", "-input=false", "-auto-approve", "tfplan")
+				cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "apply", "-input=false", "-parallelism=50", "-auto-approve", "tfplan")
 				cmd.Stdout = os.Stdout
 				cmd.Stderr = os.Stderr
 				errapply = cmd.Run()
@@ -1196,7 +1196,11 @@ func destroy_deployment(name string) {
 		}
 
 		// connect to aws API
-		cfg, err := awscfg.LoadDefaultConfig(context.TODO(), awscfg.WithRegion(config.Aws_Region), awscfg.WithCredentialsProvider(awscredentials.NewStaticCredentialsProvider(config.Aws_Access_Key_Id, config.Aws_Secret_Access_Key, "")))
+		cfg, err := awscfg.LoadDefaultConfig(
+			context.TODO(),
+			//awscfg.WithRetryer(func() aws.Retryer { return retry.AddWithMaxAttempts(retry.NewStandard(), 15) }),
+			awscfg.WithRegion(config.Aws_Region),
+			awscfg.WithCredentialsProvider(awscredentials.NewStaticCredentialsProvider(config.Aws_Access_Key_Id, config.Aws_Secret_Access_Key, "")))
 		if err != nil {
 			panic("aws configuration error, " + err.Error())
 		}
@@ -1334,11 +1338,18 @@ func destroy_deployment(name string) {
 				}
 				wg.Wait()
 				fmt.Println("pre-delete scripts done")
+
 				if len(aws_volumes) > 0 {
-					fmt.Println("Waiting for termination of instances: (timeout 5min)")
-					wg.Add(len(aws_instances))
-					for _, instanceID := range aws_instances {
-						go terminate_and_wait_ec2(client, instanceID, 5)
+					fmt.Printf("Waiting for termination of %v instances: (timeout 5min) \n", len(aws_instances))
+					// terminate instances in chunks of 197 to prevent API rate limiting
+					for i := range aws_instances_split {
+						go terminate_ec2_instances(client, aws_instances_split[i])
+						// create waiter for each instance
+						for j := range aws_instances_split[i] {
+							wg.Add(1)
+							go wait_ec2_termination(client, aws_instances_split[i][j], 5)
+						}
+
 					}
 					wg.Wait()
 					fmt.Println("EC2 instances terminated")
@@ -1368,7 +1379,7 @@ func destroy_deployment(name string) {
 		}
 
 		fmt.Println(White + "running Terraform PLAN" + Reset)
-		cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-destroy", "-input=false", "-out=tfplan", "-var-file", ".tfvars")
+		cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-destroy", "-input=false", "-parallelism=50", "-out=tfplan", "-var-file", ".tfvars")
 		cmd.Stderr = os.Stderr
 		err = cmd.Run()
 		if err != nil {
@@ -1376,7 +1387,7 @@ func destroy_deployment(name string) {
 			die(err.Error())
 		} else {
 			fmt.Println(White + "running Terraform DESTROY" + Reset)
-			cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "apply", "-input=false", "-auto-approve", "tfplan")
+			cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "apply", "-input=false", "-parallelism=50", "-auto-approve", "tfplan")
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			errdestroy = cmd.Run()
@@ -1452,7 +1463,11 @@ func aws_get_node_ip(deployment string, node string) string {
 	var output []byte
 
 	// connect to aws API
-	cfg, err := awscfg.LoadDefaultConfig(context.TODO(), awscfg.WithRegion(config.Aws_Region), awscfg.WithCredentialsProvider(awscredentials.NewStaticCredentialsProvider(config.Aws_Access_Key_Id, config.Aws_Secret_Access_Key, "")))
+	cfg, err := awscfg.LoadDefaultConfig(
+		context.TODO(),
+		//awscfg.WithRetryer(func() aws.Retryer { return retry.AddWithMaxAttempts(retry.NewStandard(), 15) }),
+		awscfg.WithRegion(config.Aws_Region),
+		awscfg.WithCredentialsProvider(awscredentials.NewStaticCredentialsProvider(config.Aws_Access_Key_Id, config.Aws_Secret_Access_Key, "")))
 	if err != nil {
 		panic("aws configuration error, " + err.Error())
 	}
@@ -1827,24 +1842,22 @@ func delete_and_wait_sgrule(client *ec2.Client, groupId string, ruleId string, i
 	}
 }
 
-func terminate_and_wait_ec2(client *ec2.Client, instanceID string, timeout_min time.Duration) {
-	defer wg.Done()
-
-	fmt.Printf("  %s \n", instanceID)
+func terminate_ec2_instances(client *ec2.Client, instanceIDs []string) {
+	//fmt.Printf("  %s \n", instanceIDs)
 	_, err := client.TerminateInstances(context.TODO(), &ec2.TerminateInstancesInput{
-		InstanceIds: []string{
-			instanceID,
-		},
+		InstanceIds: instanceIDs,
 	})
 
 	if err != nil {
-		fmt.Println("error terminating ec2 instance:")
+		fmt.Printf("error terminating ec2 instances %s \n", instanceIDs)
 		fmt.Println(err)
 		return
 	}
+}
 
+func wait_ec2_termination(client *ec2.Client, instanceID string, timeout_min time.Duration) {
+	defer wg.Done()
 	waiter := ec2.NewInstanceTerminatedWaiter(client)
-
 	params := &ec2.DescribeInstancesInput{
 		Filters: []types.Filter{
 			{
@@ -1863,9 +1876,10 @@ func terminate_and_wait_ec2(client *ec2.Client, instanceID string, timeout_min t
 	}
 
 	maxWaitTime := timeout_min * time.Minute
-	err = waiter.Wait(context.TODO(), params, maxWaitTime)
+	err := waiter.Wait(context.TODO(), params, maxWaitTime)
 	if err != nil {
-		fmt.Println("waiter error:", err)
+		fmt.Printf("waiter error: %s \n", instanceID)
+		fmt.Println(err)
 		return
 	}
 }
