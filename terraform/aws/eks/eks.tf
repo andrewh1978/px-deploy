@@ -3,6 +3,11 @@ variable "eks_nodes" {
 	type 		= number
 }
 
+variable "eks_version" {
+	description = "EKS k8s version"
+	type 		= string
+}
+
 variable "run_everywhere" {
    description = "content of run_everywhere"
    type = string
@@ -237,7 +242,7 @@ resource "aws_iam_role_policy_attachment" "px-pol-attach" {
 resource "aws_eks_cluster" "eks" {
   for_each = var.eksclusters
   name = format("%s-%s-%s",var.name_prefix,var.config_name, each.key)
-  version = "1.23"
+  version = var.eks_version
   role_arn = aws_iam_role.eks-iam-role.arn
   vpc_config {
     subnet_ids = [aws_subnet.eks_private1[each.key - 1].id, aws_subnet.eks_private2[each.key - 1].id, aws_subnet.eks_private3[each.key - 1].id, aws_subnet.subnet[each.key - 1].id, aws_subnet.eks_public2[each.key - 1].id, aws_subnet.eks_public3[each.key - 1].id]

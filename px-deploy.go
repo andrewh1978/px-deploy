@@ -59,6 +59,7 @@ type Config struct {
 	Aws_Type                 string
 	Aws_Ebs                  string
 	Aws_Tags                 string
+	Eks_Version              string
 	Tags                     string
 	Aws_Access_Key_Id        string
 	Aws_Secret_Access_Key    string
@@ -121,7 +122,7 @@ var Blue = "\033[34m"
 var wg sync.WaitGroup
 
 func main() {
-	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createAwsAccessKeyId, createAwsSecretAccessKey, createTags, createGcpType, createGcpDisks, createGcpZone, createGkeVersion, createAzureType, createAksVersion, createAzureDisks, createAzureClientSecret, createAzureClientId, createAzureTenantId, createAzureSubscriptionId, createTemplate, createRegion, createCloud, createEnv, connectName, kubeconfigName, destroyName, statusName, historyNumber string
+	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createAwsAccessKeyId, createEksVersion, createAwsSecretAccessKey, createTags, createGcpType, createGcpDisks, createGcpZone, createGkeVersion, createAzureType, createAksVersion, createAzureDisks, createAzureClientSecret, createAzureClientId, createAzureTenantId, createAzureSubscriptionId, createTemplate, createRegion, createCloud, createEnv, connectName, kubeconfigName, destroyName, statusName, historyNumber string
 	var createQuiet, createDryRun, destroyAll bool
 	os.Chdir("/px-deploy/.px-deploy")
 	rootCmd := &cobra.Command{Use: "px-deploy"}
@@ -351,6 +352,12 @@ func main() {
 					die("Invalid AKS version '" + createAksVersion + "'")
 				}
 				config.Aks_Version = createAksVersion
+			}
+			if createEksVersion != "" {
+				if !regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+-gke\.[0-9]+$`).MatchString(createEksVersion) {
+					die("Invalid EKS version '" + createEksVersion + "'")
+				}
+				config.Eks_Version = createEksVersion
 			}
 			if createAzureType != "" {
 				if !regexp.MustCompile(`^[0-9a-z\-]+$`).MatchString(createAzureType) {
@@ -715,6 +722,7 @@ func main() {
 	cmdCreate.Flags().StringVarP(&createGcpDisks, "gcp_disks", "", "", "space-separated list of EBS volumes to be attached to worker nodes, eg \"pd-standard:20 pd-ssd:30\" (default "+defaults.Gcp_Disks+")")
 	cmdCreate.Flags().StringVarP(&createGcpZone, "gcp_zone", "", defaults.Gcp_Zone, "GCP zone (a, b or c)")
 	cmdCreate.Flags().StringVarP(&createAksVersion, "aks_version", "", "", "AKS Version (default "+defaults.Aks_Version+")")
+	cmdCreate.Flags().StringVarP(&createAksVersion, "eks_version", "", "", "EKS Version (default "+defaults.Eks_Version+")")
 	cmdCreate.Flags().StringVarP(&createAzureType, "azure_type", "", "", "Azure type for each node (default "+defaults.Azure_Type+")")
 	cmdCreate.Flags().StringVarP(&createAzureClientSecret, "azure_client_secret", "", "", "Azure Client Secret (default "+defaults.Azure_Client_Secret+")")
 	cmdCreate.Flags().StringVarP(&createAzureClientId, "azure_client_id", "", "", "Azure client ID (default "+defaults.Azure_Client_Id+")")
@@ -833,6 +841,7 @@ func create_deployment(config Config) int {
 			case "eks":
 				{
 					tf_variables = append(tf_variables, "eks_nodes = \""+config.Nodes+"\"")
+					tf_variables = append(tf_variables, "eks_version = \""+config.Eks_Version+"\"")
 					config.Nodes = "0"
 					if config.Env["run_everywhere"] != "" {
 						tf_variables = append(tf_variables, "run_everywhere = \""+strings.Replace(config.Env["run_everywhere"], "'", "\\\"", -1)+"\"")
