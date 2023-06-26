@@ -1610,7 +1610,7 @@ func run_predelete(confCloud string, confName string, confNode string, confPath 
 	}
 	fmt.Printf("Running pre-delete scripts on %v (%v)\n", confNode, ip)
 
-	cmd := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+confCloud+"."+confName, "root@"+ip, `
+	cmd := exec.Command("/usr/bin/ssh", "-oCheckHostIP=no", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+confCloud+"."+confName, "root@"+ip, `
 		for i in /px-deploy/`+confPath+`-delete/*.sh; do bash $i ;done; exit 0
 	`)
 	cmd.Stdout = os.Stdout
