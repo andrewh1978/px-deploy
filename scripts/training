@@ -1,79 +1,27 @@
-# Set up training clusters, including vim and shellinabox
-dnf install -y epel-release vim-enhanced
-dnf install -y shellinabox
-rm -f /etc/securetty
-sed -i s/4200/443/ /etc/sysconfig/shellinaboxd
-systemctl enable shellinaboxd
-systemctl restart shellinaboxd sshd
-mv /assets/training /root
-
-kubectl apply -f - <<EOF
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: px-deploy
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: script
-  namespace: px-deploy
-data:
-  entrypoint.sh: |-
-    #!/bin/sh
-    if [ ! -f /sysroot/var/log/px-deploy/.lock ]; then
-      echo "export PS1='\e[0;33m[\u@\h \W]\\\\$ \e[m'" >>/sysroot/root/.bashrc
-      touch /sysroot/var/log/px-deploy/.lock
-    fi
-    sleep infinity
----
-apiVersion: apps/v1
-kind: DaemonSet
-metadata:
-  name: px-deploy
-  namespace: px-deploy
-  labels:
-    name: px-deploy
-spec:
-  selector:
-    matchLabels:
-      name: px-deploy
-  minReadySeconds: 0
-  template:
-    metadata:
-      labels:
-        name: px-deploy
-    spec:
-      tolerations:
-      - key: "node-role.kubernetes.io/master"
-        operator: "Exists"
-        effect: "NoSchedule"
-      terminationGracePeriodSeconds: 0
-      volumes:
-      - name: script
-        configMap:
-          defaultMode: 0700
-          name: script
-      - name: sysroot
-        hostPath:
-          path: /
-          type: Directory
-      containers:
-        - name: px-deploy
-          image: centos:7
-          command:
-          - /entrypoint.sh
-          readinessProbe:
-            exec:
-              command:
-              - cat
-              - /sysroot/var/log/px-deploy/.lock
-            initialDelaySeconds: 1
-            periodSeconds: 10
-          volumeMounts:
-          - name: script
-            mountPath: /entrypoint.sh
-            subPath: entrypoint.sh
-          - name: sysroot
-            mountPath: /sysroot
+if [ $cluster -eq 1 ]; then
+  dnf install -y epel-release vim-enhanced nano
+  dnf install -y shellinabox jq
+  rm -f /etc/securetty
+  sed -i s/4200/443/ /etc/sysconfig/shellinaboxd
+  systemctl enable shellinaboxd
+  systemctl restart shellinaboxd sshd
+  sh /assets/training/Disaster_Recovery/etcd.sh
+  mkdir /etc/skel/.kube
+  mv /assets/training /etc/skel
+  cat <<EOF >>/etc/skel/.bashrc
+alias k=kubectl
+complete -F __start_kubectl k
+PS1='\e[0;33m[\u@px-training \W]\$ \e[m'
 EOF
+  for i in $(seq 1 $clusters); do
+    useradd training$i
+    passwd --stdin training$i <<<portworx
+  done
+fi
+
+while :; do
+  echo trying to copy kubeconfig
+  cat /root/.kube/config | ssh master-1 "su -l training$cluster -c 'cat >.kube/config' && exit 22"
+  [ $? -eq 22 ] && break
+  sleep 2
+done
