@@ -26,7 +26,7 @@ cat <<EOF >/vsphere-rocky.json
     "vm-cpu-num": "4",
     "vm-mem-size": "8192",
     "vm-disk-size": "52000",
-    "iso_url": "https://download.rockylinux.org/pub/rocky/8/isos/x86_64/Rocky-8.7-x86_64-minimal.iso",
+    "iso_url": "https://dl.rockylinux.org/vault/rocky/8.7/isos/x86_64/Rocky-8.7-x86_64-minimal.iso",
     "kickstart_file": "/vsphere-ks.cfg"
   },
   "builders": [
