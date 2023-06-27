@@ -425,10 +425,10 @@ func main() {
 			}
 			y, _ := yaml.Marshal(config)
 			log("[ " + strings.Join(os.Args[1:], " ") + " ] " + base64.StdEncoding.EncodeToString(y))
-			if config.Dry_Run == "true" {
-				fmt.Println(string(y))
-				die("Dry-run only")
-			}
+			//if config.Dry_Run == "true" {
+			//	fmt.Println(string(y))
+			//	die("Dry-run only")
+			//}
 			err := ioutil.WriteFile("deployments/"+createName+".yml", y, 0644)
 			if err != nil {
 				die(err.Error())
@@ -734,7 +734,7 @@ func main() {
 	cmdCreate.Flags().StringVarP(&createCloud, "cloud", "C", "", "aws | gcp | azure | vsphere (default "+defaults.Cloud+")")
 	cmdCreate.Flags().StringVarP(&createEnv, "env", "e", "", "Comma-separated list of environment variables to be passed, for example foo=bar,abc=123")
 	cmdCreate.Flags().BoolVarP(&createQuiet, "quiet", "q", false, "hide provisioning output")
-	cmdCreate.Flags().BoolVarP(&createDryRun, "dry_run", "d", false, "dry-run, output yaml only")
+	cmdCreate.Flags().BoolVarP(&createDryRun, "dry_run", "d", false, "dry-run, create local files only. Works only on aws / azure")
 
 	cmdDestroy.Flags().BoolVarP(&destroyAll, "all", "a", false, "destroy all deployments")
 	cmdDestroy.Flags().StringVarP(&destroyName, "name", "n", "", "name of deployment to be destroyed")
@@ -945,6 +945,10 @@ func create_deployment(config Config) int {
 				fmt.Println(Yellow + "ERROR: terraform plan failed. Check validity of terraform scripts" + Reset)
 				die(err.Error())
 			} else {
+				if config.Dry_Run == "true" {
+					fmt.Printf("Dry run only. No deployment on target cloud. Run 'px-deploy destroy -n %s' to remove local files\n", config.Name)
+					die("Exit")
+				}
 				fmt.Println(White + "running terraform APPLY" + Reset)
 				cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "apply", "-input=false", "-parallelism=50", "-auto-approve", "tfplan")
 				cmd.Stdout = os.Stdout
@@ -1142,6 +1146,10 @@ func create_deployment(config Config) int {
 				fmt.Println(Yellow + "ERROR: terraform plan failed. Check validity of terraform scripts" + Reset)
 				die(err.Error())
 			} else {
+				if config.Dry_Run == "true" {
+					fmt.Printf("Dry run only. No deployment on target cloud. Run 'px-deploy destroy -n %s' to remove local files\n", config.Name)
+					die("Exit")
+				}
 				fmt.Println(White + "running terraform APPLY" + Reset)
 				cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "apply", "-input=false", "-auto-approve", "tfplan")
 				cmd.Stdout = os.Stdout
