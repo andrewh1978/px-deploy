@@ -87,7 +87,6 @@ cat <<EOF >/vsphere-rocky.json
   "provisioners": [
     {
       "inline": [
-        "sudo dnf upgrade -y",
         "sudo dnf install -y cloud-init",
         "sudo dnf install -y epel-release",
         "sudo dnf install -y python3-devel",
