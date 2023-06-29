@@ -23,3 +23,7 @@ while ! dnf install -y vim-enhanced git; do
   sleep 1
 done
 git config --global color.ui auto true
+
+curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
+chmod 700 get_helm.sh
+HELM_INSTALL_DIR=/usr/bin ./get_helm.sh
