@@ -3,6 +3,3 @@ kubeadm init --apiserver-advertise-address=$(hostname -i) --pod-network-cidr=10.
 mkdir /root/.kube
 cp /etc/kubernetes/admin.conf /root/.kube/config
 kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/v0.19.2/Documentation/kube-flannel.yml
-curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
-chmod 700 get_helm.sh
-HELM_INSTALL_DIR=/usr/bin ./get_helm.sh
