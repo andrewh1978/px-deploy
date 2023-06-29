@@ -31,14 +31,14 @@ resource "azurerm_kubernetes_cluster" "aks" {
     name       = "default"
     node_count = var.aks_nodes
     vm_size    = each.value
-    tags       = var.aws_tags
+    tags       = var.azure_tags
   }
 
   identity {
     type = "SystemAssigned"
   }
 
-  tags                = var.aws_tags
+  tags                = var.azure_tags
 }
 
 //output "client_certificate" {
