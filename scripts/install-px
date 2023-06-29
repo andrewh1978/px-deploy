@@ -98,12 +98,10 @@ EOF
 fi
 
 if [ "$operator" != false -a "$platform" != ocp4 ]; then
-  [ -e /sbin/azure-repo-svc ] && kubectl taint node --all node-role.kubernetes.io/master-
   kubectl apply -f "https://install.portworx.com/$px_version?comp=pxoperator&kbver=$k8s_version"
   while ! kubectl wait --for=condition=ready pod -lname=portworx-operator -n kube-system; do
     sleep 2
   done
-  [ -e /sbin/azure-repo-svc ] && kubectl taint node --all node-role.kubernetes.io/master=:NoSchedule
 fi
 
 if [ "$secrets" = vault ]; then
