@@ -123,7 +123,7 @@ var wg sync.WaitGroup
 
 func main() {
 	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createAwsAccessKeyId, createEksVersion, createAwsSecretAccessKey, createTags, createGcpType, createGcpDisks, createGcpZone, createGkeVersion, createAzureType, createAksVersion, createAzureDisks, createAzureClientSecret, createAzureClientId, createAzureTenantId, createAzureSubscriptionId, createTemplate, createRegion, createCloud, createEnv, connectName, kubeconfigName, destroyName, statusName, historyNumber string
-	var createQuiet, createDryRun, destroyAll bool
+	var createQuiet, createDryRun, destroyAll, destroyClear bool
 	os.Chdir("/px-deploy/.px-deploy")
 	rootCmd := &cobra.Command{Use: "px-deploy"}
 
@@ -208,7 +208,10 @@ func main() {
 					die("Invalid deployment name '" + createName + "'")
 				}
 				if _, err := os.Stat("deployments/" + createName + ".yml"); !os.IsNotExist(err) {
-					die("Deployment '" + createName + "' already exists")
+					fmt.Printf("\033[31m Deployment %s already exists \033[0m \n", createName)
+					fmt.Printf("please it delete running 'px-deploy destroy -n %s' \n", createName)
+					fmt.Printf("if this fails, remove cloud ressources manually and run 'px-deploy destroy --clear -n %s'", createName)
+					die("")
 				}
 			} else {
 				createName = uuid.New().String()
@@ -486,6 +489,10 @@ func main() {
 		Long:  "Destroys a deployment",
 		Run: func(cmd *cobra.Command, args []string) {
 			if destroyAll {
+				if destroyClear {
+					die("--clear is not supported with -a")
+				}
+
 				if destroyName != "" {
 					die("Specify either -a or -n, not both")
 				}
@@ -501,7 +508,11 @@ func main() {
 				if destroyName == "" {
 					die("Must specify deployment to destroy")
 				}
-				destroy_deployment(destroyName)
+				if destroyClear {
+					destroy_clear(destroyName)
+				} else {
+					destroy_deployment(destroyName)
+				}
 			}
 		},
 	}
@@ -737,6 +748,7 @@ func main() {
 	cmdCreate.Flags().BoolVarP(&createDryRun, "dry_run", "d", false, "dry-run, create local files only. Works only on aws / azure")
 
 	cmdDestroy.Flags().BoolVarP(&destroyAll, "all", "a", false, "destroy all deployments")
+	cmdDestroy.Flags().BoolVarP(&destroyClear, "clear", "c", false, "destroy local deployment files (use with caution!)")
 	cmdDestroy.Flags().StringVarP(&destroyName, "name", "n", "", "name of deployment to be destroyed")
 
 	cmdConnect.Flags().StringVarP(&connectName, "name", "n", "", "name of deployment to connect to")
@@ -1194,6 +1206,25 @@ func create_deployment(config Config) int {
 		return 1
 	}
 	return 0
+}
+
+func destroy_clear(name string) {
+	os.Chdir("/px-deploy/.px-deploy")
+	config := parse_yaml("deployments/" + name + ".yml")
+
+	fmt.Println(Red + "Deleting local files for deployment " + name)
+	fmt.Println("If there is any deployment in cloud " + config.Cloud + " you need to remove manually now" + Reset)
+
+	os.Chdir("/px-deploy/.px-deploy")
+	os.Remove("deployments/" + name + ".yml")
+	os.RemoveAll("tf-deployments/" + name)
+	os.Remove("keys/id_rsa." + config.Cloud + "." + name)
+	os.Remove("keys/id_rsa." + config.Cloud + "." + name + ".pub")
+
+	clusters, _ := strconv.Atoi(config.Clusters)
+	for c := 0; c <= clusters; c++ {
+		os.Remove("kubeconfig/" + name + "." + strconv.Itoa(c))
+	}
 }
 
 func destroy_deployment(name string) {
