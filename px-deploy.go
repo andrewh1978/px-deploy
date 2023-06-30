@@ -208,7 +208,10 @@ func main() {
 					die("Invalid deployment name '" + createName + "'")
 				}
 				if _, err := os.Stat("deployments/" + createName + ".yml"); !os.IsNotExist(err) {
-					die("Deployment '" + createName + "' already exists")
+					fmt.Printf("\033[31m Deployment %s already exists \033[0m \n", createName)
+					fmt.Printf("please it delete running 'px-deploy destroy -n %s' \n", createName)
+					fmt.Printf("if this fails, remove cloud ressources manually and run 'px-deploy destroy --clear -n %s'", createName)
+					die("")
 				}
 			} else {
 				createName = uuid.New().String()
