@@ -100,8 +100,8 @@ cat <<EOF >/vsphere-rocky.json
 EOF
 
 cat <<\EOF >/vsphere-ks.cfg
-repo --name=BaseOS --baseurl=https://download.rockylinux.org/pub/rocky/8/BaseOS/x86_64/os/
-repo --name=AppStream --baseurl=https://download.rockylinux.org/pub/rocky/8/AppStream/x86_64/os/
+repo --name=BaseOS --baseurl=https://dl.rockylinux.org/vault/rocky/8.7/BaseOS/x86_64/os/
+repo --name=AppStream --baseurl=https://dl.rockylinux.org/vault/rocky/8.7/AppStream/x86_64/os/
 text
 firstboot --enable
 ignoredisk --only-use=sda
