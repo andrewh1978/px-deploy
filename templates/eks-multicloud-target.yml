@@ -1,3 +1,5 @@
+# you need to set env variable DR_BUCKET in defaults.yml pointing to existing AWS S3 Bucket
 description: setup EKS px cluster as Migration Target
 scripts: ["install-px", "eks-migration-target"]
-
+cloud: aws
+platform: eks
