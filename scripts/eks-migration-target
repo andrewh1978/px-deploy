@@ -48,7 +48,6 @@ while : ;do
 done
 
 mkdir /root/drscripts
-cp /root/.aws/credentials /root/drscripts/
 
 PX_POD=$(kubectl get pods -l name=portworx -n portworx -o jsonpath='{.items[0].metadata.name}')
 
@@ -72,7 +71,7 @@ echo "aws_access_key_id = $S3_ACCESS_KEY" >> /root/.aws/credentials
 echo "aws_secret_access_key = $S3_SECRET_KEY" >> /root/.aws/credentials
 
 kubectl pxc $CRED_CMD
-kubectl create secret  generic --from-file=/root/.aws/.credentials -n portworx aws-creds
+kubectl create secret  generic --from-file=/root/.aws/credentials -n portworx aws-creds
 kubectl patch stc/px-deploy-1  --type merge  -n portworx -p '{"spec": {
   "stork": {
       "volumes": [
@@ -89,7 +88,7 @@ kubectl patch stc/px-deploy-1  --type merge  -n portworx -p '{"spec": {
 }}'
 
 kubectl apply -f ./cp.yaml
-
+chmod +x /root/drscripts/prepare_migrate_dr_source.sh
 EOF
 
 cat <<EOF >> /etc/motd
