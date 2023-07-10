@@ -19,6 +19,8 @@ cd /root/ocp4
 while [ ! -f "/tmp/ocp4-install-config.yaml" ]; do sleep 5; done
 cp /tmp/ocp4-install-config.yaml /root/ocp4/install-config.yaml
 
+echo "cd /root/ocp4 ; openshift-install destroy cluster" >> /px-deploy/platform-delete/ocp4.sh
+
 openshift-install create cluster --log-level=debug
 if [ $? -ne 0 ]; then
   echo Failed to deploy Openshift
@@ -36,8 +38,6 @@ aws ec2 authorize-security-group-ingress --group-id $sg --protocol udp --port 17
 # open NFS Port for RWX
 cidr=$(cat terraform.cluster.tfstate | jq -r '.resources[] | select(.name==("private") and .type==("aws_subnet")).instances[0].attributes.cidr_block')
 aws ec2 authorize-security-group-ingress --group-id $sg --protocol tcp --port 2049 --cidr $cidr
-
-echo "cd /root/ocp4 ; openshift-install destroy cluster" >> /px-deploy/platform-delete/ocp4.sh
 
 URL=$(grep 'Access the OpenShift web-console' /root/ocp4/.openshift_install.log |cut -d\" -f4 | cut -d: -f2-)
 echo "url $URL" >> /var/log/px-deploy/completed/tracking
