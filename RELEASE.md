@@ -1,3 +1,15 @@
+## Fixes
+ * Fix issue with destroying large deployments 
+ * Correct Rocky URL for vSphere
+ * Fix AKS tagging
+
+## Improvements
+ * Delete old assets
+ * Improvement provisioning parallelisation
+ * Add eks_version parameter
+ * Add destroy --clear flag
+ * Add multicloud migration template
+
 # 5.1
 
 ## Fixes
