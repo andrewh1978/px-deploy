@@ -1,7 +1,3 @@
-dnf install -y pv
-echo "set bell-style none" >>/etc/inputrc 
-echo "set vb" >> /root/.vimrc
-echo "set t_vb=" >> /root/.vimrc
 
 kubectl create secret  generic --from-file=/root/.aws/credentials -n portworx aws-creds
 kubectl patch stc/px-deploy-$cluster  --type merge  -n portworx -p '{"spec": {

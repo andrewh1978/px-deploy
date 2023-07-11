@@ -12,7 +12,7 @@
 # Maintainer: Daniel Paul
 #
 description: setup EKS cluster with PX as clusterpair migration target
-scripts: ["install-px", "eks-migration-target"]
+scripts: ["install-px", "eks-multicloud-target"]
 cloud: aws
 platform: eks
 env:
