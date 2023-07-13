@@ -2050,7 +2050,7 @@ func write_nodescripts(config Config) {
 			tf_post_script = append(tf_post_script, "(\n"...)
 			tf_post_script = append(tf_post_script, "echo \"Started $(date)\"\n"...)
 			tf_post_script = append(tf_post_script, content...)
-			tf_post_script = append(tf_post_script, "echo \"Finished $(date)\"\n"...)
+			tf_post_script = append(tf_post_script, "\necho \"Finished $(date)\"\n"...)
 			tf_post_script = append(tf_post_script, "\n) >&/var/log/px-deploy/"+config.Post_Script+"\n"...)
 		}
 	} else {
@@ -2074,6 +2074,7 @@ func write_nodescripts(config Config) {
 					if err == nil {
 						tf_master_script = append(tf_master_script, "(\n"...)
 						tf_master_script = append(tf_master_script, content...)
+						tf_master_script = append(tf_master_script, "\necho \"Finished $(date)\"\n"...)
 						tf_master_script = append(tf_master_script, "\n) >&/var/log/px-deploy/"+filename+"\n"...)
 					}
 				}
