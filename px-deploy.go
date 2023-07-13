@@ -2000,9 +2000,9 @@ func write_nodescripts(config Config) {
 		content, err := ioutil.ReadFile("/px-deploy/vagrant/" + filename)
 		if err == nil {
 			tf_node_script = append(tf_node_script, "(\n"...)
-			tf_node_script = append(tf_node_script, "echo \"Started ($date)\"\n"...)
+			tf_node_script = append(tf_node_script, "echo \"Started $(date)\"\n"...)
 			tf_node_script = append(tf_node_script, content...)
-			tf_node_script = append(tf_node_script, "\necho \"Finished ($date)\"\n"...)
+			tf_node_script = append(tf_node_script, "\necho \"Finished $(date)\"\n"...)
 			tf_node_script = append(tf_node_script, "\n) >&/var/log/px-deploy/"+filename+"\n"...)
 		}
 	}
