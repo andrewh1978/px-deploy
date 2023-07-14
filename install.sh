@@ -10,6 +10,7 @@ if [ -d $HOME/.px-deploy ]; then
   if [ $(find $HOME/.px-deploy -uid 0 | wc -l) != 0 ]; then
     echo -e "${RED}Found root-owned files in $HOME/.px-deploy - run this command before rerunning install.sh:$NC"
     echo "sudo chown -R $USER $HOME/.px-deploy"
+    exit 1
   fi
 fi
 
