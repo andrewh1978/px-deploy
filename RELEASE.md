@@ -4,6 +4,7 @@
  * Fix AKS tagging
 
 ## Improvements
+ * install.sh no longer runs in a container, so is much faster
  * Delete old assets
  * Improvement provisioning parallelisation
  * Add eks_version parameter

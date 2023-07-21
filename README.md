@@ -23,13 +23,15 @@ This will deploy one or more clusters in the cloud, with optional post-install t
 
 1. Install and enable a container runtime such as Docker. On MacOS with Apple Silicon, it is recommended you use [Colima](https://github.com/abiosoft/colima). Start it with `colima start -a x86_64 -m 8 -c 8  --vz-rosetta`.
 
-2. Install bash-completion (optional), eg:
+2. Install the [Git CLI](https://github.com/git-guides/install-git).
+
+3. Install bash-completion (optional), eg:
 ```
 $ brew install bash-completion
 ```
 You will need to restart your shell.
 
-3. Run the install / update script:
+4. Run the install / update script:
 ```
 curl https://raw.githubusercontent.com/andrewh1978/px-deploy/master/install.sh | bash
 ```
@@ -44,7 +46,7 @@ Update your `.bash_profile` or `.zshrc` as directed. Source them or login again.
 
 Review the various cloud settings in `~/.px-deploy/defaults.yml`.
 
-4. Configure Cloud specific settings
+5. Configure Cloud specific settings
 
 [Notes for AWS](#notes-for-aws)
 
