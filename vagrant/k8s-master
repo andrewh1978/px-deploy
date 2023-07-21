@@ -2,7 +2,21 @@ kubeadm config images list --kubernetes-version $k8s_version | xargs -n1 -P0 ctr
 kubeadm init --apiserver-advertise-address=$(hostname -i) --pod-network-cidr=10.244.0.0/16 --kubernetes-version $k8s_version
 mkdir /root/.kube
 cp /etc/kubernetes/admin.conf /root/.kube/config
-kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/v0.19.2/Documentation/kube-flannel.yml
-curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
-chmod 700 get_helm.sh
-HELM_INSTALL_DIR=/usr/bin ./get_helm.sh
+#
+# wait for API server to come up
+sleep 5
+echo "Waiting on kube api"
+readiness="https://localhost:6443/readyz"
+expected_response="ok"
+
+while true; do
+    response=$(curl -k -s "$readiness")
+    if [ "$response" = "$expected_response" ]; then
+        echo "kube api is ready!"
+        break
+    fi
+    echo "kube api not ready. Waiting 5 seconds..."
+    sleep 5
+done
+echo "Applying Flannel"
+kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/v0.22.0/Documentation/kube-flannel.yml

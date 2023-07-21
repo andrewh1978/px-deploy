@@ -1,7 +1,15 @@
-# dev
+## Fixes
+ * Fix issue with destroying large deployments 
+ * Correct Rocky URL for vSphere
+ * Fix AKS tagging
 
 ## Improvements
- *** install.sh no longer runs in a container, so is much faster
+ * install.sh no longer runs in a container, so is much faster
+ * Delete old assets
+ * Improvement provisioning parallelisation
+ * Add eks_version parameter
+ * Add destroy --clear flag
+ * Add multicloud migration template
 
 # 5.1
 

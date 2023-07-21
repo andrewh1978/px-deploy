@@ -26,7 +26,7 @@ cat <<EOF >/vsphere-rocky.json
     "vm-cpu-num": "4",
     "vm-mem-size": "8192",
     "vm-disk-size": "52000",
-    "iso_url": "https://download.rockylinux.org/pub/rocky/8/isos/x86_64/Rocky-8.7-x86_64-minimal.iso",
+    "iso_url": "https://dl.rockylinux.org/vault/rocky/8.7/isos/x86_64/Rocky-8.7-x86_64-minimal.iso",
     "kickstart_file": "/vsphere-ks.cfg"
   },
   "builders": [
@@ -87,7 +87,6 @@ cat <<EOF >/vsphere-rocky.json
   "provisioners": [
     {
       "inline": [
-        "sudo dnf upgrade -y",
         "sudo dnf install -y cloud-init",
         "sudo dnf install -y epel-release",
         "sudo dnf install -y python3-devel",
@@ -101,8 +100,8 @@ cat <<EOF >/vsphere-rocky.json
 EOF
 
 cat <<\EOF >/vsphere-ks.cfg
-repo --name=BaseOS --baseurl=https://download.rockylinux.org/pub/rocky/8/BaseOS/x86_64/os/
-repo --name=AppStream --baseurl=https://download.rockylinux.org/pub/rocky/8/AppStream/x86_64/os/
+repo --name=BaseOS --baseurl=https://dl.rockylinux.org/vault/rocky/8.7/BaseOS/x86_64/os/
+repo --name=AppStream --baseurl=https://dl.rockylinux.org/vault/rocky/8.7/AppStream/x86_64/os/
 text
 firstboot --enable
 ignoredisk --only-use=sda

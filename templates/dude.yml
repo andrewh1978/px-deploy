@@ -1,0 +1,2 @@
+description: Deploys clusters with Portworx, sets up and configures a cluster pairing from odd to even clusters, configures an async DR schedule, installs PX-Backup on the last cluster
+scripts: ["install-awscli", "install-px", "licenses", "dude"]

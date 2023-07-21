@@ -144,6 +144,7 @@ The `defaults.yml` file sets a number of deployment variables:
  * `aws_type` - the AWS machine type for each node
  * `aws_access_key_id` - your AWS API access key
  * `aws_secret_access_key` - your AWS API secret access key
+ * `eks_version` - EKS k8s Version
  * `cloud` - the cloud on which to deploy (aws, gcp, or vsphere)
  * `clusters` - the number of clusters to deploy
  * `k8s_version` - the version of Kubernetes to deploy
