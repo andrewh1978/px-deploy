@@ -10,6 +10,7 @@
  * Add eks_version parameter
  * Add destroy --clear flag
  * Add multicloud migration template
+ * Update OpenSSH to fix scp issues on MacOS
 
 # 5.1
 
