@@ -123,7 +123,7 @@ var wg sync.WaitGroup
 
 func main() {
 	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createAwsAccessKeyId, createEksVersion, createAwsSecretAccessKey, createTags, createGcpType, createGcpDisks, createGcpZone, createGkeVersion, createAzureType, createAksVersion, createAzureDisks, createAzureClientSecret, createAzureClientId, createAzureTenantId, createAzureSubscriptionId, createTemplate, createRegion, createCloud, createEnv, connectName, kubeconfigName, destroyName, statusName, historyNumber string
-	var createQuiet, createDryRun, destroyAll, destroyClear bool
+	var createQuiet, createDryRun, destroyAll, estroyClear bool
 	os.Chdir("/px-deploy/.px-deploy")
 	rootCmd := &cobra.Command{Use: "px-deploy"}
 
@@ -208,9 +208,9 @@ func main() {
 					die("Invalid deployment name '" + createName + "'")
 				}
 				if _, err := os.Stat("deployments/" + createName + ".yml"); !os.IsNotExist(err) {
-					fmt.Printf("\033[31m Deployment %s already exists \033[0m \n", createName)
-					fmt.Printf("please it delete running 'px-deploy destroy -n %s' \n", createName)
-					fmt.Printf("if this fails, remove cloud ressources manually and run 'px-deploy destroy --clear -n %s'", createName)
+					fmt.Printf("Deployment %s already exists%s\n", Red, createName, Reset)
+					fmt.Printf("please delete it by running 'px-deploy destroy -n %s' \n", createName)
+					fmt.Printf("if this fails, remove cloud resources manually and run 'px-deploy destroy --clear -n %s'", createName)
 					die("")
 				}
 			} else {
