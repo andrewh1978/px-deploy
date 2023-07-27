@@ -2,6 +2,8 @@
  * Fix issue with destroying large deployments 
  * Correct Rocky URL for vSphere
  * Fix AKS tagging
+ * SSH root password authentication is disabled by default
+ * validation of values in defaults.yml
 
 ## Improvements
  * install.sh no longer runs in a container, so is much faster
@@ -11,6 +13,7 @@
  * Add destroy --clear flag
  * Add multicloud migration template
  * Update OpenSSH to fix scp issues on MacOS
+ * you can provide your ssh public key by setting ssh_pub_key env variable in defaults.yml
 
 # 5.1
 

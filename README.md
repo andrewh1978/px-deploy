@@ -146,6 +146,7 @@ The `defaults.yml` file sets a number of deployment variables:
  * `aws_secret_access_key` - your AWS API secret access key
  * `eks_version` - EKS k8s Version
  * `cloud` - the cloud on which to deploy (aws, gcp, or vsphere)
+ * `ssh_pub_key` - ssh public key which will be added for root access on each node
  * `clusters` - the number of clusters to deploy
  * `k8s_version` - the version of Kubernetes to deploy
  * `tags` - a list of tags to be applied to each node. This is a comma-separate list of name=value pairs, for example: `"Owner=Bob,Purpose=Demo"`

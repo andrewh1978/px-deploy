@@ -104,6 +104,7 @@ type Config struct {
 	Gcp__Key                 string `yaml:"gcp__key,omitempty"`
 	Azure__Group             string `yaml:"azure__group,omitempty"`
 	Vsphere__Userdata        string `yaml:"vsphere__userdata,omitempty"`
+	Ssh_Pub_Key              string
 }
 
 type Config_Cluster struct {
@@ -122,7 +123,7 @@ var Blue = "\033[34m"
 var wg sync.WaitGroup
 
 func main() {
-	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createAwsAccessKeyId, createEksVersion, createAwsSecretAccessKey, createTags, createGcpType, createGcpDisks, createGcpZone, createGkeVersion, createAzureType, createAksVersion, createAzureDisks, createAzureClientSecret, createAzureClientId, createAzureTenantId, createAzureSubscriptionId, createTemplate, createRegion, createCloud, createEnv, connectName, kubeconfigName, destroyName, statusName, historyNumber string
+	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createAwsAccessKeyId, createEksVersion, createAwsSecretAccessKey, createTags, createGcpType, createGcpDisks, createGcpZone, createGkeVersion, createAzureType, createAksVersion, createAzureDisks, createAzureClientSecret, createAzureClientId, createAzureTenantId, createAzureSubscriptionId, createTemplate, createRegion, createCloud, createEnv, createSshPubKey, connectName, kubeconfigName, destroyName, statusName, historyNumber string
 	var createQuiet, createDryRun, destroyAll, destroyClear bool
 	os.Chdir("/px-deploy/.px-deploy")
 	rootCmd := &cobra.Command{Use: "px-deploy"}
@@ -223,6 +224,10 @@ func main() {
 			}
 			if config.Cloud != "aws" && config.Cloud != "gcp" && config.Cloud != "azure" && config.Cloud != "vsphere" {
 				die("Cloud must be 'aws', 'gcp', 'azure' or 'vsphere' (not '" + config.Cloud + "')")
+			}
+
+			if createSshPubKey != "" {
+				config.Ssh_Pub_Key = createSshPubKey
 			}
 
 			if createRegion != "" {
@@ -771,6 +776,7 @@ func main() {
 	cmdCreate.Flags().StringVarP(&createTemplate, "template", "t", "", "name of template to be deployed")
 	cmdCreate.Flags().StringVarP(&createRegion, "region", "r", "", "AWS, GCP or Azure region (default "+defaults.Aws_Region+", "+defaults.Gcp_Region+" or "+defaults.Azure_Region+")")
 	cmdCreate.Flags().StringVarP(&createCloud, "cloud", "C", "", "aws | gcp | azure | vsphere (default "+defaults.Cloud+")")
+	cmdCreate.Flags().StringVarP(&createSshPubKey, "ssh_pub_key", "", "", "ssh public key which will be added for root access on each node")
 	cmdCreate.Flags().StringVarP(&createEnv, "env", "e", "", "Comma-separated list of environment variables to be passed, for example foo=bar,abc=123")
 	cmdCreate.Flags().BoolVarP(&createQuiet, "quiet", "q", false, "hide provisioning output")
 	cmdCreate.Flags().BoolVarP(&createDryRun, "dry_run", "d", false, "dry-run, create local files only. Works only on aws / azure")
@@ -2005,7 +2011,7 @@ func write_nodescripts(config Config) {
 	e := reflect.ValueOf(&config).Elem()
 	for i := 0; i < e.NumField(); i++ {
 		if e.Type().Field(i).Type.Name() == "string" {
-			tf_env_script = append(tf_env_script, "export "+strings.ToLower(strings.TrimSpace(e.Type().Field(i).Name))+"=\""+strings.ToLower(strings.TrimSpace(e.Field(i).Interface().(string)))+"\"\n"...)
+			tf_env_script = append(tf_env_script, "export "+strings.ToLower(strings.TrimSpace(e.Type().Field(i).Name))+"=\""+strings.TrimSpace(e.Field(i).Interface().(string))+"\"\n"...)
 		}
 	}
 
