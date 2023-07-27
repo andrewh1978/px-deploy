@@ -2,6 +2,7 @@ cloud: aws
 platform: k8s
 clusters: 1
 nodes: 3
+#ssh_pub_key: "ssh-rsa XXXXXXXXXXXXXXXXXXXXXX user@example"
 k8s_version: 1.24.13
 px_version: 2.13.5
 stop_after: 6
@@ -54,4 +55,3 @@ ocp4_pull_secret: XXX
 
 #env:
 #    licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX ..."
-#    ssh_pub_key: "ssh-rsa XXXXXXXXXXXXXXXXXXXXXX user@example"
