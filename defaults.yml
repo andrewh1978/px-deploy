@@ -54,3 +54,4 @@ ocp4_pull_secret: XXX
 
 #env:
 #    licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX ..."
+#    ssh_pub_key: "ssh-rsa XXXXXXXXXXXXXXXXXXXXXX user@example"
