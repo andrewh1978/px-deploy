@@ -345,9 +345,9 @@ func main() {
 				config.Tags = createTags
 			}
 
-			//if !regexp.MustCompile(`^[0-9a-zA-Z,=\ ]+$`).MatchString(config.Tags) {
-			//	die("Invalid tags '" + config.Tags + "'")
-			//}
+			if !regexp.MustCompile(`^(([\p{L}\p{Z}\p{N}_.:+\-@]*)=([\p{L}\p{Z}\p{N}_.:+\-@]*),)*(([\p{L}\p{Z}\p{N}_.:+\-@]*)=([\p{L}\p{Z}\p{N}_.:+\-@]*)){1}$`).MatchString(config.Tags) {
+				die("Invalid tags '" + config.Tags + "'")
+			}
 
 			if createGcpType != "" {
 				config.Gcp_Type = createGcpType
@@ -394,14 +394,14 @@ func main() {
 			if createAzureType != "" {
 				config.Azure_Type = createAzureType
 			}
-			if !regexp.MustCompile(`^[0-9a-z\-]+$`).MatchString(config.Azure_Type) {
+			if !regexp.MustCompile(`^[0-9a-zA-Z\-\_]+$`).MatchString(config.Azure_Type) {
 				die("Invalid Azure type '" + config.Azure_Type + "'")
 			}
 
 			if createAzureDisks != "" {
 				config.Azure_Disks = createAzureDisks
 			}
-			if !regexp.MustCompile(`^[0-9 ]+$`).MatchString(config.Azure_Disks) {
+			if !regexp.MustCompile(`^[0-9a-zA-Z\ \_:]+$`).MatchString(config.Azure_Disks) {
 				die("Invalid Azure disks '" + config.Azure_Disks + "'")
 			}
 
