@@ -13,7 +13,7 @@
  * Add destroy --clear flag
  * Add multicloud migration template
  * Update OpenSSH to fix scp issues on MacOS
- * you can provide your ssh public key by setting ssh_pub_key env variable in defaults.yml
+ * you can provide your ssh public key by setting ssh_pub_key defaults.yml
 
 # 5.1
 
