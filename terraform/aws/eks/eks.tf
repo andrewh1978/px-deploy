@@ -271,9 +271,9 @@ resource "aws_eks_node_group" "worker-node-group" {
   }
   
   scaling_config {
-   desired_size = 3
-   max_size   = 3
-   min_size   = 3
+   desired_size = var.eks_nodes
+   max_size   = var.eks_nodes
+   min_size   = var.eks_nodes
   }
  
   depends_on = [
