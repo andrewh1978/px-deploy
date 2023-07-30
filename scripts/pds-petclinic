@@ -13,16 +13,17 @@
 # when running standalone ensure the following variables are set properly
 # and  /assets/pds-petclinic/pds-petclinic.tpl exists & is accessible
 #
+# PDS_TOKEN="[your pds user api key]"
 # name="pds-demo"
+# cluster=1
 # platform="ocp4"
 # PDS_ENDPOINT="https://prod.pds.portworx.com/api"
 # PDS_NAMESPACE="pds-petclinic"
 # PDS_DATASERVICE="pg"
-# PDS_DATASERVICE_VERSION="13.9"
+# PDS_DATASERVICE_VERSION="13.11"
 # PDS_APP_CONFIG_TEMPLATE="Default"
 # PDS_APP_RESOURCE_TEMPLATE="Tiny"
 # PDS_APP_STORAGE_TEMPLATE="Volume%20replication%20(best-effort%20spread)"
-# PDS_TOKEN="[your pds user api key]"
 # PDS_ACCOUNT="Sales"
 # PDS_TENANT="Default"
 # PDS_PROJECT="Default"
@@ -33,54 +34,67 @@ kubectl label ns $PDS_NAMESPACE pds.portworx.com/available=true
 
 TGT_NAME="px-deploy-$name-$cluster"
 
+[[ -z $PDS_TOKEN ]] && { echo "env variable PDS_TOKEN not set. check your ~/.px-deploy/defaults.yml"; exit 1; }
 
-PDS_ACCOUNT_ID=$(curl -s -X "GET"   "$PDS_ENDPOINT/accounts?Name=$PDS_ACCOUNT"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN" | jq -r '.data[0].id')
-[[ -z $PDS_ACCOUNT_ID ]] && { echo "Account ID not found"; exit 1; }
-echo "PDS ACCOUNT ID:		$PDS_ACCOUNT_ID"
+OUTPUT=$(curl -s -X "GET"   "$PDS_ENDPOINT/accounts?Name=$PDS_ACCOUNT"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN")
+PDS_ACCOUNT_ID=$(echo $OUTPUT | jq -r '.data[0].id')
+[[ $PDS_ACCOUNT_ID == "null" ]] && { echo "PDS_ACCOUNT_ID not found"; echo $OUTPUT; exit 1; }
+echo "PDS_ACCOUNT_ID=\"$PDS_ACCOUNT_ID\""
 
-PDS_TENANT_ID=$(curl -s -X "GET"   "$PDS_ENDPOINT/accounts/$PDS_ACCOUNT_ID/tenants?Name=$PDS_TENANT"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.data[0].id')
-[[ -z $PDS_TENANT_ID ]] && { echo "Tenant ID not found"; exit 1; }
-echo "PDS TENANT ID:		$PDS_TENANT_ID"
+OUTPUT=$(curl -s -X "GET"   "$PDS_ENDPOINT/accounts/$PDS_ACCOUNT_ID/tenants?Name=$PDS_TENANT"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN")
+PDS_TENANT_ID=$(echo $OUTPUT | jq -r '.data[0].id')
+[[ $PDS_TENANT_ID == "null" ]] && { echo "PDS_TENANT_ID not found"; echo $OUTPUT; exit 1; }
+echo "PDS_TENANT_ID=\"$PDS_TENANT_ID\""
 
-PDS_PROJECT_ID=$(curl -s -X "GET"   "$PDS_ENDPOINT/tenants/$PDS_TENANT_ID/projects?Name=$PDS_PROJECT"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.data[0].id')
-[[ -z $PDS_PROJECT_ID ]] && { echo "Project ID not found"; exit 1; }
-echo "PDS PROJECT ID:		$PDS_PROJECT_ID"
+OUTPUT=$(curl -s -X "GET"   "$PDS_ENDPOINT/tenants/$PDS_TENANT_ID/projects?Name=$PDS_PROJECT"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN")
+PDS_PROJECT_ID=$(echo $OUTPUT | jq -r '.data[0].id')
+[[ $PDS_PROJECT_ID == "null" ]] && { echo "PDS_PROJECT_ID not found"; echo $OUTPUT; exit 1; }
+echo "PDS_PROJECT_ID=\"$PDS_PROJECT_ID\""
 
-PDS_SERVICE_ACCOUNT_ID=$(curl -s -X "GET"   "$PDS_ENDPOINT/tenants/$PDS_TENANT_ID/service-accounts?Name=Default-AgentWriter"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.data[0].id')
-[[ -z $PDS_SERVICE_ACCOUNT_ID ]] && { echo "Service Account ID not found"; exit 1; }
-echo "SVC ACCT ID: 		$PDS_SERVICE_ACCOUNT_ID"
+OUTPUT=$(curl -s -X "GET"   "$PDS_ENDPOINT/tenants/$PDS_TENANT_ID/service-accounts?Name=Default-AgentWriter"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN")
+PDS_SERVICE_ACCOUNT_ID=$(echo $OUTPUT | jq -r '.data[0].id')
+[[ $PDS_SERVICE_ACCOUNT_ID == "null" ]] && { echo "PDS_SERVICE_ACCOUNT_ID not found"; echo $OUTPUT; exit 1; }
+echo "PDS_SERVICE_ACCOUNT_ID=\"$PDS_SERVICE_ACCOUNT_ID\""
 
-PDS_SERVICE_ACCOUNT_TOKEN=$(curl -s -X "GET"   "$PDS_ENDPOINT/service-accounts/$PDS_SERVICE_ACCOUNT_ID/token"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.token')
-[[ -z $PDS_SERVICE_ACCOUNT_TOKEN ]] && { echo "Service Account Token not found"; exit 1; }
-echo "SVC ACCT TOKEN: $PDS_SERVICE_ACCOUNT_TOKEN"
+OUTPUT=$(curl -s -X "GET"   "$PDS_ENDPOINT/service-accounts/$PDS_SERVICE_ACCOUNT_ID/token"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN")
+PDS_SERVICE_ACCOUNT_TOKEN=$(echo $OUTPUT | jq -r '.token')
+[[ $PDS_SERVICE_ACCOUNT_TOKEN == "null" ]] && { echo "PDS_SERVICE_ACCOUNT_TOKEN not found"; echo $OUTPUT; exit 1; }
+echo "PDS_SERVICE_ACCOUNT_TOKEN=\"$PDS_SERVICE_ACCOUNT_TOKEN\""
 
-PDS_DATASERVICE_ID=$(curl -s -X "GET"   "$PDS_ENDPOINT/data-services?short_name=$PDS_DATASERVICE"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.data[0].id')
-[[ -z $PDS_DATASERVICE_ID ]] && { echo "Dataservice ID not found"; exit 1; }
-echo "PDS DS ID: 		$PDS_DATASERVICE_ID"
+OUTPUT=$(curl -s -X "GET"   "$PDS_ENDPOINT/data-services?short_name=$PDS_DATASERVICE"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN")
+PDS_DATASERVICE_ID=$(echo $OUTPUT | jq -r '.data[0].id')
+[[ $PDS_DATASERVICE_ID == "null" ]] && { echo "PDS_DATASERVICE_ID not found"; echo $OUTPUT; exit 1; }
+echo "PDS_DATASERVICE_ID=\"$PDS_DATASERVICE_ID\""
 
-PDS_DATASERVICE_VERSION_ID=$(curl -s -X "GET"   "$PDS_ENDPOINT/data-services/$PDS_DATASERVICE_ID/versions?name=$PDS_DATASERVICE_VERSION&enabled=true"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.data[0].id')
-[[ -z $PDS_DATASERVICE_VERSION_ID ]] && { echo "Dataservice Version ID not found"; exit 1; }
-echo "PDS DS VERS ID:		$PDS_DATASERVICE_VERSION_ID"
+OUTPUT=$(curl -s -X "GET"   "$PDS_ENDPOINT/data-services/$PDS_DATASERVICE_ID/versions?name=$PDS_DATASERVICE_VERSION&enabled=true"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN")
+PDS_DATASERVICE_VERSION_ID=$(echo $OUTPUT | jq -r '.data[0].id')
+[[ $PDS_DATASERVICE_VERSION_ID == "null" ]] && { echo "PDS_DATASERVICE_VERSION_ID not found"; echo $OUTPUT; exit 1; }
+echo "PDS_DATASERVICE_VERSION_ID=\"$PDS_DATASERVICE_VERSION_ID\""
 
-PDS_DATASERVICE_IMAGE_ID=$(curl -s -X "GET"   "$PDS_ENDPOINT/images?data_service_id=$PDS_DATASERVICE_ID&version_id=$PDS_DATASERVICE_VERSION_ID&latest=true"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.data[0].id')
-[[ -z $PDS_DATASERVICE_IMAGE_ID ]] && { echo "Dataservice Image ID not found"; exit 1; }
-echo "PDS DS IMG ID:		$PDS_DATASERVICE_IMAGE_ID"
+OUTPUT=$(curl -s -X "GET"   "$PDS_ENDPOINT/images?data_service_id=$PDS_DATASERVICE_ID&version_id=$PDS_DATASERVICE_VERSION_ID&latest=true"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN")
+PDS_DATASERVICE_IMAGE_ID=$(echo $OUTPUT | jq -r '.data[0].id')
+[[ $PDS_DATASERVICE_IMAGE_ID == "null" ]] && { echo "PDS_DATASERVICE_IMAGE_ID not found"; echo $OUTPUT; exit 1; }
+echo "PDS_DATASERVICE_IMAGE_ID=\"$PDS_DATASERVICE_IMAGE_ID\""
 
-PDS_APP_CONFIG_TEMPLATE_ID=$(curl -s -X "GET"   "$PDS_ENDPOINT/tenants/$PDS_TENANT_ID/application-configuration-templates?name=$PDS_APP_CONFIG_TEMPLATE&data_service_id=$PDS_DATASERVICE_ID"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.data[0].id')
-[[ -z $PDS_APP_CONFIG_TEMPLATE_ID ]] && { echo "Application Config Template ID not found"; exit 1; }
-echo "PDS APP CONF TEMP ID:	$PDS_APP_CONFIG_TEMPLATE_ID"
+OUTPUT=$(curl -s -X "GET"   "$PDS_ENDPOINT/tenants/$PDS_TENANT_ID/application-configuration-templates?name=$PDS_APP_CONFIG_TEMPLATE&data_service_id=$PDS_DATASERVICE_ID"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN")
+PDS_APP_CONFIG_TEMPLATE_ID=$(echo $OUTPUT | jq -r '.data[0].id')
+[[ $PDS_APP_CONFIG_TEMPLATE_ID == "null" ]] && { echo "PDS_APP_CONFIG_TEMPLATE_ID not found"; echo $OUTPUT; exit 1; }
+echo "PDS_APP_CONFIG_TEMPLATE_ID=\"$PDS_APP_CONFIG_TEMPLATE_ID\""
 
-PDS_APP_RESOURCE_TEMPLATE_ID=$(curl -s -X "GET"  "$PDS_ENDPOINT/tenants/$PDS_TENANT_ID/resource-settings-templates?name=$PDS_APP_RESOURCE_TEMPLATE&data_service_id=$PDS_DATASERVICE_ID"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.data[0].id')
-[[ -z $PDS_APP_RESOURCE_TEMPLATE_ID ]] && { echo "Application Resource Template ID not found"; exit 1; }
-echo "PDS APP RES TEMP ID:	$PDS_APP_RESOURCE_TEMPLATE_ID"
+OUTPUT=$(curl -s -X "GET"  "$PDS_ENDPOINT/tenants/$PDS_TENANT_ID/resource-settings-templates?name=$PDS_APP_RESOURCE_TEMPLATE&data_service_id=$PDS_DATASERVICE_ID"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN")
+PDS_APP_RESOURCE_TEMPLATE_ID=$(echo $OUTPUT | jq -r '.data[0].id')
+[[ $PDS_APP_RESOURCE_TEMPLATE_ID == "null" ]] && { echo "PDS_APP_RESOURCE_TEMPLATE_ID not found"; echo $OUTPUT; exit 1; }
+echo "PDS_APP_RESOURCE_TEMPLATE_ID=\"$PDS_APP_RESOURCE_TEMPLATE_ID\""
 
-PDS_APP_STORAGE_TEMPLATE_ID=$(curl -s -X "GET"  "$PDS_ENDPOINT/tenants/$PDS_TENANT_ID/storage-options-templates?name=$PDS_APP_STORAGE_TEMPLATE&provisioner=auto"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.data[0].id')
-[[ -z $PDS_APP_STORAGE_TEMPLATE_ID ]] && { echo "Application Storage Template ID not found"; exit 1; }
-echo "PDS APP STO TEMP ID:	$PDS_APP_STORAGE_TEMPLATE_ID"
+OUTPUT=$(curl -s -X "GET"  "$PDS_ENDPOINT/tenants/$PDS_TENANT_ID/storage-options-templates?name=$PDS_APP_STORAGE_TEMPLATE&provisioner=auto"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN")
+PDS_APP_STORAGE_TEMPLATE_ID=$(echo $OUTPUT | jq -r '.data[0].id')
+[[ $PDS_APP_STORAGE_TEMPLATE_ID == "null" ]] && { echo "PDS_APP_STORAGE_TEMPLATE_ID not found"; echo $OUTPUT; exit 1; }
+echo "PDS_APP_STORAGE_TEMPLATE_ID=\"$PDS_APP_STORAGE_TEMPLATE_ID\""
 
-PDS_HELM_CHART_VERSION=$(curl -s -X "GET" "$PDS_ENDPOINT/metadata" -H 'Accept: application/json' -H "Authorization: Bearer $PDS_TOKEN" | jq -r '.helm_chart_version')
-[[ -z $PDS_HELM_CHART_VERSION ]] && { echo "Helm Chart Version not found"; exit 1; }
-echo "PDS HELM CHART Version:      $PDS_HELM_CHART_VERSION"
+OUTPUT=$(curl -s -X "GET" "$PDS_ENDPOINT/metadata" -H 'Accept: application/json' -H "Authorization: Bearer $PDS_TOKEN")
+PDS_HELM_CHART_VERSION=$(echo $OUTPUT | jq -r '.helm_chart_version')
+[[ $PDS_HELM_CHART_VERSION == "null" ]] && { echo "PDS_HELM_CHART_VERSION not found"; echo $OUTPUT; exit 1; }
+echo "PDS_HELM_CHART_VERSION=\"$PDS_HELM_CHART_VERSION\""
 
 if [ "$platform" = ocp4 ]; then
 	PDSPLATFORM="--set platform=ocp"
@@ -94,22 +108,24 @@ echo "Waiting for pds-agent to get ready"
 kubectl wait pods -n pds-system -l app=pds-agent  --for condition=Ready --timeout -1s
 
 PDS_DEPLOYMENT_TARGET_NAME=$(kubectl get ns kube-system -o json |jq -r ".metadata.uid")
-echo "DEPL TGT NAME:		$PDS_DEPLOYMENT_TARGET_NAME"
+echo "PDS_DEPLOYMENT_TARGET_NAME=\"$PDS_DEPLOYMENT_TARGET_NAME\""
 
-PDS_DEPLOYMENT_TARGET_ID=$(curl -s -X "GET"   "$PDS_ENDPOINT/tenants/$PDS_TENANT_ID/deployment-targets?cluster_id=$PDS_DEPLOYMENT_TARGET_NAME"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.data[0].id')
-[[ -z $PDS_DEPLOYMENT_TARGET_ID ]] && { echo "PDS Deployment Target ID not found"; exit 1; }
-echo "DEPL TGT ID:		$PDS_DEPLOYMENT_TARGET_ID"
+OUTPUT=$(curl -s -X "GET"   "$PDS_ENDPOINT/tenants/$PDS_TENANT_ID/deployment-targets?cluster_id=$PDS_DEPLOYMENT_TARGET_NAME"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN")
+PDS_DEPLOYMENT_TARGET_ID=$(echo $OUTPUT | jq -r '.data[0].id')
+[[ $PDS_DEPLOYMENT_TARGET_ID == "null" ]] && { echo "PDS_DEPLOYMENT_TARGET_ID not found"; echo $OUTPUT; exit 1; }
+echo "PDS_DEPLOYMENT_TARGET_ID=\"$PDS_DEPLOYMENT_TARGET_ID\""
 
-PDS_NAMESPACE_ID=$(curl -s -X "GET"   "$PDS_ENDPOINT/deployment-targets/$PDS_DEPLOYMENT_TARGET_ID/namespaces?name=$PDS_NAMESPACE"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.data[0].id')
-[[ -z $PDS_NAMESPACE_ID ]] && { echo "PDS Namespace ID not found"; exit 1; }
-echo "PDS NS ID:		$PDS_NAMESPACE_ID"
+OUTPUT=$(curl -s -X "GET"   "$PDS_ENDPOINT/deployment-targets/$PDS_DEPLOYMENT_TARGET_ID/namespaces?name=$PDS_NAMESPACE"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN")
+PDS_NAMESPACE_ID=$(echo $OUTPUT | jq -r '.data[0].id')
+[[ $PDS_NAMESPACE_ID == "null" ]] && { echo "PDS_NAMESPACE_ID not found"; echo $OUTPUT; exit 1; }
+echo "PDS_NAMESPACE_ID=\"$PDS_NAMESPACE_ID\""
 
-# rename deployment target from kube-system uuid to project name
-curl -s -X "PUT" "$PDS_ENDPOINT/deployment-targets/$PDS_DEPLOYMENT_TARGET_ID" -H "accept: application/json" -H "Authorization: Bearer $PDS_TOKEN" -H "Content-Type: application/json" -d "{ \"name\": \"$TGT_NAME\"}" 
+echo "Renaming Deployment Target from kube-system uuid to $TGT_NAME"
+curl -s -X "PUT" "$PDS_ENDPOINT/deployment-targets/$PDS_DEPLOYMENT_TARGET_ID" -H "accept: application/json" -H "Authorization: Bearer $PDS_TOKEN" -H "Content-Type: application/json" -d "{ \"name\": \"$TGT_NAME\"}" > /dev/null
 
 echo "Creating Deployment"
 
-PDS_DEPLOYMENT_ID=$(curl -s -X "POST" "$PDS_ENDPOINT/projects/$PDS_PROJECT_ID/deployments" -H "accept: application/json" -H "Authorization: Bearer $PDS_TOKEN" -H "Content-Type: application/json" -d '{ 
+OUTPUT=$(curl -s -X "POST" "$PDS_ENDPOINT/projects/$PDS_PROJECT_ID/deployments" -H "accept: application/json" -H "Authorization: Bearer $PDS_TOKEN" -H "Content-Type: application/json" -d '{ 
 "node_count":1, 
 "name":"'$TGT_NAME'", 
 "data_service_id":"'$PDS_DATASERVICE_ID'", 
@@ -124,10 +140,11 @@ PDS_DEPLOYMENT_ID=$(curl -s -X "POST" "$PDS_ENDPOINT/projects/$PDS_PROJECT_ID/de
 "application_configuration_template_id":"'$PDS_APP_CONFIG_TEMPLATE_ID'",
 "resource_settings_template_id":"'$PDS_APP_RESOURCE_TEMPLATE_ID'",
 "storage_options_template_id":"'$PDS_APP_STORAGE_TEMPLATE_ID'"
-}' | jq -r '.id')
+}')
 
-[[ -z $PDS_DEPLOYMENT_ID ]] && { echo "PDS Deployment ID not found"; exit 1; }
-echo "PDS DEPL ID:		$PDS_DEPLOYMENT_ID"
+PDS_DEPLOYMENT_ID=$(echo $OUTPUT  | jq -r '.id' )
+[[ $PDS_DEPLOYMENT_ID == "null" ]] && { echo "Deployment failed."; echo $OUTPUT; exit 1; }
+echo "PDS_DEPLOYMENT_ID=\"$PDS_DEPLOYMENT_ID\""
 
 PDS_DEPLOYMENT_STATUS=""
 
@@ -137,10 +154,10 @@ while [ "$PDS_DEPLOYMENT_STATUS" != "Available" ]; do
 	echo "Current Depl Status:	$PDS_DEPLOYMENT_STATUS		$(date)"
 done
 
-
-PDS_DEPLOYMENT_CLUSTER_RESOURCE_NAME=$(curl -s -X "GET"   "$PDS_ENDPOINT/deployments/$PDS_DEPLOYMENT_ID"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.cluster_resource_name')
-[[ -z $PDS_DEPLOYMENT_CLUSTER_RESOURCE_NAME ]] && { echo "PDS Cluster Resource Name not found"; exit 1; }
-echo "DEPL CLUST RES Name:		$PDS_DEPLOYMENT_CLUSTER_RESOURCE_NAME"
+OUTPUT=$(curl -s -X "GET"   "$PDS_ENDPOINT/deployments/$PDS_DEPLOYMENT_ID"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN")
+PDS_DEPLOYMENT_CLUSTER_RESOURCE_NAME=$(echo $OUTPUT | jq -r '.cluster_resource_name')
+[[ $PDS_DEPLOYMENT_CLUSTER_RESOURCE_NAME == "null" ]] && { echo "PDS_DEPLOYMENT_CLUSTER_RESOURCE_NAME not found"; echo $OUTPUT; exit 1; }
+echo "PDS_DEPLOYMENT_CLUSTER_RESOURCE_NAME=\"$PDS_DEPLOYMENT_CLUSTER_RESOURCE_NAME\""
 
 
 PDS_CONNECTION=$(curl -s -X "GET"   "$PDS_ENDPOINT/deployments/$PDS_DEPLOYMENT_ID/connection-info"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN")
@@ -158,16 +175,21 @@ echo "Deleting PDS-Petclinic Deployment"
 curl -X "DELETE"   "$PDS_ENDPOINT/deployments/$PDS_DEPLOYMENT_ID"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN" 
 
 echo "Deleting Namespace $PDS_NAMESPACE"
-kubectl delete namespace $PDS_NAMESPACE
+kubectl delete namespace $PDS_NAMESPACE --wait=false
 
-echo "Deleting pds-system helm deployment and Namespace"
+echo "Deleting pds helm deployment"
 
 helm delete pds -n pds-system
 
-kubectl delete namespace pds-system
+echo "Deleting pds-system namespace"
 
-DEPLOY_STAT=""
-echo "Waiting for Deployment Target to become unhealthy (can take 5min)"
+kubectl delete namespace pds-system --wait=false
+
+DEPLOY_STAT=\$(curl -s -X "GET"   "$PDS_ENDPOINT/deployment-targets/$PDS_DEPLOYMENT_TARGET_ID"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.status')
+
+[[ \$DEPLOY_STAT == "null" ]] && { echo "Deployment Status empty. ";  exit 1; }
+
+echo "Waiting for Deployment Target to become unhealthy (this can take up to 5min)"
 
 while [ "\$DEPLOY_STAT" != "unhealthy" ]; do
 	sleep 5
