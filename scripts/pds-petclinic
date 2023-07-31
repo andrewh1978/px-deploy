@@ -163,12 +163,12 @@ echo "Deleting deployment(s) for this deployment target"
 
 OUTPUT=\$(curl -s -X "GET"   "$PDS_ENDPOINT/projects/$PDS_PROJECT_ID/deployments?deployment_target_id=$PDS_DEPLOYMENT_TARGET_ID"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN")
 
-echo "Found following deployment(s)"
-echo \$OUTPUT | jq -r '.data[].name'
+echo "Found following deployment(s):"
+echo \$OUTPUT | jq -r '.data[] | .name, .id'
 
 for i in \$(echo \$OUTPUT | jq -r '.data[].id'); do
   echo "deleting \$i"
-  curl -X "DELETE"   "$PDS_ENDPOINT/deployments/\$i"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN" 
+  curl -s -X "DELETE"   "$PDS_ENDPOINT/deployments/\$i"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN" 
 done
 
 echo "Deleting Namespace $PDS_NAMESPACE"
