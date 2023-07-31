@@ -26,7 +26,7 @@ check PDS_ACCOUNT / PDS_TENANT / PDS_PROJECT
 
 check PDS_ENDPOINT 
 
-if you need to change settings create your own temlplate file and modify. 
+if you need to change settings create your own template file and modify. 
 
 template pds-petclinic.yml will be updated regulary and your changes will be lost
 
