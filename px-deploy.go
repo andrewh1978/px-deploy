@@ -350,7 +350,7 @@ func main() {
 				config.Tags = createTags
 			}
 
-			if !regexp.MustCompile(`^(([\p{L}\p{Z}\p{N}_.:+\-@]*)=([\p{L}\p{Z}\p{N}_.:+\-@]*),)*(([\p{L}\p{Z}\p{N}_.:+\-@]*)=([\p{L}\p{Z}\p{N}_.:+\-@]*)){1}$`).MatchString(config.Tags) {
+			if !regexp.MustCompile(`^((([\p{L}\p{Z}\p{N}_.:+\-@]*)=([\p{L}\p{Z}\p{N}_.:+\-@]*),)*(([\p{L}\p{Z}\p{N}_.:+\-@]*)=([\p{L}\p{Z}\p{N}_.:+\-@]*)){1})*$`).MatchString(config.Tags) {
 				die("Invalid tags '" + config.Tags + "'")
 			}
 
