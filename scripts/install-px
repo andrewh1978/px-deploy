@@ -39,7 +39,7 @@ EOF
   done
 fi
 
-ctr -n k8s.io images pull $(curl -sk https://install.portworx.com/$px_version?comp=stork | awk '/image: openstorage.stork/{print$2}') &
+ctr -n k8s.io images pull docker.io/$(curl -sk https://install.portworx.com/$px_version?comp=stork | awk '/image: openstorage.stork/{print$2}') &
 k8s_version=$(kubectl version --short | awk -Fv '/Server Version: / {print $3}')
 url="https://install.portworx.com/$px_version?kbver=$k8s_version&b=true&c=px-deploy-$cluster&stork=true&st=k8s&lh=true&mon=true&promop=true"
 [ -e /usr/bin/oc ] && url="$url&osft=true"
@@ -120,6 +120,7 @@ fi
 curl -sko /tmp/px.yml $url
 if [ "$operator" != false ]; then
   sed -i 's/namespace: kube-system/namespace: portworx/' /tmp/px.yml
+  sed -i 's/imagePullPolicy: Always/imagePullPolicy: IfNotPresent/' /tmp/px.yml
 fi
 kubectl apply -f /tmp/px.yml
 
