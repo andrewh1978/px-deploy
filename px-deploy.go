@@ -209,9 +209,9 @@ func main() {
 					die("Invalid deployment name '" + createName + "'")
 				}
 				if _, err := os.Stat("deployments/" + createName + ".yml"); !os.IsNotExist(err) {
-					fmt.Printf("Deployment %s already exists%s %s\n", Red, createName, Reset)
-					fmt.Printf("please delete it by running 'px-deploy destroy -n %s' \n", createName)
-					fmt.Printf("if this fails, remove cloud resources manually and run 'px-deploy destroy --clear -n %s'", createName)
+					fmt.Printf("%sDeployment '%s' already exists%s\n", Red, createName, Reset)
+					fmt.Printf("Please delete it by running 'px-deploy destroy -n %s' \n", createName)
+					fmt.Printf("If this fails, remove cloud resources manually and run 'px-deploy destroy --clear -n %s'", createName)
 					die("")
 				}
 			} else {
@@ -350,7 +350,7 @@ func main() {
 				config.Tags = createTags
 			}
 
-			if !regexp.MustCompile(`^(([\p{L}\p{Z}\p{N}_.:+\-@]*)=([\p{L}\p{Z}\p{N}_.:+\-@]*),)*(([\p{L}\p{Z}\p{N}_.:+\-@]*)=([\p{L}\p{Z}\p{N}_.:+\-@]*)){1}$`).MatchString(config.Tags) {
+			if !regexp.MustCompile(`^((([\p{L}\p{Z}\p{N}_.:+\-@]*)=([\p{L}\p{Z}\p{N}_.:+\-@]*),)*(([\p{L}\p{Z}\p{N}_.:+\-@]*)=([\p{L}\p{Z}\p{N}_.:+\-@]*)){1})*$`).MatchString(config.Tags) {
 				die("Invalid tags '" + config.Tags + "'")
 			}
 

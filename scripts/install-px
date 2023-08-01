@@ -39,7 +39,6 @@ EOF
   done
 fi
 
-(dnf install -y epel-release ; dnf install -y jq) &
 ctr -n k8s.io images pull docker.io/$(curl -sk https://install.portworx.com/$px_version?comp=stork | awk '/image: openstorage.stork/{print$2}') &
 k8s_version=$(kubectl version --short | awk -Fv '/Server Version: / {print $3}')
 url="https://install.portworx.com/$px_version?kbver=$k8s_version&b=true&c=px-deploy-$cluster&stork=true&st=k8s&lh=true&mon=true&promop=true"

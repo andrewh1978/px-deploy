@@ -1,5 +1,4 @@
-dnf install -y docker python3-pip epel-release
-dnf install -y jq
+dnf install -y docker python3-pip
 systemctl enable --now docker
 pip3 install awscli
 

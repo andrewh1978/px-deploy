@@ -1,9 +1,8 @@
 # Install PX-Metro across the clusters
 
-JQ="docker run -i --rm --name jq endeveit/docker-jq jq"
 
 if [ "$operator" = false ]; then
-  x=$(kubectl get ds/portworx -n kube-system -o json | $JQ -c '.spec.template.spec.containers[0].args')
+  x=$(kubectl get ds/portworx -n kube-system -o json | jq -c '.spec.template.spec.containers[0].args')
   x="${x%]},-cluster_domain, cluster-$cluster]"
   kubectl patch ds/portworx -n kube-system --type json -p="[{\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/args\", \"value\":$x}]"
 else
@@ -11,7 +10,7 @@ else
 fi
 
 while : ; do
-  n=$(curl -s http://node-1-1:9001/status | $JQ .QuorumMap | grep true | wc -l)
+  n=$(curl -s http://node-1-1:9001/status | jq .QuorumMap | grep true | wc -l)
   [ $n -eq $[$nodes*$clusters] ] && break
   sleep 1
   echo Waiting for Portworx cluster to come up
