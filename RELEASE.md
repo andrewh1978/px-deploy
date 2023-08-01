@@ -2,18 +2,19 @@
  * Fix issue with destroying large deployments 
  * Correct Rocky URL for vSphere
  * Fix AKS tagging
- * SSH root password authentication is disabled by default
- * validation of values in defaults.yml
+ * Validation of values in defaults.yml
+ * Update OpenSSH to fix scp issues on MacOS
+ * Fix auto shutdown so VMs are powered off
 
 ## Improvements
  * install.sh no longer runs in a container, so is much faster
  * Delete old assets
- * Improvement provisioning parallelisation
+ * Improve provisioning parallelisation
  * Add eks_version parameter
  * Add destroy --clear flag
  * Add multicloud migration template
- * Update OpenSSH to fix scp issues on MacOS
- * you can provide your ssh public key by setting ssh_pub_key defaults.yml
+ * SSH root password authentication is disabled by default - provide your SSH public key by setting ssh_pub_key defaults.yml
+ * Symlink .terraform directory so create/destroy much faster on MacOS
 
 # 5.1
 
