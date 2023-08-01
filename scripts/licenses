@@ -1,4 +1,3 @@
-JQ="docker run -i --rm --name jq endeveit/docker-jq jq"
 if [ -z "$licenses" ]; then
   echo '$licenses is empty'
   exit
@@ -19,7 +18,7 @@ for i in $licenses; do
     NAMESPACE=portworx
   fi
   if [ "$security" = true ]; then
-    ADMIN_TOKEN=$(kubectl -n $NAMESPACE get secret px-admin-token -o json | $JQ -r '.data."auth-token"' | base64 -d)
+    ADMIN_TOKEN=$(kubectl -n $NAMESPACE get secret px-admin-token -o json | jq -r '.data."auth-token"' | base64 -d)
   fi 
   while ! kubectl exec -n $NAMESPACE -c portworx -it $(kubectl get pods -n $NAMESPACE -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- bash <<EOF
 /opt/pwx/bin/pxctl context create admin --token=$ADMIN_TOKEN

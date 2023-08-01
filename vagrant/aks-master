@@ -1,5 +1,4 @@
 #CLUSTER=px-deploy-$name-$cluster
-JQ="docker run -i --rm --name jq endeveit/docker-jq jq"
 
 cat <<EOF >/etc/yum.repos.d/azure-cli.repo
 [azure-cli]
@@ -22,7 +21,7 @@ az aks get-credentials --resource-group $azure__group --name px-deploy-$name-$cl
 
 #az provider register --namespace Microsoft.OperationsManagement
 #az provider register --namespace Microsoft.OperationalInsights
-#while ! az provider show -n Microsoft.OperationsManagement | $JQ -r .registrationState | grep -q '^Registered$'; do sleep 1 ; done
-#while ! az provider show -n Microsoft.OperationalInsights | $JQ -r .registrationState | grep -q '^Registered$'; do sleep 1 ; done
+#while ! az provider show -n Microsoft.OperationsManagement | jq -r .registrationState | grep -q '^Registered$'; do sleep 1 ; done
+#while ! az provider show -n Microsoft.OperationalInsights | jq -r .registrationState | grep -q '^Registered$'; do sleep 1 ; done
 #az aks create --resource-group $azure__group --name $CLUSTER --node-count $nodes --enable-addons monitoring --generate-ssh-keys --node-vm-size $azure_type --location $azure_region
 #az aks get-credentials --resource-group $azure__group --name $CLUSTER
