@@ -829,7 +829,9 @@ func create_deployment(config Config) int {
 			exec.Command("cp", "-a", `/px-deploy/terraform/aws/cloud-init.tpl`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
 			exec.Command("cp", "-a", `/px-deploy/terraform/aws/aws-returns.tpl`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
 			// also copy terraform modules
-			exec.Command("cp", "-a", `/px-deploy/terraform/aws/.terraform`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
+			//exec.Command("cp", "-a", `/px-deploy/terraform/aws/.terraform`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
+			// creating symlink for .terraform as performance on mac significantly improves when not on bind mount issue #397
+			exec.Command("ln", "-s", `/px-deploy/terraform/aws/.terraform`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name+`/.terraform`).Run()
 			exec.Command("cp", "-a", `/px-deploy/terraform/aws/.terraform.lock.hcl`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
 
 			switch config.Platform {
@@ -1052,7 +1054,9 @@ func create_deployment(config Config) int {
 			exec.Command("cp", "-a", `/px-deploy/terraform/azure/variables.tf`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
 			exec.Command("cp", "-a", `/px-deploy/terraform/azure/cloud-init.tpl`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
 			// also copy terraform modules
-			exec.Command("cp", "-a", `/px-deploy/terraform/azure/.terraform`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
+			//exec.Command("cp", "-a", `/px-deploy/terraform/azure/.terraform`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
+			// creating symlink for .terraform as performance on mac significantly improves when not on bind mount issue #397
+			exec.Command("ln", "-s", `/px-deploy/terraform/azure/.terraform`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name+`/.terraform`).Run()
 			exec.Command("cp", "-a", `/px-deploy/terraform/azure/.terraform.lock.hcl`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
 
 			switch config.Platform {
