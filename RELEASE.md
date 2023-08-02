@@ -1,3 +1,5 @@
+# 5.2
+
 ## Fixes
  * Fix issue with destroying large deployments 
  * Correct Rocky URL for vSphere
