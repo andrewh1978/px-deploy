@@ -66,6 +66,8 @@ type Config struct {
 	Gcp_Type                 string
 	Gcp_Disks                string
 	Gcp_Zone                 string
+	Gcp_Project              string
+	Gcp_Auth_Json            string
 	Gke_Version              string
 	Azure_Type               string
 	Azure_Disks              string
@@ -123,7 +125,7 @@ var Blue = "\033[34m"
 var wg sync.WaitGroup
 
 func main() {
-	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createAwsAccessKeyId, createEksVersion, createAwsSecretAccessKey, createTags, createGcpType, createGcpDisks, createGcpZone, createGkeVersion, createAzureType, createAksVersion, createAzureDisks, createAzureClientSecret, createAzureClientId, createAzureTenantId, createAzureSubscriptionId, createTemplate, createRegion, createCloud, createEnv, createSshPubKey, connectName, kubeconfigName, destroyName, statusName, historyNumber string
+	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createAwsAccessKeyId, createEksVersion, createAwsSecretAccessKey, createTags, createGcpType, createGcpDisks, createGcpZone, createGcpAuthJson, createGcpProject, createGkeVersion, createAzureType, createAksVersion, createAzureDisks, createAzureClientSecret, createAzureClientId, createAzureTenantId, createAzureSubscriptionId, createTemplate, createRegion, createCloud, createEnv, createSshPubKey, connectName, kubeconfigName, destroyName, statusName, historyNumber string
 	var createQuiet, createDryRun, destroyAll, destroyClear bool
 	os.Chdir("/px-deploy/.px-deploy")
 	rootCmd := &cobra.Command{Use: "px-deploy"}
@@ -350,7 +352,7 @@ func main() {
 				config.Tags = createTags
 			}
 
-			if !regexp.MustCompile(`^((([\p{L}\p{Z}\p{N}_.:+\-@]*)=([\p{L}\p{Z}\p{N}_.:+\-@]*),)*(([\p{L}\p{Z}\p{N}_.:+\-@]*)=([\p{L}\p{Z}\p{N}_.:+\-@]*)){1})*$`).MatchString(config.Tags) {
+			if !regexp.MustCompile(`^((([\p{L}\p{Z}\p{N}_.:+\-]*)=([\p{L}\p{Z}\p{N}_.:+\-]*),)*(([\p{L}\p{Z}\p{N}_.:+\-]*)=([\p{L}\p{Z}\p{N}_.:+\-]*)){1})*$`).MatchString(config.Tags) {
 				die("Invalid tags '" + config.Tags + "'")
 			}
 
@@ -371,6 +373,21 @@ func main() {
 			if createGcpZone != "" {
 				config.Gcp_Zone = createGcpZone
 			}
+
+			if createGcpAuthJson != "" {
+				config.Gcp_Auth_Json = createGcpAuthJson
+			}
+
+			if config.Gcp_Auth_Json != "" {
+				if _, err := os.Stat(config.Gcp_Auth_Json); os.IsNotExist(err) {
+					die("GCP Auth Json File '" + config.Gcp_Auth_Json + "' does not exist")
+				}
+			}
+
+			if createGcpProject != "" {
+				config.Gcp_Project = createGcpProject
+			}
+
 			if config.Gcp_Zone != "a" && config.Gcp_Zone != "b" && config.Gcp_Zone != "c" {
 				die("Invalid GCP zone '" + config.Gcp_Zone + "'")
 			}
@@ -449,6 +466,9 @@ func main() {
 			if config.Cloud == "azure" && ((config.Azure_Client_Id == "") || (config.Azure_Client_Secret == "") || (config.Azure_Tenant_Id == "") || (config.Azure_Subscription_Id == "")) {
 				die("Please set azure_client_id / azure_client_secret / azure_tenant_id / azure_subscription_id in defaults.yml")
 			}
+			if config.Cloud == "gcp" && ((config.Gcp_Auth_Json == "") || (config.Gcp_Project == "")) {
+				die("Please set gcp_auth_json and gcp_project in defaults.yml")
+			}
 
 			if config.Platform == "eks" && !(config.Cloud == "aws") {
 				die("EKS only makes sense with AWS (not " + config.Cloud + ")")
@@ -477,12 +497,12 @@ func main() {
 			os.Setenv("deployment", config.Name)
 
 			// when using aws everything should be up and running. other clouds now run vagrant
-			if (config.Cloud == "gcp") || (config.Cloud == "vsphere") {
+			if config.Cloud == "vsphere" {
 
 				var provider string
 				switch config.Cloud {
-				case "gcp":
-					provider = "google"
+				//case "gcp":
+				//	provider = "google"
 				case "vsphere":
 					provider = "vsphere"
 				}
@@ -763,6 +783,8 @@ func main() {
 	cmdCreate.Flags().StringVarP(&createAwsSecretAccessKey, "aws_secret_access_key", "", "", "your AWS API secret access key (default \""+defaults.Aws_Secret_Access_Key+"\")")
 	cmdCreate.Flags().StringVarP(&createTags, "tags", "", "", "comma-separated list of tags to be applies to cloud nodes, eg \"Owner=Bob,Purpose=Demo\"")
 	cmdCreate.Flags().StringVarP(&createGcpType, "gcp_type", "", "", "GCP type for each node (default "+defaults.Gcp_Type+")")
+	cmdCreate.Flags().StringVarP(&createGcpAuthJson, "gcp_auth_json", "", "", "GCP Auth Json file")
+	cmdCreate.Flags().StringVarP(&createGcpProject, "gcp_project", "", "", "GCP Project")
 	cmdCreate.Flags().StringVarP(&createGcpDisks, "gcp_disks", "", "", "space-separated list of EBS volumes to be attached to worker nodes, eg \"pd-standard:20 pd-ssd:30\" (default "+defaults.Gcp_Disks+")")
 	cmdCreate.Flags().StringVarP(&createGcpZone, "gcp_zone", "", defaults.Gcp_Zone, "GCP zone (a, b or c)")
 	cmdCreate.Flags().StringVarP(&createAksVersion, "aks_version", "", "", "AKS Version (default "+defaults.Aks_Version+")")
@@ -1023,24 +1045,200 @@ func create_deployment(config Config) int {
 		}
 	case "gcp":
 		{
-			output, _ = exec.Command("bash", "-c", `
-        yes | ssh-keygen -q -t rsa -b 2048 -f keys/id_rsa.gcp.`+config.Name+` -N ''
-        _GCP_project=pxd-$(uuidgen | tr -d -- - | cut -b 1-26 | tr 'A-Z' 'a-z')
-        gcloud projects create $_GCP_project --labels px-deploy_name=`+config.Name+`
-        account=$(gcloud alpha billing accounts list | tail -1 | cut -f 1 -d " ")
-        gcloud alpha billing projects link $_GCP_project --billing-account $account
-        gcloud services enable compute.googleapis.com --project $_GCP_project
-        gcloud compute networks create px-net --project $_GCP_project
-        gcloud compute networks subnets create --range 192.168.0.0/16 --network px-net px-subnet --region `+config.Gcp_Region+` --project $_GCP_project
-        gcloud compute firewall-rules create allow-internal --allow=tcp,udp,icmp --source-ranges=192.168.0.0/16 --network px-net --project $_GCP_project &
-        gcloud compute firewall-rules create allow-external --allow=tcp:22,tcp:80,tcp:443,tcp:6443,tcp:5900 --network px-net --project $_GCP_project &
-        gcloud compute project-info add-metadata --metadata "ssh-keys=centos:$(cat keys/id_rsa.gcp.`+config.Name+`.pub)" --project $_GCP_project &
-        service_account=$(gcloud iam service-accounts list --project $_GCP_project --format 'flattened(email)' | tail -1 | cut -f 2 -d " ")
-        _GCP_key=$(gcloud iam service-accounts keys create /dev/stdout --iam-account $service_account | base64 -w0)
-        wait
-        echo gcp__project: $_GCP_project >>deployments/`+config.Name+`.yml
-        echo gcp__key: $_GCP_key >>deployments/`+config.Name+`.yml
-      `).CombinedOutput()
+			// create directory for deployment and copy terraform scripts
+			err = os.Mkdir("/px-deploy/.px-deploy/tf-deployments/"+config.Name, 0755)
+			if err != nil {
+				die(err.Error())
+			}
+			//maybe there is a better way to copy templates to working dir ?
+			exec.Command("cp", "-a", `/px-deploy/terraform/gcp/main.tf`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
+			exec.Command("cp", "-a", `/px-deploy/terraform/gcp/variables.tf`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
+			exec.Command("cp", "-a", `/px-deploy/terraform/gcp/cloud-init.tpl`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
+
+			// also copy terraform modules
+			//exec.Command("cp", "-a", `/px-deploy/terraform/aws/.terraform`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
+			// creating symlink for .terraform as performance on mac significantly improves when not on bind mount issue #397
+			exec.Command("ln", "-s", `/px-deploy/terraform/gcp/.terraform`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name+`/.terraform`).Run()
+			exec.Command("cp", "-a", `/px-deploy/terraform/gcp/.terraform.lock.hcl`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
+
+			/*switch config.Platform {
+			case "ocp4":
+				{
+					exec.Command("cp", "-a", `/px-deploy/terraform/aws/ocp4/ocp4.tf`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
+					exec.Command("cp", "-a", `/px-deploy/terraform/aws/ocp4/ocp4-install-config.tpl`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
+				}
+			case "eks":
+				{
+					exec.Command("cp", "-a", `/px-deploy/terraform/aws/eks/eks.tf`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
+					exec.Command("cp", "-a", `/px-deploy/terraform/aws/eks/eks_run_everywhere.tpl`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
+				}
+			}
+			*/
+			write_nodescripts(config)
+
+			// create EBS definitions
+			// split ebs definition by spaces and range the results
+
+			ebs := strings.Fields(config.Aws_Ebs)
+			for i, val := range ebs {
+				// split by : and create common .tfvars entry for all nodes
+				entry := strings.Split(val, ":")
+				tf_var_ebs = append(tf_var_ebs, "      {\n        ebs_type = \""+entry[0]+"\"\n        ebs_size = \""+entry[1]+"\"\n        ebs_device_name = \"/dev/sd"+string(i+98)+"\"\n      },")
+			}
+			// other node ebs processing happens in cluster/node loop
+
+			// AWS default tagging
+			tf_var_tags = append(tf_var_tags, "aws_tags = {")
+
+			if config.Tags != "" {
+				tags := strings.Split(config.Tags, ",")
+				for _, val := range tags {
+					entry := strings.Split(val, "=")
+					tf_var_tags = append(tf_var_tags, "  "+strings.TrimSpace(entry[0])+" = \""+strings.TrimSpace(entry[1])+"\"")
+				}
+			}
+			// get PXDUSER env and apply to tf_variables
+			pxduser = os.Getenv("PXDUSER")
+			if pxduser != "" {
+				tf_var_tags = append(tf_var_tags, "  px-deploy_username = \""+pxduser+"\"")
+			} else {
+				tf_var_tags = append(tf_var_tags, "  px-deploy_username = \"unknown\"")
+			}
+			tf_var_tags = append(tf_var_tags, "  px-deploy_name = \""+config.Name+"\"")
+			tf_var_tags = append(tf_var_tags, "}\n")
+
+			/*switch config.Platform {
+			case "ocp4":
+				{
+					tf_variables = append(tf_variables, "ocp4_nodes = \""+config.Nodes+"\"")
+					config.Nodes = "0"
+				}
+			case "eks":
+				{
+					tf_variables = append(tf_variables, "eks_nodes = \""+config.Nodes+"\"")
+					tf_variables = append(tf_variables, "eks_version = \""+config.Eks_Version+"\"")
+					config.Nodes = "0"
+					if config.Env["run_everywhere"] != "" {
+						tf_variables = append(tf_variables, "run_everywhere = \""+strings.Replace(config.Env["run_everywhere"], "'", "\\\"", -1)+"\"")
+					}
+				}
+			}
+			*/
+			Clusters, err := strconv.Atoi(config.Clusters)
+			Nodes, err := strconv.Atoi(config.Nodes)
+
+			// build terraform variable file
+			tf_variables = append(tf_variables, "config_name = \""+config.Name+"\"")
+			tf_variables = append(tf_variables, "clusters = "+config.Clusters)
+			tf_variables = append(tf_variables, "aws_region = \""+config.Aws_Region+"\"")
+			tf_variables = append(tf_variables, "aws_access_key_id = \""+config.Aws_Access_Key_Id+"\"")
+			tf_variables = append(tf_variables, "aws_secret_access_key = \""+config.Aws_Secret_Access_Key+"\"")
+
+			/*switch config.Platform {
+			case "ocp4":
+				{
+					tf_variables = append(tf_variables, "ocp4_domain = \""+config.Ocp4_Domain+"\"")
+					tf_variables = append(tf_variables, "ocp4_pull_secret = \""+base64.StdEncoding.EncodeToString([]byte(config.Ocp4_Pull_Secret))+"\"")
+					tf_variables_ocp4 = append(tf_variables_ocp4, "ocp4clusters = {")
+				}
+			case "eks":
+				{
+					tf_variables_eks = append(tf_variables_eks, "eksclusters = {")
+				}
+			}*/
+
+			tf_variables = append(tf_variables, "nodeconfig = [")
+
+			// loop clusters (masters and nodes) to build tfvars and master/node scripts
+			for c := 1; c <= Clusters; c++ {
+				masternum := strconv.Itoa(c)
+				tf_cluster_instance_type = config.Aws_Type
+
+				// if exist, apply individual scripts/aws_type settings for nodes of a cluster
+				for _, clusterconf := range config.Cluster {
+					if clusterconf.Id == c {
+						//is there a cluster specific aws_type override? if not, set from generic config
+						if clusterconf.Instance_Type != "" {
+							tf_cluster_instance_type = clusterconf.Instance_Type
+						}
+					}
+				}
+
+				// process .tfvars file for deployment
+				tf_variables = append(tf_variables, "  {")
+				tf_variables = append(tf_variables, "    role = \"master\"")
+				tf_variables = append(tf_variables, "    ip_start = 89")
+				tf_variables = append(tf_variables, "    nodecount = 1")
+				tf_variables = append(tf_variables, "    instance_type = \""+config.Aws_Type+"\"")
+				tf_variables = append(tf_variables, "    cluster = "+masternum)
+				tf_variables = append(tf_variables, "    ebs_block_devices = [] ")
+				tf_variables = append(tf_variables, "  },")
+
+				tf_variables = append(tf_variables, "  {")
+				tf_variables = append(tf_variables, "    role = \"node\"")
+				tf_variables = append(tf_variables, "    ip_start = 100")
+				tf_variables = append(tf_variables, "    nodecount = "+strconv.Itoa(Nodes))
+				tf_variables = append(tf_variables, "    instance_type = \""+tf_cluster_instance_type+"\"")
+				tf_variables = append(tf_variables, "    cluster = "+masternum)
+				tf_variables = append(tf_variables, "    ebs_block_devices = [")
+				tf_variables = append(tf_variables, tf_var_ebs...)
+				tf_variables = append(tf_variables, "    ]\n  },")
+
+				/*switch config.Platform {
+				case "ocp4":
+					{
+						tf_variables_ocp4 = append(tf_variables_ocp4, "  \""+masternum+"\" = \""+tf_cluster_instance_type+"\",")
+					}
+				case "eks":
+					{
+						tf_variables_eks = append(tf_variables_eks, "  \""+masternum+"\" = \""+tf_cluster_instance_type+"\",")
+					}
+				}*/
+			}
+			tf_variables = append(tf_variables, "]")
+
+			/*switch config.Platform {
+			case "ocp4":
+				{
+					tf_variables_ocp4 = append(tf_variables_ocp4, "}")
+					tf_variables = append(tf_variables, tf_variables_ocp4...)
+				}
+			case "eks":
+				{
+					tf_variables_eks = append(tf_variables_eks, "}")
+					tf_variables = append(tf_variables, tf_variables_eks...)
+				}
+			}
+			*/
+
+			tf_variables = append(tf_variables, tf_var_tags...)
+			write_tf_file(config.Name, ".tfvars", tf_variables)
+			// now run terraform plan & terraform apply
+			fmt.Println(White + "running terraform PLAN" + Reset)
+			cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-input=false", "-parallelism=50", "-out=tfplan", "-var-file", ".tfvars")
+			cmd.Stderr = os.Stderr
+			err = cmd.Run()
+			if err != nil {
+				fmt.Println(Yellow + "ERROR: terraform plan failed. Check validity of terraform scripts" + Reset)
+				die(err.Error())
+			} else {
+				if config.Dry_Run == "true" {
+					fmt.Printf("Dry run only. No deployment on target cloud. Run 'px-deploy destroy -n %s' to remove local files\n", config.Name)
+					die("Exit")
+				}
+				fmt.Println(White + "running terraform APPLY" + Reset)
+				cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "apply", "-input=false", "-parallelism=50", "-auto-approve", "tfplan")
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+				errapply = cmd.Run()
+				if errapply != nil {
+					fmt.Println(Yellow + "ERROR: terraform apply failed. Check validity of terraform scripts" + Reset)
+					die(errapply.Error())
+				}
+
+				fmt.Println(Yellow + "Terraform infrastructure creation done. Please check master/node readiness/credentials using: px-deploy status -n " + config.Name + Reset)
+			}
+
 		}
 	case "azure":
 		{
