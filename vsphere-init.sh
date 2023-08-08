@@ -116,7 +116,7 @@ clearpart --all --initlabel
 part /boot/efi --fstype=vfat --fsoptions='defaults,umask=0027,fmask=0077,uid=0,gid=0' --size=600 --ondisk=/dev/sda
 part /boot --fstype=xfs --fsoptions='nosuid,nodev' --size=1024 --ondisk=/dev/sda
 part / --fstype="xfs" --ondisk=sda --size=50000
-bootloader --append="rd.driver.blacklist=dm-multipath,crashkernel=auto systemd.unified_cgroup_hierarchy=1" --location=mbr --boot-drive=sda
+bootloader --append="rd.driver.blacklist=dm-multipath,crashkernel=auto" --location=mbr --boot-drive=sda
 
 cdrom
 
