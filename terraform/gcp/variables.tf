@@ -48,23 +48,3 @@ variable "aws_tags" {
 	description = "user-defined custom aws tags"
 	type 		= map(string)
 }
-
-/*
-variable "aws_cidr_vpc" {
-	description ="CIDR block for VPC"
-	type		= string
-	default 	= "192.168.0.0/16"
-}
-
-variable "aws_cidr_sn" {
-	description ="CIDR block for Subnet"
-	type		= string
-	default 	= "192.168.0.0/16"
-}
-
-
-
-data "local_file" "env_script" {
-	filename = "${path.module}/env.sh"
-}
-*/

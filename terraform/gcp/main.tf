@@ -2,7 +2,7 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = "4.76.0"
+      version = "4.77.0"
     }
     local = {
       source = "hashicorp/local"
@@ -31,16 +31,17 @@ resource "tls_private_key" "ssh" {
 resource "local_file" "ssh_private_key" {
 	content = tls_private_key.ssh.private_key_openssh
 	file_permission = "0600"
-	filename = format("/px-deploy/.px-deploy/keys/id_rsa.aws.%s",var.config_name)
+	filename = format("/px-deploy/.px-deploy/keys/id_rsa.gcp.%s",var.config_name)
 }
 
 resource "local_file" "ssh_public_key" {
 	content = tls_private_key.ssh.public_key_openssh
 	file_permission = "0644"
-	filename = format("/px-deploy/.px-deploy/keys/id_rsa.aws.%s.pub",var.config_name)
+	filename = format("/px-deploy/.px-deploy/keys/id_rsa.gcp.%s.pub",var.config_name)
 }
 
 resource "google_compute_network" "vpc" {
+	// DO NOT RENAME! other functions rely on this naming scheme
 	name 					= format("%s-%s-%s",var.name_prefix,var.config_name,"vpc")
 	auto_create_subnetworks = false
 }
@@ -54,8 +55,8 @@ resource "google_compute_subnetwork" "subnet" {
 
 resource "google_compute_firewall" "fw_external" {
 	network     	= 	google_compute_network.vpc.id
-	name 			= 	format("ext-px-deploy-%s",var.config_name)
-	description 	= 	"Security group for px-deploy (tf-created)"
+	name 			= 	format("px-deploy-%s-ext",var.config_name)
+	description 	= 	"external security group for px-deploy (tf-created)"
 	source_ranges 	= ["0.0.0.0/0"]
 	allow {
     	protocol  = "tcp"
@@ -63,27 +64,25 @@ resource "google_compute_firewall" "fw_external" {
   	}
 }
 
-data "cloudinit_config" "conf" {
-  for_each		= {for server in local.instances: server.instance_name =>  server}
-  gzip 			= false
-  base64_encode = false
-
-  part {
-    content_type = "text/cloud-config"
-    content = local_file.cloud-init[each.key].content
-    filename = "conf.yaml"
-  }
-  depends_on = [ local_file.cloud-init ]
+resource "google_compute_firewall" "fw_internal" {
+	network     	= 	google_compute_network.vpc.id
+	name 			= 	format("px-deploy-%s-int",var.config_name)
+	description 	= 	"internal security group for px-deploy (tf-created)"
+	source_ranges 	= ["192.168.0.0/16"]
+	allow {
+		protocol = "all"
+	}
 }
 
-resource "local_file" "cloud-init" {
+// rocky8 image is missing cloud-init. but gcp has concept of startup-script which in our case can do the same
+resource "local_file" "startup-script" {
 	for_each	=	{for server in local.instances: server.instance_name =>  server}
-	content 	= 	templatefile("${path.module}/cloud-init.tpl", {
+	content 	= 	templatefile("${path.module}/startup-script.tpl", {
 		tpl_priv_key 	= base64encode(tls_private_key.ssh.private_key_openssh),
 		tpl_name 		= each.key
 		tpl_cluster 	= each.value.cluster
 	})
-	filename = "${path.module}/cloud-init-${each.key}-generated.yaml"
+	filename = "${path.module}/startup-script-${each.key}-generated.yaml"
 }
 
 data "google_compute_image" "rocky" {
@@ -140,7 +139,7 @@ resource "google_compute_attached_disk" "ebs" {
 resource "google_compute_instance" "node" {
 	for_each 					= {for server in local.instances: server.instance_name =>  server}
 	machine_type				= each.value.instance_type
-	name 						= each.key
+	name 						= format("%s-%s",var.config_name,each.key)
 	labels 						= var.aws_tags	      	
 
 	boot_disk {
@@ -162,35 +161,53 @@ resource "google_compute_instance" "node" {
 	}
 	metadata = {
 		ssh-keys = "rocky:${tls_private_key.ssh.public_key_openssh}"
-		user-data = "${data.cloudinit_config.conf[each.key].rendered}"
+		//user-data = "${data.cloudinit_config.conf[each.key].rendered}"
+		startup-script = local_file.startup-script[each.key].content
+	}
+	
+    service_account {
+    	scopes = [ "compute-rw" ,"storage-ro"]
 	}
 
     connection {
-                        type = "ssh"
-                        user = "rocky"
-                        host = "${self.network_interface.0.access_config.0.nat_ip }"
-                        private_key = tls_private_key.ssh.private_key_openssh
-        }
+        type = "ssh"
+        user = "rocky"
+        host = "${self.network_interface.0.access_config.0.nat_ip }"
+        private_key = tls_private_key.ssh.private_key_openssh
+    }
 		
-		provisioner "remote-exec" {
-            inline = [
-        		"sudo mkdir /assets",
-                "sudo chown rocky.users /assets"
-            ]
-        }
-
-	    provisioner "file" {
-                source = format("%s%s",path.module,"/env.sh")
-                destination = "/tmp/env.sh"
-        }
-
-        provisioner "file" {
-                source = format("%s/%s",path.module,each.key)
-                destination = format("%s%s%s","/tmp/",each.key,"_scripts.sh")
-        }
+	provisioner "remote-exec" {
+        inline = [
+	 	"sudo mkdir /assets",
+        "sudo chown rocky.users /assets"
+        ]
+    }
 	
-		provisioner "file" {
-				source = "/px-deploy/.px-deploy/assets/"
-				destination = "/assets"
+	provisioner "file" {
+        source = var.gcp_auth_json
+        destination = "/tmp/gcp.json"
+    }
+
+	provisioner "file" {
+        source = format("%s%s",path.module,"/env.sh")
+        destination = "/tmp/env.sh"
+    }
+
+    provisioner "file" {
+        source = format("%s/%s",path.module,each.key)
+        destination = format("%s%s%s","/tmp/",each.key,"_scripts.sh")
+    }
+	
+	provisioner "file" {
+		source = "/px-deploy/.px-deploy/assets/"
+		destination = "/assets"
+	}
+}
+
+resource "local_file" "gcp-returns" {
+	content = templatefile("${path.module}/gcp-returns.tpl", { 
+		tpl_vpc = google_compute_network.vpc.self_link,
 		}
+	)
+	filename = "${path.module}/gcp-returns-generated.yaml"
 }

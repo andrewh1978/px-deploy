@@ -53,6 +53,8 @@ StrictHostKeyChecking no
 LogLevel ERROR
 EOF
 
+systemctl restart sshd 2>/dev/null
+
 if [ $cloud = "aws" -o $cloud = "gcp" -o $cloud = "azure" ]; then
   echo 127.0.0.1 localhost >/etc/hosts
   for i in $(seq 1 $clusters); do
