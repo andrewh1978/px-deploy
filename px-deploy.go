@@ -1608,7 +1608,7 @@ func destroy_deployment(name string) {
 			for c := 1; c <= clusters; c++ {
 				nodepools, err := gcp_get_nodepools(&config, fmt.Sprintf("px-deploy-%v-%v", config.Name, c))
 				if err != nil {
-					die("error listing gke nodepools")
+					fmt.Printf("Warning: error listing gke nodepools\n")
 				}
 
 				for _, n := range nodepools {

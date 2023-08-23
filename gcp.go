@@ -245,10 +245,11 @@ func gcp_get_node_ip(deployment string, node string) string {
 	}
 
 	if len(list.Items) != 1 {
-		panic("found more than one gcp instance of, " + node)
+		fmt.Printf("Warning: found %v instance(s) of %v\n", len(list.Items), node)
+		return ""
+	} else {
+		return strings.TrimSuffix(list.Items[0].NetworkInterfaces[0].AccessConfigs[0].NatIP, "\n")
 	}
-
-	return strings.TrimSuffix(list.Items[0].NetworkInterfaces[0].AccessConfigs[0].NatIP, "\n")
 }
 
 func gcp_create_variables(config *Config) []string {
