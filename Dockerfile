@@ -22,7 +22,7 @@ RUN curl -Ls https://github.com/vmware/govmomi/releases/download/v0.23.0/govc_li
 RUN mkdir -p /root/go/src/px-deploy
 RUN curl -s https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo >/etc/yum.repos.d/terraform-repo.repo
 RUN dnf install -y terraform-1.3.9
-COPY go.mod go.sum px-deploy.go /root/go/src/px-deploy/
+COPY go.mod go.sum *.go /root/go/src/px-deploy/
 COPY vagrant /px-deploy/vagrant
 COPY terraform /px-deploy/terraform
 COPY vsphere-init.sh VERSION /
