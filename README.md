@@ -324,7 +324,7 @@ $ az vm image terms accept --urn "erockyenterprisesoftwarefoundationinc165307125
 ```
 PX_DEPLOY_PROJECT="[px-deploy-proj]"
 
-SERICE_ACCOUNT="[px-deploy-sa]"
+SERVICE_ACCOUNT="[px-deploy-sa]"
 
 gcloud projects create ${PX_DEPLOY_PROJECT}
 
