@@ -317,21 +317,25 @@ $ az vm image terms accept --urn "erockyenterprisesoftwarefoundationinc165307125
 
 1. install CLI and ensure it is configured: https://cloud.google.com/sdk/docs/quickstarts
 
-2. in the following examples ensure to replace all values shown in [brackets] with your specific values - without the [brackets]
+2. you can copy & paste the following commands. just ensure to replace all values shown in [brackets] with your specific values - without the [brackets]
 
-3. create a new project and set it as default (example here **`px-deploy-proj`**)
+3. set env variable for project /service account (example here **`px-deploy-proj`** and **`px-deploy-sa`**)
 
 ```
 PX_DEPLOY_PROJECT="[px-deploy-proj]"
 
 SERVICE_ACCOUNT="[px-deploy-sa]"
+```
 
+4. create a new project and set it as default
+
+```
 gcloud projects create ${PX_DEPLOY_PROJECT}
 
 gcloud config set project ${PX_DEPLOY_PROJECT}
 ```
 
-4. get your billing account id 
+5. get your billing account id 
 
 ```
 gcloud beta billing accounts list
@@ -344,19 +348,19 @@ ACCOUNT_ID            NAME                OPEN  MASTER_ACCOUNT_ID
 
 654321-ABCDEF-123456  My Billing Account  True
 ```
-5. link your project to billing account id  (here **`654321-ABCDEF-123456`**)
+6. link your project to billing account id  (here **`654321-ABCDEF-123456`**)
 
 ```
 gcloud beta billing projects link ${PX_DEPLOY_PROJECT} --billing-account [654321-ABCDEF-123456]
 ```
 
-6. create service account
+7. create service account
 
 ```
 gcloud iam service-accounts create ${SERVICE_ACCOUNT}
 ```
 
-6. assign roles to service-account
+8. assign roles to service-account
  
 ```
 gcloud projects add-iam-policy-binding ${PX_DEPLOY_PROJECT} \
@@ -372,14 +376,14 @@ gcloud projects add-iam-policy-binding ${PX_DEPLOY_PROJECT} \
    --role="roles/iam.serviceAccountUser"  
 ```
 
-7. download service account json key file (here **`gcp.json`**)
+9. download service account json key file (here **`gcp.json`**)
 
 ```
 gcloud iam service-accounts keys create [gcp.json] \
     --iam-account=${SERVICE_ACCOUNT}@${PX_DEPLOY_PROJECT}.iam.gserviceaccount.com
 ```
 
-8. enable compute & kubernetes API
+10. enable compute & kubernetes API
 
 ```
 gcloud services enable container.googleapis.com
@@ -387,7 +391,7 @@ gcloud services enable container.googleapis.com
 gcloud services enable compute.googleapis.com
 ```
 
-9. edit your `~/.px-deploy/defaults.yml` to add 
+11. edit your `~/.px-deploy/defaults.yml` to add 
 
 ```
 gcp_project: "[px-deploy-proj]"
