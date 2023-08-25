@@ -319,71 +319,78 @@ $ az vm image terms accept --urn "erockyenterprisesoftwarefoundationinc165307125
 
 2. in the following examples ensure to replace all values shown in [brackets] with your specific values - without the [brackets]
 
-3. create a new project and set it as default (example here **`px-deploy-test`**)
+3. create a new project and set it as default (example here **`px-deploy-proj`**)
 
 ```
-$ gcloud projects create [px-deploy-test]
+PX_DEPLOY_PROJECT="[px-deploy-proj]"
 
-$ gcloud config set project [px-deploy-test]
+SERICE_ACCOUNT="[px-deploy-sa]"
+
+gcloud projects create ${PX_DEPLOY_PROJECT}
+
+gcloud config set project ${PX_DEPLOY_PROJECT}
 ```
 
-4. get your billing account and link project to it
+4. get your billing account id 
 
 ```
-$ gcloud beta billing accounts list
+gcloud beta billing accounts list
 ```
+
+Output will look like this:
 
 ```
 ACCOUNT_ID            NAME                OPEN  MASTER_ACCOUNT_ID
 
 654321-ABCDEF-123456  My Billing Account  True
 ```
+5. link your project to billing account id  (here **`654321-ABCDEF-123456`**)
 
 ```
-$ gcloud beta billing projects link [px-deploy-test] --billing-account [654321-ABCDEF-123456]
+gcloud beta billing projects link ${PX_DEPLOY_PROJECT} --billing-account [654321-ABCDEF-123456]
 ```
 
-5. create service account (example here **`px-user`**)
+6. create service account
 
 ```
-$ gcloud iam service-accounts create [px-user]
+gcloud iam service-accounts create ${SERVICE_ACCOUNT}
 ```
 
-6. assign roles to service-account (pay attention to the --member format: serviceAccount:[svc account name]@[project name].iam.gserviceaccount.com)
+6. assign roles to service-account
  
 ```
-$ gcloud projects add-iam-policy-binding [px-deploy-test] \
-   --member="serviceAccount:[px-user]@[px-deploy-test].iam.gserviceaccount.com" \
+gcloud projects add-iam-policy-binding ${PX_DEPLOY_PROJECT} \
+   --member="serviceAccount:${SERVICE_ACCOUNT}@${PX_DEPLOY_PROJECT}.iam.gserviceaccount.com" \
    --role="roles/compute.admin"
 
-$ gcloud projects add-iam-policy-binding [px-deploy-test] \
-   --member="serviceAccount:[px-user]@[px-deploy-test].iam.gserviceaccount.com" \
+gcloud projects add-iam-policy-binding ${PX_DEPLOY_PROJECT} \
+   --member="serviceAccount:${SERVICE_ACCOUNT}@${PX_DEPLOY_PROJECT}.iam.gserviceaccount.com" \
    --role="roles/container.admin"
 
-$ gcloud projects add-iam-policy-binding [px-deploy-test] \
-   --member="serviceAccount:[px-user]@[px-deploy-test].iam.gserviceaccount.com" \
+gcloud projects add-iam-policy-binding ${PX_DEPLOY_PROJECT} \
+   --member="serviceAccount:${SERVICE_ACCOUNT}@${PX_DEPLOY_PROJECT}.iam.gserviceaccount.com" \
    --role="roles/iam.serviceAccountUser"  
 ```
 
 7. download service account json key file (here **`gcp.json`**)
 
 ```
-$ gcloud iam service-accounts keys create [gcp.json] \
-    --iam-account=[px-user]@[px-deploy-test].iam.gserviceaccount.com
+gcloud iam service-accounts keys create [gcp.json] \
+    --iam-account=${SERVICE_ACCOUNT}@${PX_DEPLOY_PROJECT}.iam.gserviceaccount.com
 ```
 
 8. enable compute & kubernetes API
 
 ```
-$ gcloud services enable container.googleapis.com
+gcloud services enable container.googleapis.com
 
-$ gcloud services enable compute.googleapis.com
+gcloud services enable compute.googleapis.com
 ```
 
 9. edit your `~/.px-deploy/defaults.yml` to add 
 
 ```
-gcp_project: "[px-deploy-test]"
+gcp_project: "[px-deploy-proj]"
 gcp_auth_json: "[/home/user/gcp.json]"
 ```
 
