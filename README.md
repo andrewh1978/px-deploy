@@ -319,7 +319,7 @@ $ az vm image terms accept --urn "erockyenterprisesoftwarefoundationinc165307125
 
 2. you can copy & paste the following commands. just ensure to replace all values shown in [brackets] with your specific values - without the [brackets]
 
-3. set env variable for project /service account (example here **`px-deploy-proj`** and **`px-deploy-sa`**)
+3. set env variable for project / service account (example here **`px-deploy-proj`** and **`px-deploy-sa`**)
 
 ```
 PX_DEPLOY_PROJECT="[px-deploy-proj]"
