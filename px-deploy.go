@@ -462,7 +462,7 @@ func main() {
 			}
 
 			if _, err := os.Stat("/px-deploy/.px-deploy/gcp.json"); os.IsNotExist(err) {
-				die("~/.px-deploy/gcp.json not found")
+				die("~/.px-deploy/gcp.json not found. refer to readme.md how to create it")
 			} else {
 				config.Gcp_Auth_Json = "/px-deploy/.px-deploy/gcp.json"
 			}
