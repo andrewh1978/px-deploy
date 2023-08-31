@@ -126,7 +126,7 @@ var Blue = "\033[34m"
 var wg sync.WaitGroup
 
 func main() {
-	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createAwsAccessKeyId, createEksVersion, createAwsSecretAccessKey, createTags, createGcpType, createGcpDisks, createGcpZone, createGcpAuthJson, createGcpProject, createGkeVersion, createAzureType, createAksVersion, createAzureDisks, createAzureClientSecret, createAzureClientId, createAzureTenantId, createAzureSubscriptionId, createTemplate, createRegion, createCloud, createEnv, createSshPubKey, connectName, kubeconfigName, destroyName, statusName, historyNumber string
+	var createName, createPlatform, createClusters, createNodes, createK8sVer, createPxVer, createStopAfter, createAwsType, createAwsEbs, createAwsAccessKeyId, createEksVersion, createAwsSecretAccessKey, createTags, createGcpType, createGcpDisks, createGcpZone, createGcpProject, createGkeVersion, createAzureType, createAksVersion, createAzureDisks, createAzureClientSecret, createAzureClientId, createAzureTenantId, createAzureSubscriptionId, createTemplate, createRegion, createCloud, createEnv, createSshPubKey, connectName, kubeconfigName, destroyName, statusName, historyNumber string
 	var createQuiet, createDryRun, destroyAll, destroyClear bool
 	os.Chdir("/px-deploy/.px-deploy")
 	rootCmd := &cobra.Command{Use: "px-deploy"}
@@ -461,9 +461,11 @@ func main() {
 				die("Please set gcp_project in defaults.yml")
 			}
 
-			//if _, err := os.Stat("scripts/" + s); os.IsNotExist(err) {
-			//	die("Script '" + s + "' does not exist")
-			//}
+			if _, err := os.Stat("/px-deploy/.px-deploy/gcp.json"); os.IsNotExist(err) {
+				die("~/.px-deploy/gcp.json not found")
+			} else {
+				config.Gcp_Auth_Json = "/px-deploy/.px-deploy/gcp.json"
+			}
 
 			if config.Platform == "eks" && !(config.Cloud == "aws") {
 				die("EKS only makes sense with AWS (not " + config.Cloud + ")")
@@ -782,7 +784,6 @@ func main() {
 	cmdCreate.Flags().StringVarP(&createAwsSecretAccessKey, "aws_secret_access_key", "", "", "your AWS API secret access key (default \""+defaults.Aws_Secret_Access_Key+"\")")
 	cmdCreate.Flags().StringVarP(&createTags, "tags", "", "", "comma-separated list of tags to be applies to cloud nodes, eg \"Owner=Bob,Purpose=Demo\"")
 	cmdCreate.Flags().StringVarP(&createGcpType, "gcp_type", "", "", "GCP type for each node (default "+defaults.Gcp_Type+")")
-	cmdCreate.Flags().StringVarP(&createGcpAuthJson, "gcp_auth_json", "", "", "GCP Auth Json file")
 	cmdCreate.Flags().StringVarP(&createGcpProject, "gcp_project", "", "", "GCP Project")
 	cmdCreate.Flags().StringVarP(&createGcpDisks, "gcp_disks", "", "", "space-separated list of EBS volumes to be attached to worker nodes, eg \"pd-standard:20 pd-ssd:30\" (default "+defaults.Gcp_Disks+")")
 	cmdCreate.Flags().StringVarP(&createGcpZone, "gcp_zone", "", defaults.Gcp_Zone, "GCP zone (a, b or c)")
