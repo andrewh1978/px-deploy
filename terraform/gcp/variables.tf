@@ -16,6 +16,7 @@ variable "gcp_project" {
 variable "gcp_auth_json" {
 	description ="GCP Authentication json"
 	type		= string
+	default     = "/px-deploy/.px-deploy/gcp.json"
 }
 
 variable "config_name" {

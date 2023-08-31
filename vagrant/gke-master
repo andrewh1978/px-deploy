@@ -1,6 +1,6 @@
 GKE_CLUSTER_NAME=px-deploy-$name-$cluster
 
-dnf install -y docker
+dnf install -y docker google-cloud-sdk-gke-gcloud-auth-plugin
 systemctl enable --now docker
 
 curl -L https://github.com/containerd/containerd/releases/download/v1.6.15/containerd-1.6.15-linux-amd64.tar.gz | tar Cxzvf /usr/local -

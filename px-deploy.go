@@ -375,16 +375,6 @@ func main() {
 				config.Gcp_Zone = createGcpZone
 			}
 
-			if createGcpAuthJson != "" {
-				config.Gcp_Auth_Json = createGcpAuthJson
-			}
-
-			if config.Gcp_Auth_Json != "" {
-				if _, err := os.Stat(config.Gcp_Auth_Json); os.IsNotExist(err) {
-					die("defaults.yml: GCP Auth JSON File '" + config.Gcp_Auth_Json + "' does not exist")
-				}
-			}
-
 			if createGcpProject != "" {
 				config.Gcp_Project = createGcpProject
 			}
@@ -467,9 +457,13 @@ func main() {
 			if config.Cloud == "azure" && ((config.Azure_Client_Id == "") || (config.Azure_Client_Secret == "") || (config.Azure_Tenant_Id == "") || (config.Azure_Subscription_Id == "")) {
 				die("Please set azure_client_id / azure_client_secret / azure_tenant_id / azure_subscription_id in defaults.yml")
 			}
-			if config.Cloud == "gcp" && ((config.Gcp_Auth_Json == "") || (config.Gcp_Project == "")) {
-				die("Please set gcp_auth_json and gcp_project in defaults.yml")
+			if config.Cloud == "gcp" && (config.Gcp_Project == "") {
+				die("Please set gcp_project in defaults.yml")
 			}
+
+			//if _, err := os.Stat("scripts/" + s); os.IsNotExist(err) {
+			//	die("Script '" + s + "' does not exist")
+			//}
 
 			if config.Platform == "eks" && !(config.Cloud == "aws") {
 				die("EKS only makes sense with AWS (not " + config.Cloud + ")")

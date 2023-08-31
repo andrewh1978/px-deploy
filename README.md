@@ -165,7 +165,6 @@ The `defaults.yml` file sets a number of deployment variables:
  * `aks_version` - AKS k8s Version
  * `px_version` - the version of Portworx to install
  * `gcp_project` - GCP project
- * `gcp_auth_json` - path to GCP JSON keyfile
  * `gcp_disks` - similar to aws_ebs, for example: `"pd-standard:20 pd-ssd:30"`
  * `gcp_region` - GCP region
  * `gcp_type` - the GCP machine type for each node
@@ -309,9 +308,9 @@ $ az vm image terms accept --urn "erockyenterprisesoftwarefoundationinc165307125
 
 - create service account with roles compute.admin,container.admin,iam.serviceAccountUser
 
-- download json key file for service account
+- download json key file for service account and move it as **`gcp.json`** into your ~/.px-deploy folder
 
-- set gcp_project and gcp_auth_json in defaults.yml
+- set gcp_project in ~/.px-deploy/defaults.yml
 
 **Detailed:**
 
@@ -379,11 +378,17 @@ gcloud projects add-iam-policy-binding ${PX_DEPLOY_PROJECT} \
 9. download service account json key file (here **`gcp.json`**)
 
 ```
-gcloud iam service-accounts keys create [gcp.json] \
+gcloud iam service-accounts keys create gcp.json \
     --iam-account=${SERVICE_ACCOUNT}@${PX_DEPLOY_PROJECT}.iam.gserviceaccount.com
 ```
 
-10. enable compute & kubernetes API
+10. move **`gcp.json`** into your ~/.px-deploy/ folder
+
+```
+mv gcp.json ~/.px-deploy/
+```
+
+11. enable compute & kubernetes API
 
 ```
 gcloud services enable container.googleapis.com
@@ -391,11 +396,10 @@ gcloud services enable container.googleapis.com
 gcloud services enable compute.googleapis.com
 ```
 
-11. edit your `~/.px-deploy/defaults.yml` to add 
+12. edit your `~/.px-deploy/defaults.yml` to add 
 
 ```
 gcp_project: "[px-deploy-proj]"
-gcp_auth_json: "[/home/user/gcp.json]"
 ```
 
 # Notes for vSphere
