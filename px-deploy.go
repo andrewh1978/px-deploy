@@ -670,7 +670,7 @@ func main() {
 			Nodes, _ := strconv.Atoi(config.Nodes)
 
 			if (config.Cloud == "aws") || (config.Cloud == "azure") || (config.Cloud == "gcp") {
-				if (config.Platform == "ocp4") || (config.Platform == "eks") || (config.Platform == "aks") {
+				if (config.Platform == "ocp4") || (config.Platform == "eks") || (config.Platform == "aks") || (config.Platform == "gke") {
 					Nodes = 0
 				}
 				// loop clusters and add master name/ip to tf var
