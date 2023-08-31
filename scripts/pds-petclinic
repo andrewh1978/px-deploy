@@ -123,6 +123,19 @@ echo "PDS_NAMESPACE_ID=\"$PDS_NAMESPACE_ID\""
 echo "Renaming Deployment Target from kube-system uuid to $TGT_NAME"
 curl -s -X "PUT" "$PDS_ENDPOINT/deployment-targets/$PDS_DEPLOYMENT_TARGET_ID" -H "accept: application/json" -H "Authorization: Bearer $PDS_TOKEN" -H "Content-Type: application/json" -d "{ \"name\": \"$TGT_NAME\"}" > /dev/null
 
+DEPLOY_STAT=\$(curl -s -X "GET"   "$PDS_ENDPOINT/deployment-targets/$PDS_DEPLOYMENT_TARGET_ID"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.status')
+
+[[ \$DEPLOY_STAT == "null" ]] && { echo "Error: Deployment Status empty. ";  exit 1; }
+
+echo "Waiting for Deployment Target to become healthy"
+
+while [ "\$DEPLOY_STAT" != "healthy" ]; do
+	sleep 5
+	echo "Current State	\$DEPLOY_STAT	\$(date)"
+	DEPLOY_STAT=\$(curl -s -X "GET"   "$PDS_ENDPOINT/deployment-targets/$PDS_DEPLOYMENT_TARGET_ID"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  | jq -r '.status')
+	[[ \$DEPLOY_STAT == "null" ]] && { echo "Error: Deployment Status empty. ";  exit 1; }
+done
+
 echo "Creating Deployment"
 
 OUTPUT=$(curl -s -X "POST" "$PDS_ENDPOINT/projects/$PDS_PROJECT_ID/deployments" -H "accept: application/json" -H "Authorization: Bearer $PDS_TOKEN" -H "Content-Type: application/json" -d '{ 
@@ -167,6 +180,16 @@ echo "Found following deployment(s):"
 echo \$OUTPUT | jq -r '.data[] | .name, .id'
 
 for i in \$(echo \$OUTPUT | jq -r '.data[].id'); do
+  echo "removing backup schedule/target for \$i"
+  curl -s -X "PUT" "$PDS_ENDPOINT/deployments/\$i" -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN" -H "Content-Type: application/json" -d "{ \"scheduled_backup\": { \"backup_policy_id\": null, \"backup_target_id\": null} }"
+  
+  echo "deleting existing backups"
+  BACKUPS=\"$(curl -s -X "GET" "$PDS_ENDPOINT/deployments/\$i/backups" -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN")
+  for BAK in \$(echo \$BACKUPS | jq -r '.data[].id'); do
+    echo "deleting backup \$BAK"
+    curl -s -X "DELETE"   "$PDS_ENDPOINT/backups/\$BAK" -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  
+  done
+
   echo "deleting \$i"
   curl -s -X "DELETE"   "$PDS_ENDPOINT/deployments/\$i"   -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN" 
 done
