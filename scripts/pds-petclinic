@@ -187,7 +187,13 @@ for i in \$(echo \$OUTPUT | jq -r '.data[].id'); do
   BACKUPS=\$(curl -s -X "GET" "$PDS_ENDPOINT/deployments/\$i/backups" -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN")
   for BAK in \$(echo \$BACKUPS | jq -r '.data[].id'); do
     echo "    deleting backup \$BAK"
-    curl -s -X "DELETE"   "$PDS_ENDPOINT/backups/\$BAK" -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN"  
+    DELSTATUS=\$(curl -s -X "DELETE"   "$PDS_ENDPOINT/backups/\$BAK" -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN" | jq -r '.http_status')
+	while [ ! -z "\${DELSTATUS}" ]; do
+	  echo "      backup job deletion failed with status \$DELSTATUS. Waiting for dependencies to be deleted. Re-try in 5sec"
+      echo "      if this fails, check & delete existing backup jobs manually"
+      sleep 5	
+	  DELSTATUS=\$(curl -s -X "DELETE"   "$PDS_ENDPOINT/backups/\$BAK" -H "accept: application/json"   -H "Authorization: Bearer $PDS_TOKEN" | jq -r '.http_status')
+    done
   done
 
   echo "deleting deployment \$i"
