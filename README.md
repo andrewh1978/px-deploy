@@ -164,6 +164,7 @@ The `defaults.yml` file sets a number of deployment variables:
  * `azure_tenant_id` - Azure Tenant ID
  * `aks_version` - AKS k8s Version
  * `px_version` - the version of Portworx to install
+ * `gcp_project` - GCP project
  * `gcp_disks` - similar to aws_ebs, for example: `"pd-standard:20 pd-ssd:30"`
  * `gcp_region` - GCP region
  * `gcp_type` - the GCP machine type for each node
@@ -301,8 +302,105 @@ $ az vm image terms accept --urn "erockyenterprisesoftwarefoundationinc165307125
 
 # Notes for GCP
 
-If you are using GCP, install the CLI and ensure it is configured:
- * GCP: https://cloud.google.com/sdk/docs/quickstarts
+**tl;dr**
+
+- setup a project
+
+- create service account with roles compute.admin,container.admin,iam.serviceAccountUser
+
+- download json key file for service account and move it as **`gcp.json`** into your ~/.px-deploy folder
+
+- set gcp_project in ~/.px-deploy/defaults.yml
+
+**Detailed:**
+
+1. install CLI and ensure it is configured: https://cloud.google.com/sdk/docs/quickstarts
+
+2. you can copy & paste the following commands. just ensure to replace all values shown in [brackets] with your specific values - without the [brackets]
+
+3. set env variable for project / service account (example here **`px-deploy-proj`** and **`px-deploy-sa`**)
+
+```
+PX_DEPLOY_PROJECT="[px-deploy-proj]"
+
+SERVICE_ACCOUNT="[px-deploy-sa]"
+```
+
+4. create a new project and set it as default
+
+```
+gcloud projects create ${PX_DEPLOY_PROJECT}
+
+gcloud config set project ${PX_DEPLOY_PROJECT}
+```
+
+5. get your billing account id 
+
+```
+gcloud beta billing accounts list
+```
+
+Output will look like this:
+
+```
+ACCOUNT_ID            NAME                OPEN  MASTER_ACCOUNT_ID
+
+654321-ABCDEF-123456  My Billing Account  True
+```
+6. link your project to billing account id  (here **`654321-ABCDEF-123456`**)
+
+```
+gcloud beta billing projects link ${PX_DEPLOY_PROJECT} --billing-account [654321-ABCDEF-123456]
+```
+
+7. create service account
+
+```
+gcloud iam service-accounts create ${SERVICE_ACCOUNT}
+```
+
+8. assign roles to service-account
+ 
+```
+gcloud projects add-iam-policy-binding ${PX_DEPLOY_PROJECT} \
+   --member="serviceAccount:${SERVICE_ACCOUNT}@${PX_DEPLOY_PROJECT}.iam.gserviceaccount.com" \
+   --role="roles/compute.admin"
+
+gcloud projects add-iam-policy-binding ${PX_DEPLOY_PROJECT} \
+   --member="serviceAccount:${SERVICE_ACCOUNT}@${PX_DEPLOY_PROJECT}.iam.gserviceaccount.com" \
+   --role="roles/container.admin"
+
+gcloud projects add-iam-policy-binding ${PX_DEPLOY_PROJECT} \
+   --member="serviceAccount:${SERVICE_ACCOUNT}@${PX_DEPLOY_PROJECT}.iam.gserviceaccount.com" \
+   --role="roles/iam.serviceAccountUser"  
+```
+
+9. download service account json key file (here **`gcp.json`**)
+
+```
+gcloud iam service-accounts keys create gcp.json \
+    --iam-account=${SERVICE_ACCOUNT}@${PX_DEPLOY_PROJECT}.iam.gserviceaccount.com
+```
+
+10. move **`gcp.json`** into your ~/.px-deploy/ folder
+
+```
+mv gcp.json ~/.px-deploy/
+```
+
+11. enable compute & kubernetes API
+
+```
+gcloud services enable container.googleapis.com
+
+gcloud services enable compute.googleapis.com
+```
+
+12. edit your `~/.px-deploy/defaults.yml` to add 
+
+```
+gcp_project: "[px-deploy-proj]"
+```
 
 # Notes for vSphere
 

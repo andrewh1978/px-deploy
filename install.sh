@@ -35,6 +35,19 @@ if [ "$found_legacy" = true ]; then
         exit
 fi
 
+#find deployments being created by old gcp code (no tf-deployments folder exists)
+found_legacy=false
+for i in $(grep -l 'cloud: gcp' $HOME/.px-deploy/deployments/*.yml 2>/dev/null); do
+    if [ ! -d $HOME/.px-deploy/tf-deployments/$(basename $i .yml) ]; then
+        echo -e "${RED} GCP Deployment $(basename $i .yml) is being created by px-deploy version < 5.3. Please remove prior to upgrading to version 5.3"
+        found_legacy=true
+    fi
+done
+if [ "$found_legacy" = true ]; then
+        echo -e "${RED}Old GCP deployment(s) found. Please destroy before updating"
+        exit
+fi
+
 rm -rf /tmp/px-deploy.build
 mkdir /tmp/px-deploy.build
 cd /tmp/px-deploy.build
@@ -77,9 +90,9 @@ cp defaults.yml $HOME/.px-deploy/defaults.yml.$ver
 
 echo
 echo -e ${YELLOW}If you are using zsh, append this to your .zshrc:
-echo -e ${WHITE}'px-deploy() { [ "$DEFAULTS" ] && params="-v $DEFAULTS:/px-deploy/.px-deploy/defaults.yml" ; docker run --platform=linux/amd64 --network host -it -e PXDUSER=$USER --rm --name px-deploy.$$ $=params -v $HOME/.px-deploy:/px-deploy/.px-deploy -v $HOME/.config/gcloud:/root/.config/gcloud px-deploy /root/go/bin/px-deploy $* ; }'
+echo -e ${WHITE}'px-deploy() { [ "$DEFAULTS" ] && params="-v $DEFAULTS:/px-deploy/.px-deploy/defaults.yml" ; docker run --platform=linux/amd64 --network host -it -e PXDUSER=$USER --rm --name px-deploy.$$ $=params -v $HOME/.px-deploy:/px-deploy/.px-deploy px-deploy /root/go/bin/px-deploy $* ; }'
 echo -e ${YELLOW}If you are using bash, append this to your .bash_profile:
-echo -e ${WHITE}'px-deploy() { [ "$DEFAULTS" ] && params="-v $DEFAULTS:/px-deploy/.px-deploy/defaults.yml" ; docker run --platform=linux/amd64 --network host -it -e PXDUSER=$USER --rm --name px-deploy.$$ $params -v $HOME/.px-deploy:/px-deploy/.px-deploy -v $HOME/.config/gcloud:/root/.config/gcloud px-deploy /root/go/bin/px-deploy $* ; }'
+echo -e ${WHITE}'px-deploy() { [ "$DEFAULTS" ] && params="-v $DEFAULTS:/px-deploy/.px-deploy/defaults.yml" ; docker run --platform=linux/amd64 --network host -it -e PXDUSER=$USER --rm --name px-deploy.$$ $params -v $HOME/.px-deploy:/px-deploy/.px-deploy px-deploy /root/go/bin/px-deploy $* ; }'
 echo
 echo -e ${GREEN}When your px-deploy function is set, create a deployment with:
 echo -e "${WHITE}px-deploy create --name myDeployment --template px$NC"
