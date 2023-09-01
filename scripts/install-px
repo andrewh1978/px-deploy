@@ -137,11 +137,6 @@ chmod +x /usr/local/bin/pxc-pxctl
 echo "alias pxctl='kubectl pxc pxctl'" >>/root/.bashrc
 [ "$operator" != false ] && kubectl-pxc config cluster set --portworx-service-namespace=portworx
 
-# Install storkctl
-stork_image=$(curl -sk https://install.portworx.com/$px_version?comp=stork | awk '/image: openstorage.stork/{print$2}')
-id=$(docker create $stork_image)
-docker cp $id:/storkctl/linux/storkctl /usr/bin
-
 # Install Grafana / wait for storagecluster readiness
 if [ "$operator" != false ]; then
   kubectl -n portworx create configmap grafana-dashboard-config --from-file=grafana-dashboard-config.yaml=<(curl -s https://docs.portworx.com/samples/k8s/pxc/grafana-dashboard-config.yaml)
@@ -161,3 +156,10 @@ if [ "$operator" != false ]; then
     sleep 3
   done
 fi
+
+# install storkctl
+STORK_POD=$(kubectl get pods -n $namespace -l name=stork -o jsonpath='{.items[0].metadata.name}') &&
+kubectl cp -n $namespace $STORK_POD:/storkctl/linux/storkctl ./storkctl
+sudo mv storkctl /usr/local/bin &&
+sudo chmod +x /usr/local/bin/storkctl
+
