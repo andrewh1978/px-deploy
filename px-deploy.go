@@ -167,7 +167,7 @@ func main() {
 				for i := 0; i < recVers.NumField(); i++ {
 					// get all fields from recommended defaults.yml.VERSION with name "version" inside and check against current default settings
 					if strings.Contains(strings.ToLower(typeOfS.Field(i).Name), "version") {
-						versioning_field := typeOfS.Field(i).Name
+						versioning_field := strings.ToLower(typeOfS.Field(i).Name)
 						versioning_current := fmt.Sprintf("%s", reflect.Indirect(curDef).FieldByName(typeOfS.Field(i).Name))
 						versioning_recommended := fmt.Sprintf("%s", recVers.Field(i).Interface())
 						//fmt.Printf("(Field: %s\t Value: %s \t\t Recommended: %s)\n", versioning_field , versioning_current, versioning_recommended)
@@ -183,13 +183,13 @@ func main() {
 									fmt.Printf("Error processing recommended Versioning %s : %s", versioning_field, versioning_recommended)
 								}
 								if v1.LessThan(v2) {
-									fmt.Printf("%s %s: %s in defaults.yml is lower than recommended setting %s %s\n", Red, versioning_field, versioning_current, versioning_recommended, Reset)
+									fmt.Printf("%sWarning:%s %s: %s %sin defaults.yml is lower than recommended setting%s %s\n", Red, Reset, versioning_field, versioning_current, Red, Reset, versioning_recommended)
 								}
 							}
 						} else if versioning_recommended == "" {
 							fmt.Printf("Field %s has no recommended version information available\n", versioning_field)
 						} else if versioning_current == "" {
-							fmt.Printf("%s please add field %s: %s in defaults.yml (recommended setting) %s\n", Red, versioning_field, versioning_recommended, Reset)
+							fmt.Printf("%s please add%s %s: \"%s\" %sto defaults.yml (recommended setting) %s\n", Red, Reset, versioning_field, versioning_recommended, Red, Reset)
 						}
 					}
 				}
