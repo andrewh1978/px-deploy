@@ -1,3 +1,12 @@
+## Fixes
+ * Fix intermittent vSphere provisioning issue
+ * Remove PDS backups before destroying
+
+## Improvements
+ * Migrate GCP to Terraform
+ * Add PX-BBQ asset
+ * Reduce Kubernetes provision time
+
 # 5.2
 
 ## Fixes
