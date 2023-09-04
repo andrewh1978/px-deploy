@@ -1,4 +1,4 @@
-# Install awscli
-dnf install -y python3-pip
-pip3 install awscli
-ln -s /usr/local/bin/aws /usr/bin/aws
+# install awscli2
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip"
+unzip -o /tmp/awscliv2.zip -d /tmp >/dev/null
+/tmp/aws/install

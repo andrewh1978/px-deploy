@@ -1,6 +1,10 @@
-dnf install -y docker python3-pip
+dnf install -y docker
 systemctl enable --now docker
-pip3 install awscli
+
+# install awscli2
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip"
+unzip -o /tmp/awscliv2.zip -d /tmp >/dev/null
+/tmp/aws/install
 
 ln -s /usr/local/bin/aws /usr/bin/aws
 eval $(ssh-agent)
