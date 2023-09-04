@@ -6,9 +6,10 @@ while ! dnf install -y docker; do
 done
 systemctl enable --now docker
 
-dnf install -y python3-pip
-pip3 install awscli
-ln -s /usr/local/bin/aws /usr/bin/aws
+# install awscli2
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip"
+unzip -o /tmp/awscliv2.zip -d /tmp
+/tmp/aws/install
 
 aws configure set default.region $aws_region
 aws eks wait cluster-active --name px-deploy-$name-$cluster
