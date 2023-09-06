@@ -450,15 +450,54 @@ func main() {
 					die("Postscript '" + config.Post_Script + "' is not valid Bash")
 				}
 			}
+			switch config.Cloud {
+			case "aws":
+				checkvar := []string{"aws_access_key_id", "aws_secret_access_key"}
+				emptyVars := isEmpty(config.Aws_Access_Key_Id, config.Aws_Secret_Access_Key)
+				if len(emptyVars) > 0 {
+					for _, i := range emptyVars {
+						fmt.Printf("%splease set \"%s\" in defaults.yml %s\n", Red, checkvar[i], Reset)
+					}
+					die("canceled deployment")
+				}
+			case "azure":
+				checkvar := []string{"azure_client_id", "azure_client_secret", "azure_tenant_id", "azure_subscription_id"}
+				emptyVars := isEmpty(config.Azure_Client_Id, config.Azure_Client_Secret, config.Azure_Tenant_Id, config.Azure_Subscription_Id)
+				if len(emptyVars) > 0 {
+					for _, i := range emptyVars {
+						fmt.Printf("%splease set \"%s\" in defaults.yml %s\n", Red, checkvar[i], Reset)
+					}
+					die("canceled deployment")
+				}
+			case "gcp":
+				checkvar := []string{"gcp_project"}
+				emptyVars := isEmpty(config.Gcp_Project)
+				if len(emptyVars) > 0 {
+					for _, i := range emptyVars {
+						fmt.Printf("%splease set \"%s\" in defaults.yml %s\n", Red, checkvar[i], Reset)
+					}
+					die("canceled deployment")
+				}
+			case "vsphere":
+				checkvar := []string{"vsphere_compute_resource", "vsphere_datacenter", "vsphere_datastore", "vsphere_folder", "vsphere_host", "vsphere_network", "vsphere_resource_pool", "vsphere_template", "vsphere_user", "vsphere_password"}
+				emptyVars := isEmpty(config.Vsphere_Compute_Resource, config.Vsphere_Datacenter, config.Vsphere_Datastore, config.Vsphere_Folder, config.Vsphere_Host, config.Vsphere_Network, config.Vsphere_Resource_Pool, config.Vsphere_Template, config.Vsphere_User, config.Vsphere_Password)
+				if len(emptyVars) > 0 {
+					for _, i := range emptyVars {
+						fmt.Printf("%splease set \"%s\" in defaults.yml %s\n", Red, checkvar[i], Reset)
+					}
+					die("canceled deployment")
+				}
+			}
 
-			if config.Cloud == "aws" && ((config.Aws_Access_Key_Id == "") || (config.Aws_Secret_Access_Key == "")) {
-				die("Please set aws_access_key_id and aws_secret_access_key in defaults.yml")
-			}
-			if config.Cloud == "azure" && ((config.Azure_Client_Id == "") || (config.Azure_Client_Secret == "") || (config.Azure_Tenant_Id == "") || (config.Azure_Subscription_Id == "")) {
-				die("Please set azure_client_id / azure_client_secret / azure_tenant_id / azure_subscription_id in defaults.yml")
-			}
-			if config.Cloud == "gcp" && (config.Gcp_Project == "") {
-				die("Please set gcp_project in defaults.yml")
+			if config.Platform == "ocp4" {
+				checkvar := []string{"ocp4_domain", "ocp4_pull_secret"}
+				emptyVars := isEmpty(config.Ocp4_Domain, config.Ocp4_Pull_Secret)
+				if len(emptyVars) > 0 {
+					for _, i := range emptyVars {
+						fmt.Printf("%splease set \"%s\" in defaults.yml %s\n", Red, checkvar[i], Reset)
+					}
+					die("canceled deployment")
+				}
 			}
 
 			if _, err := os.Stat("/px-deploy/.px-deploy/gcp.json"); os.IsNotExist(err) {
@@ -2174,6 +2213,17 @@ func terminate_and_wait_nodegroup(eksclient *eks.Client, nodegroupName string, c
 		fmt.Println("waiter error:", err)
 		return
 	}
+}
+
+// return which variables are empty
+func isEmpty(vars ...interface{}) []int {
+	emptyVars := []int{}
+	for i, v := range vars {
+		if v == nil || reflect.ValueOf(v).IsZero() {
+			emptyVars = append(emptyVars, i)
+		}
+	}
+	return emptyVars
 }
 
 func write_nodescripts(config Config) {
