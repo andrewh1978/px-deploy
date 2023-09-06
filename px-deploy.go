@@ -457,14 +457,17 @@ func main() {
 			if config.Cloud == "azure" && ((config.Azure_Client_Id == "") || (config.Azure_Client_Secret == "") || (config.Azure_Tenant_Id == "") || (config.Azure_Subscription_Id == "")) {
 				die("Please set azure_client_id / azure_client_secret / azure_tenant_id / azure_subscription_id in defaults.yml")
 			}
-			if config.Cloud == "gcp" && (config.Gcp_Project == "") {
-				die("Please set gcp_project in defaults.yml")
-			}
 
-			if _, err := os.Stat("/px-deploy/.px-deploy/gcp.json"); os.IsNotExist(err) {
-				die("~/.px-deploy/gcp.json not found. refer to readme.md how to create it")
-			} else {
-				config.Gcp_Auth_Json = "/px-deploy/.px-deploy/gcp.json"
+			if config.Cloud == "gcp" {
+				if config.Gcp_Project == "" {
+					die("Please set gcp_project in defaults.yml")
+				}
+
+				if _, err := os.Stat("/px-deploy/.px-deploy/gcp.json"); os.IsNotExist(err) {
+					die("~/.px-deploy/gcp.json not found. refer to readme.md how to create it")
+				} else {
+					config.Gcp_Auth_Json = "/px-deploy/.px-deploy/gcp.json"
+				}
 			}
 
 			if config.Platform == "eks" && !(config.Cloud == "aws") {
