@@ -37,23 +37,23 @@ azure_tenant_id: ""
 azure_subscription_id: ""
 aks_version: "1.25.5"
 
-vsphere_host: XXX
-vsphere_compute_resource: XXX
-vsphere_resource_pool: XXX
-vsphere_datacenter: XXX
-vsphere_user: XXX
-vsphere_password: XXX
-vsphere_template: XXX
-vsphere_datastore: XXX
-vsphere_folder: XXX
+vsphere_host: ""
+vsphere_compute_resource: ""
+vsphere_resource_pool: ""
+vsphere_datacenter: ""
+vsphere_user: ""
+vsphere_password: ""
+vsphere_template: ""
+vsphere_datastore: ""
+vsphere_folder: ""
 vsphere_disks: "64"
-vsphere_network: XXX
+vsphere_network: ""
 vsphere_memory: 8
 vsphere_cpu: 2
 
-ocp4_domain: openshift.portworx.com
+ocp4_domain: ""
 ocp4_version: 4.12.12
-ocp4_pull_secret: XXX
+ocp4_pull_secret: ""
 
 #env:
 #    licenses: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX ..."
