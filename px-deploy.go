@@ -500,10 +500,16 @@ func main() {
 				}
 			}
 
-			if _, err := os.Stat("/px-deploy/.px-deploy/gcp.json"); os.IsNotExist(err) {
-				die("~/.px-deploy/gcp.json not found. refer to readme.md how to create it")
-			} else {
-				config.Gcp_Auth_Json = "/px-deploy/.px-deploy/gcp.json"
+			if config.Cloud == "gcp" {
+				if config.Gcp_Project == "" {
+					die("Please set gcp_project in defaults.yml")
+				}
+
+				if _, err := os.Stat("/px-deploy/.px-deploy/gcp.json"); os.IsNotExist(err) {
+					die("~/.px-deploy/gcp.json not found. refer to readme.md how to create it")
+				} else {
+					config.Gcp_Auth_Json = "/px-deploy/.px-deploy/gcp.json"
+				}
 			}
 
 			if config.Platform == "eks" && !(config.Cloud == "aws") {
