@@ -1454,6 +1454,7 @@ func destroy_deployment(name string) {
 							"data",
 							"kvdb",
 							"journal",
+							"metadata",
 						},
 					},
 				},
