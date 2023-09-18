@@ -1,0 +1,6 @@
+description: Install kubevirt on a bare-metal cluster
+scripts: ["install-px","kubevirt"]
+aws_type: "c5n.metal"
+env:
+  KUBEVIRTVERSION: "v1.0.0-beta.0"
+
