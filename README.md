@@ -259,10 +259,11 @@ px-deploy create -n foo -t migration -e install_apps=true,foo=bar
 
 The `install-px` script looks for an environment variable called `cloud_drive`. If it exists, it will deploy Portworx using a clouddrive rather than looking for all attached devices. Note that this is a requirement for Openshift 4. For example:
 ```
-px-deploy create -n foo -t px -e cloud_drive=type%3Dgp2%2Csize%3D150
-px-deploy create -n bar -t px --platform ocp4 --cloud aws -e cloud_drive=type%3Dgp2%2Csize%3D150
-px-deploy create -n baz -t px --platform gke --cloud gcp -e cloud_drive="type%3Dpd-standard%2Csize%3D150"
-px-deploy create -n foo -t px --platform aks --cloud azure -e cloud_drive="type%3DStandard_LRS%2Csize%3D150"
+px-deploy create -n foo -t px --cloud aws -e cloud_drive=type%3Dgp2%2Csize%3D150
+px-deploy create -n foo -t px --cloud aws --platform eks -e cloud_drive=type%3Dgp2%2Csize%3D150
+px-deploy create -n bar -t px --cloud aws --platform ocp4 -e cloud_drive=type%3Dgp2%2Csize%3D150
+px-deploy create -n baz -t px --cloud gcp --platform gke -e cloud_drive="type%3Dpd-standard%2Csize%3D150"
+px-deploy create -n foo -t px --cloud azure --platform aks -e cloud_drive="type%3DStandard_LRS%2Csize%3D150"
 ```
 # Notes for AWS
 
