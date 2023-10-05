@@ -44,11 +44,7 @@ k8s_version=$(kubectl version --short | awk -Fv '/Server Version: / {print $3}')
 url="https://install.portworx.com/$px_version?kbver=$k8s_version&b=true&c=px-deploy-$cluster&stork=true&st=k8s&lh=true&mon=true&promop=true"
 [ -e /usr/bin/oc ] && url="$url&osft=true"
 if [ "$cloud_drive" ]; then
-  if [ "$cloud" = "aws" ]; then
-    key=$(grep ^aws_access_key_id /root/.aws/credentials | cut -f 2 -d = | tr -d ' ' | head -1 | sed 's/+/%2B/g')
-    secret=$(grep ^aws_secret_access_key /root/.aws/credentials | cut -f 2 -d = | tr -d ' ' | head -1 | sed 's/+/%2B/g')
-    url="$url&e=AWS_ACCESS_KEY_ID%3D$key%2CAWS_SECRET_ACCESS_KEY%3D$secret"
-  elif [ "$cloud" = "azure" ]; then
+  if [ "$cloud" = "azure" ]; then
     url="$url&e=AZURE_CLIENT_ID%3D$azure_client_id%2CAZURE_CLIENT_SECRET%3D$azure_client_secret%2CAZURE_TENANT_ID%3D$azure_tenant_id"
   fi
   url="$url&s=%22$cloud_drive%22&mz=0&kd=$cloud_drive"

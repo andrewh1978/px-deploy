@@ -173,21 +173,6 @@ resource "aws_iam_role_policy_attachment" "AmazonEC2ContainerRegistryReadOnly-EK
   role    = aws_iam_role.eks-iam-role.name
 }
 
-resource "aws_iam_role" "node-iam-role" {
-  name = format("%s-%s-eks-nodegroup",var.name_prefix,var.config_name)
-
-  assume_role_policy = jsonencode({
-    Statement = [{
-      Action = "sts:AssumeRole"
-      Effect = "Allow"
-      Principal = {
-        Service = "ec2.amazonaws.com"
-      }
-    }]
-    Version = "2012-10-17"
-  })
-}
-
 resource "aws_iam_role_policy_attachment" "AmazonEKSWorkerNodePolicy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
   role       = aws_iam_role.node-iam-role.name
@@ -202,42 +187,6 @@ resource "aws_iam_role_policy_attachment" "AmazonEC2ContainerRegistryReadOnly" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
   role       = aws_iam_role.node-iam-role.name
 }
-
-resource "aws_iam_policy" "px-policy" {
-  name = format("px-policy-%s-%s",var.name_prefix,var.config_name)
-  description = "portworx node policy"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-            Sid = "" 
-            Effect = "Allow"
-            Action = [
-                "ec2:AttachVolume",
-                "ec2:ModifyVolume",
-                "ec2:DetachVolume",
-                "ec2:CreateTags",
-                "ec2:CreateVolume",
-                "ec2:DeleteTags",
-                "ec2:DeleteVolume",
-                "ec2:DescribeTags",
-                "ec2:DescribeVolumeAttribute",
-                "ec2:DescribeVolumesModifications",
-                "ec2:DescribeVolumeStatus",
-                "ec2:DescribeVolumes",
-                "ec2:DescribeInstances",
-                "autoscaling:DescribeAutoScalingGroups"
-            ]
-            Resource = "*"
-        }]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "px-pol-attach" {
-  role       = aws_iam_role.node-iam-role.name
-  policy_arn = aws_iam_policy.px-policy.arn
-}
-
 
 resource "aws_eks_cluster" "eks" {
   for_each = var.eksclusters
