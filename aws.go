@@ -64,8 +64,6 @@ func aws_get_instances(config *Config, client *ec2.Client) ([]string, error) {
 
 func aws_get_clouddrives(aws_instances_split []([]string), config *Config, client *ec2.Client) ([]string, error) {
 	var aws_volumes []string
-	// split aws_instances into chunks of 197 elements
-	// because of the aws DescribeVolumes Filter limit of 200 (197 instances + pxtype: data/kvdb/journal)
 
 	fmt.Printf("Searching for portworx clouddrive volumes:\n")
 	for i := range aws_instances_split {
