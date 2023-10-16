@@ -16,6 +16,7 @@ EOF
   for i in $(seq 1 $clusters); do
     useradd training$i
     passwd --stdin training$i <<<portworx
+    chmod 755 /home/training$i
   done
 fi
 
