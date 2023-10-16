@@ -1,0 +1,490 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awscfg "github.com/aws/aws-sdk-go-v2/config"
+	awscredentials "github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/aws/aws-sdk-go-v2/service/eks"
+	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancing"
+)
+
+func aws_load_config(config *Config) aws.Config {
+	cfg, err := awscfg.LoadDefaultConfig(
+		context.TODO(),
+		//awscfg.WithRetryer(func() aws.Retryer { return retry.AddWithMaxAttempts(retry.NewStandard(), 15) }),
+		awscfg.WithRegion(config.Aws_Region),
+		awscfg.WithCredentialsProvider(awscredentials.NewStaticCredentialsProvider(config.Aws_Access_Key_Id, config.Aws_Secret_Access_Key, "")))
+	if err != nil {
+		panic(fmt.Sprintf("failed loading config, %v \n", err))
+	}
+	return cfg
+}
+
+func aws_connect_ec2(config *Config, awscfg *aws.Config) *ec2.Client {
+	cfg := aws_load_config(config)
+	client := ec2.NewFromConfig(cfg)
+	return client
+}
+
+func aws_get_instances(config *Config, client *ec2.Client) ([]string, error) {
+	var aws_instances []string
+
+	// get instances in current VPC
+	instances, err := client.DescribeInstances(context.TODO(), &ec2.DescribeInstancesInput{
+		Filters: []types.Filter{
+			{
+				Name: aws.String("network-interface.vpc-id"),
+				Values: []string{
+					config.Aws__Vpc,
+				},
+			},
+		},
+	})
+	if err != nil {
+		fmt.Println("Got an error retrieving information about your Amazon EC2 instances:")
+		return nil, err
+	}
+
+	for _, r := range instances.Reservations {
+		for _, i := range r.Instances {
+			//fmt.Println("   " + *i.InstanceId+"  "+ *i.PrivateIpAddress)
+			aws_instances = append(aws_instances, *i.InstanceId)
+		}
+	}
+	return aws_instances, nil
+}
+
+func aws_get_clouddrives(aws_instances_split []([]string), config *Config, client *ec2.Client) ([]string, error) {
+	var aws_volumes []string
+	// split aws_instances into chunks of 197 elements
+	// because of the aws DescribeVolumes Filter limit of 200 (197 instances + pxtype: data/kvdb/journal)
+
+	fmt.Printf("Searching for portworx clouddrive volumes:\n")
+	for i := range aws_instances_split {
+		//get list of attached volumes, filter for PX Clouddrive Volumes
+		volumes, err := client.DescribeVolumes(context.TODO(), &ec2.DescribeVolumesInput{
+			Filters: []types.Filter{
+				{
+					Name:   aws.String("attachment.instance-id"),
+					Values: aws_instances_split[i],
+				},
+				{
+					Name: aws.String("tag:pxtype"),
+					Values: []string{
+						"data",
+						"kvdb",
+						"journal",
+						"metadata",
+					},
+				},
+			},
+		})
+
+		if err != nil {
+			fmt.Println("Got an error retrieving information about volumes:")
+			return nil, err
+		}
+
+		for _, i := range volumes.Volumes {
+			fmt.Println("  " + *i.VolumeId)
+			aws_volumes = append(aws_volumes, *i.VolumeId)
+		}
+	}
+	return aws_volumes, nil
+}
+
+func aws_delete_nodegroups(config *Config) error {
+	cfg := aws_load_config(config)
+
+	eksclient := eks.NewFromConfig(cfg)
+	fmt.Println("Deleting EKS Nodegroups: (timeout 20min)")
+	clusters, _ := strconv.Atoi(config.Clusters)
+	for i := 1; i <= clusters; i++ {
+		nodegroups, err := eksclient.ListNodegroups(context.TODO(), &eks.ListNodegroupsInput{
+			ClusterName: aws.String(fmt.Sprintf("px-deploy-%s-%d", config.Name, i)),
+		})
+		if err != nil {
+			fmt.Println("Error retrieving information about EKS Node Groups:")
+			return err
+		}
+
+		wg.Add(len(nodegroups.Nodegroups))
+		for _, nodegroupname := range nodegroups.Nodegroups {
+			//fmt.Printf("Nodegroup %s \n",nodegroupname)
+			go terminate_and_wait_nodegroup(eksclient, nodegroupname, fmt.Sprintf("px-deploy-%s-%d", config.Name, i), 20)
+		}
+	}
+	wg.Wait()
+	return nil
+}
+
+// get node ip implementation leveraging API calls
+func aws_get_node_ip(deployment string, node string) string {
+	config := parse_yaml("/px-deploy/.px-deploy/deployments/" + deployment + ".yml")
+	var output []byte
+
+	// connect to aws API
+	cfg, err := awscfg.LoadDefaultConfig(
+		context.TODO(),
+		//awscfg.WithRetryer(func() aws.Retryer { return retry.AddWithMaxAttempts(retry.NewStandard(), 15) }),
+		awscfg.WithRegion(config.Aws_Region),
+		awscfg.WithCredentialsProvider(awscredentials.NewStaticCredentialsProvider(config.Aws_Access_Key_Id, config.Aws_Secret_Access_Key, "")))
+	if err != nil {
+		panic("aws configuration error, " + err.Error())
+	}
+
+	client := ec2.NewFromConfig(cfg)
+
+	// get running instances matching node name in current VPC
+	instances, err := client.DescribeInstances(context.TODO(), &ec2.DescribeInstancesInput{
+		Filters: []types.Filter{
+			{
+				Name: aws.String("network-interface.vpc-id"),
+				Values: []string{
+					config.Aws__Vpc,
+				},
+			},
+			{
+				Name: aws.String("instance-state-name"),
+				Values: []string{
+					"running",
+				},
+			},
+			{
+				Name: aws.String("tag:Name"),
+				Values: []string{
+					node,
+				},
+			},
+		},
+	})
+
+	if err != nil {
+		fmt.Println("Got an error retrieving information about your Amazon EC2 instances:")
+		panic("Error getting IP of instance:" + err.Error())
+	}
+
+	if len(instances.Reservations) == 1 {
+		if len(instances.Reservations[0].Instances) == 1 {
+			output = []byte(*instances.Reservations[0].Instances[0].PublicIpAddress)
+		} else {
+			// no [or multiple] instances found
+			output = []byte("")
+		}
+
+	} else {
+		// no [or multiple] instances found
+		output = []byte("")
+	}
+
+	return strings.TrimSuffix(string(output), "\n")
+}
+
+// range thru ELBs of VPC
+// collect list of SGs used by ELBs
+// find SGs referncing those ELB SGs in rules
+// delete those rules first
+// delete ELB SGs
+func delete_elb_instances(vpc string, cfg aws.Config) {
+	var elb_sg_list []string
+
+	elbclient := elasticloadbalancing.NewFromConfig(cfg)
+	ec2client := ec2.NewFromConfig(cfg)
+
+	elb, err := elbclient.DescribeLoadBalancers(context.TODO(), &elasticloadbalancing.DescribeLoadBalancersInput{})
+	if err != nil {
+		fmt.Println("Error retrieving information about ELBs:")
+		fmt.Println(err)
+		return
+	}
+
+	// range thru loadbalancers within VPC
+	// cumulate list of their security groups
+	// delete ELB instance
+	fmt.Printf("Deleting ELBs within VPC\n")
+	for _, i := range elb.LoadBalancerDescriptions {
+		if *i.VPCId == vpc {
+			fmt.Printf("  ELB: %s ", *i.LoadBalancerName)
+			for _, z := range i.SecurityGroups {
+				fmt.Printf(" (attached SG %s)", z)
+				elb_sg_list = append(elb_sg_list, z)
+			}
+			fmt.Printf("\n")
+			wg.Add(1)
+			go delete_and_wait_elb(elbclient, *i.LoadBalancerName)
+		}
+	}
+	wg.Wait()
+
+	//find other SGs referencing the ELB SGs
+	//delete the referencing rules
+	// find referencing SGs
+	fmt.Println(" Deleting SG rules referencing the ELB SGs")
+	sg, err := ec2client.DescribeSecurityGroups(context.TODO(), &ec2.DescribeSecurityGroupsInput{
+		Filters: []types.Filter{
+			{
+				Name: aws.String("vpc-id"),
+				Values: []string{
+					vpc,
+				},
+			},
+			{
+				Name:   aws.String("ip-permission.group-id"),
+				Values: elb_sg_list,
+			},
+		},
+	})
+
+	if err != nil {
+		fmt.Println("Error retrieving SG references:")
+		fmt.Println(err)
+		return
+	}
+
+	// range thru referencing SGs, get their rules
+	for _, ref_sg := range sg.SecurityGroups {
+		//fmt.Printf("    referenced by SG %s \n",*ref_sg.GroupId)
+		ref_sg_rules, err := ec2client.DescribeSecurityGroupRules(context.TODO(), &ec2.DescribeSecurityGroupRulesInput{
+			Filters: []types.Filter{
+				{
+					Name: aws.String("group-id"),
+					Values: []string{
+						*ref_sg.GroupId,
+					},
+				},
+			},
+		})
+
+		if err != nil {
+			fmt.Println("Error retrieving SG rule refs:")
+			fmt.Println(err)
+			return
+		}
+
+		for _, ref_rule := range ref_sg_rules.SecurityGroupRules {
+			if ref_rule.ReferencedGroupInfo != nil {
+				//fmt.Printf("      rule %s references %s \n", *ref_rule.SecurityGroupRuleId, aws.ToString(ref_rule.ReferencedGroupInfo.GroupId))
+				// if referenced rule is within elb_sg_list, delete it
+				for _, v := range elb_sg_list {
+					if aws.ToString(ref_rule.ReferencedGroupInfo.GroupId) == v {
+						wg.Add(1)
+						go delete_and_wait_sgrule(ec2client, *ref_rule.GroupId, *ref_rule.SecurityGroupRuleId, *ref_rule.IsEgress)
+					}
+				}
+			}
+		}
+	}
+	wg.Wait()
+
+	fmt.Println(" Deleting ELB SGs")
+	for _, v := range elb_sg_list {
+		fmt.Printf("   delete SG %s \n", v)
+		wg.Add(1)
+		go delete_and_wait_sg(ec2client, v)
+	}
+	wg.Wait()
+	// dont finally wait for SGs to be deleted as terraform VPC destruction will finally wait for it
+}
+
+// delete a elb instance and wait until DescribeLoadBalancer returns Error LoadBalancerNotFound
+// could be moved to waiter as soon as available in aws sdk
+func delete_and_wait_elb(client *elasticloadbalancing.Client, elbName string) {
+	defer wg.Done()
+	_, err := client.DeleteLoadBalancer(context.TODO(), &elasticloadbalancing.DeleteLoadBalancerInput{
+		LoadBalancerName: aws.String(elbName),
+	})
+	if err != nil {
+		fmt.Println("Error deleting ELB:")
+		fmt.Println(err)
+		return
+	}
+
+	deleted := false
+	for deleted != true {
+		_, err := client.DescribeLoadBalancers(context.TODO(), &elasticloadbalancing.DescribeLoadBalancersInput{
+			LoadBalancerNames: []string{elbName},
+		})
+
+		if err != nil {
+			if strings.Contains(fmt.Sprint(err), "LoadBalancerNotFound") {
+				deleted = true
+			} else {
+				fmt.Println("Error retrieving information about ELB deletion status:")
+				fmt.Println(err)
+				return
+			}
+		}
+		if !deleted {
+			fmt.Printf("   Wait 5 sec for deletion of ELB %s \n", elbName)
+			time.Sleep(5 * time.Second)
+		}
+	}
+}
+
+func delete_and_wait_sg(client *ec2.Client, sgName string) {
+	defer wg.Done()
+	deleted := false
+	for deleted != true {
+		_, err := client.DeleteSecurityGroup(context.TODO(), &ec2.DeleteSecurityGroupInput{
+			//DryRun: aws.Bool(true),
+			GroupId: aws.String(sgName),
+		})
+
+		if err != nil {
+			if strings.Contains(fmt.Sprint(err), "DependencyViolation") {
+				fmt.Printf("    wait 5 sec to resolve dependency violation during deletion of %s \n", sgName)
+				time.Sleep(5 * time.Second)
+			} else {
+				fmt.Println("Error deleting SG:")
+				fmt.Println(err)
+				return
+			}
+		} else {
+			deleted = true
+		}
+	}
+}
+
+func delete_and_wait_sgrule(client *ec2.Client, groupId string, ruleId string, isEgress bool) {
+	var err error
+	defer wg.Done()
+
+	if isEgress {
+		fmt.Printf("   delete %s egress rule %s \n", groupId, ruleId)
+		_, err = client.RevokeSecurityGroupEgress(context.TODO(), &ec2.RevokeSecurityGroupEgressInput{
+			//DryRun: aws.Bool(true),
+			GroupId:              aws.String(groupId),
+			SecurityGroupRuleIds: []string{ruleId},
+		})
+	} else {
+		fmt.Printf("   delete %s ingress rule %s \n", groupId, ruleId)
+		_, err = client.RevokeSecurityGroupIngress(context.TODO(), &ec2.RevokeSecurityGroupIngressInput{
+			//DryRun: aws.Bool(true),
+			GroupId:              aws.String(groupId),
+			SecurityGroupRuleIds: []string{ruleId},
+		})
+	}
+
+	if err != nil {
+		fmt.Println("Error deleting SG rule:")
+		fmt.Println(err)
+		return
+	}
+
+	// check if security rule is deleted in API
+	// to be replaced by a waiter as soon as implemented in AWS SDK
+	deleted := false
+	for deleted != true {
+		sg_rules, err := client.DescribeSecurityGroupRules(context.TODO(), &ec2.DescribeSecurityGroupRulesInput{
+			Filters: []types.Filter{
+				{
+					Name: aws.String("group-id"),
+					Values: []string{
+						groupId,
+					},
+				},
+				{
+					Name: aws.String("security-group-rule-id"),
+					Values: []string{
+						ruleId,
+					},
+				},
+			},
+		})
+
+		if err != nil {
+			fmt.Println("Error retrieving SG rule to check deletion status:")
+			fmt.Println(err)
+			return
+		}
+
+		if len(sg_rules.SecurityGroupRules) == 0 {
+			deleted = true
+		}
+
+		if !deleted {
+			fmt.Printf("   Wait 5 sec for deletion of SG rule %s (%s) \n", ruleId, groupId)
+			time.Sleep(5 * time.Second)
+		}
+	}
+}
+
+func terminate_ec2_instances(client *ec2.Client, instanceIDs []string) {
+	//fmt.Printf("  %s \n", instanceIDs)
+	_, err := client.TerminateInstances(context.TODO(), &ec2.TerminateInstancesInput{
+		InstanceIds: instanceIDs,
+	})
+
+	if err != nil {
+		fmt.Printf("error terminating ec2 instances %s \n", instanceIDs)
+		fmt.Println(err)
+		return
+	}
+}
+
+func wait_ec2_termination(client *ec2.Client, instanceID string, timeout_min time.Duration) {
+	defer wg.Done()
+	waiter := ec2.NewInstanceTerminatedWaiter(client)
+	params := &ec2.DescribeInstancesInput{
+		Filters: []types.Filter{
+			{
+				Name: aws.String("instance-id"),
+				Values: []string{
+					instanceID,
+				},
+			},
+			{
+				Name: aws.String("instance-state-name"),
+				Values: []string{
+					"terminated",
+				},
+			},
+		},
+	}
+
+	maxWaitTime := timeout_min * time.Minute
+	err := waiter.Wait(context.TODO(), params, maxWaitTime)
+	if err != nil {
+		fmt.Printf("waiter error: %s \n", instanceID)
+		fmt.Println(err)
+		return
+	}
+}
+
+func terminate_and_wait_nodegroup(eksclient *eks.Client, nodegroupName string, clusterName string, timeout_min time.Duration) {
+	defer wg.Done()
+
+	fmt.Printf("  %s \n", nodegroupName)
+	_, err := eksclient.DeleteNodegroup(context.TODO(), &eks.DeleteNodegroupInput{
+		ClusterName:   aws.String(clusterName),
+		NodegroupName: aws.String(nodegroupName),
+	})
+
+	if err != nil {
+		fmt.Println("error deleting EKS nodegroup:")
+		fmt.Println(err)
+		return
+	}
+
+	waiter := eks.NewNodegroupDeletedWaiter(eksclient)
+
+	params := &eks.DescribeNodegroupInput{
+		ClusterName:   aws.String(clusterName),
+		NodegroupName: aws.String(nodegroupName),
+	}
+
+	maxWaitTime := timeout_min * time.Minute
+	err = waiter.Wait(context.TODO(), params, maxWaitTime)
+	if err != nil {
+		fmt.Println("waiter error:", err)
+		return
+	}
+}
