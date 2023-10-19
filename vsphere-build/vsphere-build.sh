@@ -1,16 +1,47 @@
 #!/bin/bash
 
-url=$vsphere_user:$vsphere_password@$vsphere_host
+# install packer (tested 1.8.5) 
+# https://developer.hashicorp.com/packer/tutorials/docker-get-started/get-started-install-cli
 
-for i in $(govc find -k -u $url / -type m -runtime.powerState poweredOff -dc $vsphere_datacenter | grep -v " "); do
-  if [ "$(govc vm.info -k -u $url -json $i | jq -r '.VirtualMachines[0].Config.ExtraConfig[] | select(.Key==("pxd.deployment")).Value' 2>/dev/null)" = TEMPLATE ] ; then
-    echo Found template $i - please use this one, or delete it and retry.
-    exit 1
-  fi
-done
+# install ovftool & include in $PATH (tested 4.6.2)
+# https://developer.vmware.com/web/tool/4.6.0/ovf-tool
+# hint: if install does not start install ncurses-compat
+# or check this https://rguske.github.io/post/vmware-ovftool-installation-was-unsuccessful-on-ubuntu-20/
+# run with --extract -> copy vmware-ovftool to /usr/lib and ln -s /usr/lib/vmware-ovftool/ovftool /usr/bin/ovftool
+
+# install & configure awscli
+
+S3_BUCKET=px-deploy
+PXDTEMPLATEID=$(date '+%Y%m%d%H%M%S')
+
+#check if ovftool is within path
+if [ ! $(type -P ovftool) ]; then
+  echo "ovftool missing"
+  exit
+fi
+
+#check if packer is within path
+if [ ! $(type -P packer) ]; then
+  echo "packer missing"
+  exit
+fi
+
+# check if Bucket is accessible
+aws s3 ls s3://$S3_BUCKET
+if [ $? != 0 ]; then
+ echo "error accessing bucket $S3_BUCKET"
+ exit;
+fi
+
+mkdir -p tmp
+
+sed -e 's/:[^:\/\/]/=/g;s/ *=/=/g' ~/.px-deploy/defaults.yml | grep vsphere > ./tmp/env.sh
+source ./tmp/env.sh
+vsphere_template_base=$(basename $vsphere_template)
+vsphere_template_dir=$(dirname $vsphere_template)
 
 echo This will take a few minutes...
-cat <<EOF >/vsphere-rocky.json
+cat <<EOF >./tmp/vsphere-rocky.json
 {
   "variables": {
     "vsphere-server": "$vsphere_host",
@@ -22,7 +53,8 @@ cat <<EOF >/vsphere-rocky.json
     "vsphere-network": "$vsphere_network",
     "vsphere-datastore": "$vsphere_datastore",
     "vsphere-folder": "$vsphere_template_dir",
-    "vm-name": "$vsphere_template_base",
+    "vm-name": "pxdeploy-template-build",
+    "pxd-templateid": "$PXDTEMPLATEID",
     "vm-cpu-num": "4",
     "vm-mem-size": "8192",
     "vm-disk-size": "52000",
@@ -49,13 +81,18 @@ cat <<EOF >/vsphere-rocky.json
           "guestinfo.userdata": "---",
           "guestinfo.userdata.encoding": "---",
           "pxd.deployment": "TEMPLATE",
-          "pxd.hostname": "---"
+          "pxd.hostname": "---",
+          "pxd.templateid": "{{user \`pxd-templateid\`}}"
       },
-      "convert_to_template": true,
+      "export": {
+       "force": "true",
+       "options": ["extraconfig"]
+      },
       "datastore": "{{user \`vsphere-datastore\`}}",
       "disk_controller_type": "pvscsi",
       "folder": "{{user \`vsphere-folder\`}}",
       "guest_os_type": "rhel8_64Guest",
+      "vm_version": "14",
       "insecure_connection": "true",
       "iso_checksum": "sha256:13c3e7fca1fd32df61695584baafc14fa28d62816d0813116d23744f5394624b",
       "iso_url": "{{user \`iso_url\`}}",
@@ -67,8 +104,9 @@ cat <<EOF >/vsphere-rocky.json
           "network_card": "vmxnet3"
         }
       ],
-      "notes": "Build via Packer",
+      "notes": "https://github.com/andrewh1978/px-deploy \n Template ID {{user \`pxd-templateid\`}}",
       "password": "{{user \`vsphere-password\`}}",
+      "destroy": "true",
       "resource_pool": "{{user \`vsphere-resource-pool\`}}",
       "ssh_username": "root",
       "ssh_password": "portworx",
@@ -99,7 +137,7 @@ cat <<EOF >/vsphere-rocky.json
 }
 EOF
 
-cat <<\EOF >/vsphere-ks.cfg
+cat <<EOF >./tmp/vsphere-ks.cfg
 repo --name=BaseOS --baseurl=https://dl.rockylinux.org/vault/rocky/8.7/BaseOS/x86_64/os/
 repo --name=AppStream --baseurl=https://dl.rockylinux.org/vault/rocky/8.7/AppStream/x86_64/os/
 text
@@ -109,7 +147,7 @@ keyboard --vckeymap=us --xlayouts='us'
 lang en_US.UTF-8
 network  --bootproto=dhcp --device=link --onboot=true --noipv6
 network  --hostname=localhost.localdomain
-rootpw --iscrypted $6$oHCngZUb/uEBImIf$Og9pS/av0PCXBOd2saohkK0P8yFl72QG4ei3467bIaGFFfNxyoTW8KZevE6AhkXrDMgvbeOSchAS5c.NNaWLJ0
+rootpw portworx
 services --disabled="chronyd,avahi-daemon.service,bluetooth.service,rhnsd.service,rhsmcertd.service"
 timezone UTC --isUtc --nontp
 clearpart --all --initlabel
@@ -140,10 +178,42 @@ systemctl enable vmtoolsd
 systemctl start vmtoolsd
 dnf -y install kernel-headers nfs-utils jq bash-completion nfs-utils chrony docker vim-enhanced git
 dnf update -y glib2
+dnf clean all
 %end
 
 reboot --eject
 EOF
 
-cd /
-/usr/bin/packer build /vsphere-rocky.json
+cd tmp
+echo $PXDTEMPLATEID > pxdid.txt
+
+echo "1. running packer"
+packer build -force ./vsphere-rocky.json
+if [ $? != 0 ]; then
+  echo "Packer build failed"
+  exit
+fi
+
+echo "2. running ovftool"
+ovftool --allowExtraConfig output-vsphere-iso/pxdeploy-template-build.ovf template.ova
+if [ $? != 0 ]; then
+  echo "ovftool build failed"
+  exit
+fi
+
+echo "3. copy ova to s3"
+aws s3 cp template.ova s3://$S3_BUCKET/templates/template.ova
+if [ $? != 0 ]; then
+  echo "s3 template upload failed"
+  exit
+fi
+
+echo "4. copy pxdid.txt to s3"
+aws s3 cp pxdid.txt s3://$S3_BUCKET/templates/pxdid.txt
+if [ $? != 0 ]; then
+  echo "s3 pxdid.txt upload failed"
+  exit
+fi
+
+cd ..
+rm -rf tmp

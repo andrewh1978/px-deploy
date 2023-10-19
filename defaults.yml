@@ -43,13 +43,14 @@ vsphere_resource_pool: ""
 vsphere_datacenter: ""
 vsphere_user: ""
 vsphere_password: ""
-vsphere_template: ""
+vsphere_template: "pxdeploy-template"
 vsphere_datastore: ""
-vsphere_folder: ""
 vsphere_disks: "64"
 vsphere_network: ""
 vsphere_memory: 8
 vsphere_cpu: 2
+vsphere_repo: "https://px-deploy.s3.eu-west-1.amazonaws.com/templates/"
+#vsphere_folder: ""
 
 ocp4_domain: ""
 ocp4_version: 4.12.12

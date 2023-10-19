@@ -85,6 +85,11 @@ type Config struct {
 	Vsphere_Network          string
 	Vsphere_Memory           string
 	Vsphere_Cpu              string
+	Vsphere_Repo             string
+	Vsphere_Dns              string
+	Vsphere_Gw               string
+	Vsphere_Node_Ip          string
+	Vsphere_Nodemap          map[string]string
 	Scripts                  []string
 	Description              string
 	Env                      map[string]string
@@ -475,8 +480,8 @@ func main() {
 					die("canceled deployment")
 				}
 			case "vsphere":
-				checkvar := []string{"vsphere_compute_resource", "vsphere_datacenter", "vsphere_datastore", "vsphere_folder", "vsphere_host", "vsphere_network", "vsphere_resource_pool", "vsphere_template", "vsphere_user", "vsphere_password"}
-				emptyVars := isEmpty(config.Vsphere_Compute_Resource, config.Vsphere_Datacenter, config.Vsphere_Datastore, config.Vsphere_Folder, config.Vsphere_Host, config.Vsphere_Network, config.Vsphere_Resource_Pool, config.Vsphere_Template, config.Vsphere_User, config.Vsphere_Password)
+				checkvar := []string{"vsphere_compute_resource", "vsphere_datacenter", "vsphere_datastore", "vsphere_host", "vsphere_network", "vsphere_resource_pool", "vsphere_template", "vsphere_user", "vsphere_password", "vsphere_repo"}
+				emptyVars := isEmpty(config.Vsphere_Compute_Resource, config.Vsphere_Datacenter, config.Vsphere_Datastore, config.Vsphere_Host, config.Vsphere_Network, config.Vsphere_Resource_Pool, config.Vsphere_Template, config.Vsphere_User, config.Vsphere_Password, config.Vsphere_Repo)
 				if len(emptyVars) > 0 {
 					for _, i := range emptyVars {
 						fmt.Printf("%splease set \"%s\" in defaults.yml %s\n", Red, checkvar[i], Reset)
@@ -534,40 +539,6 @@ func main() {
 			os.Chdir("/px-deploy/vagrant")
 			os.Setenv("deployment", config.Name)
 
-			// when using aws everything should be up and running. other clouds now run vagrant
-			if config.Cloud == "vsphere" {
-
-				var provider string
-				switch config.Cloud {
-				//case "gcp":
-				//	provider = "google"
-				case "vsphere":
-					provider = "vsphere"
-				}
-				fmt.Println(White + "Provisioning VMs..." + Reset)
-				vcmd := exec.Command("sh", "-c", "vagrant up --provider "+provider+" 2>&1")
-				stdout, err := vcmd.StdoutPipe()
-				if err != nil {
-					die(err.Error())
-				}
-				if err := vcmd.Start(); err != nil {
-					die(err.Error())
-				}
-				reader := bufio.NewReader(stdout)
-				for {
-					data := make([]byte, 4<<20)
-					_, err := reader.Read(data)
-					if config.Quiet != "true" {
-						fmt.Print(string(data))
-					}
-					if err == io.EOF {
-						break
-					}
-				}
-				if err := vcmd.Wait(); err != nil {
-					die(err.Error())
-				}
-			}
 			if config.Auto_Destroy == "true" {
 				destroy_deployment(config.Name)
 			}
@@ -706,70 +677,71 @@ func main() {
 			Clusters, _ := strconv.Atoi(config.Clusters)
 			Nodes, _ := strconv.Atoi(config.Nodes)
 
-			if (config.Cloud == "aws") || (config.Cloud == "azure") || (config.Cloud == "gcp") {
-				if (config.Platform == "ocp4") || (config.Platform == "eks") || (config.Platform == "aks") || (config.Platform == "gke") {
-					Nodes = 0
-				}
-				// loop clusters and add master name/ip to tf var
-				for c := 1; c <= Clusters; c++ {
-
-					switch config.Cloud {
-					case "aws":
-						ip = aws_get_node_ip(statusName, fmt.Sprintf("master-%v-1", c))
-					case "azure":
-						ip = azure_get_node_ip(statusName, fmt.Sprintf("master-%v-1", c))
-					case "gcp":
-						ip = gcp_get_node_ip(statusName, fmt.Sprintf("%v-master-%v-1", config.Name, c))
-					}
-					// get content of node tracking file (-> each node will add its entry when finished cloud-init/vagrant scripts)
-					cmd := exec.Command("ssh", "-q", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, "cat /var/log/px-deploy/completed/tracking")
-					out, err := cmd.CombinedOutput()
-					if err != nil {
-						die(err.Error())
-					} else {
-						scanner := bufio.NewScanner(strings.NewReader(string(out)))
-						ready_nodes := make(map[string]string)
-						for scanner.Scan() {
-							entry := strings.Fields(scanner.Text())
-							ready_nodes[entry[0]] = entry[1]
-						}
-						if ready_nodes[fmt.Sprintf("master-%v", c)] != "" {
-							fmt.Printf("Ready\tmaster-%v \t  %v\n", c, ip)
-						} else {
-							fmt.Printf("NotReady\tmaster-%v \t (%v)\n", c, ip)
-						}
-						if config.Platform == "ocp4" {
-							if ready_nodes["url"] != "" {
-								fmt.Printf("  URL: %v \n", ready_nodes["url"])
-							} else {
-								fmt.Printf("  OCP4 URL not yet available\n")
-							}
-							if ready_nodes["cred"] != "" {
-								fmt.Printf("  Credentials: kubeadmin / %v \n", ready_nodes["cred"])
-							} else {
-								fmt.Printf("  OCP4 credentials not yet available\n")
-							}
-						}
-						for n := 1; n <= Nodes; n++ {
-							if ready_nodes[fmt.Sprintf("node-%v-%v", c, n)] != "" {
-								fmt.Printf("Ready\t node-%v-%v\n", c, n)
-							} else {
-								fmt.Printf("NotReady\t node-%v-%v\n", c, n)
-							}
-						}
-					}
-				}
-			} else {
-				ip := get_ip(statusName)
-				c := `
-        masters=$(grep master /etc/hosts | cut -f 2 -d " ")
-        for m in $masters; do
-          ip=$(sudo ssh -oStrictHostKeyChecking=no $m "curl http://ipinfo.io/ip" 2>/dev/null)
-          hostname=$(sudo ssh -oStrictHostKeyChecking=no $m "curl http://ipinfo.io/hostname" 2>/dev/null)
-          echo $m $ip $hostname
-        done`
-				syscall.Exec("/usr/bin/ssh", []string{"ssh", "-q", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa." + config.Cloud + "." + config.Name, "root@" + ip, c}, []string{})
+			if (config.Platform == "ocp4") || (config.Platform == "eks") || (config.Platform == "aks") || (config.Platform == "gke") {
+				Nodes = 0
 			}
+			// loop clusters and add master name/ip to tf var
+			for c := 1; c <= Clusters; c++ {
+
+				switch config.Cloud {
+				case "aws":
+					ip = aws_get_node_ip(statusName, fmt.Sprintf("master-%v-1", c))
+				case "azure":
+					ip = azure_get_node_ip(statusName, fmt.Sprintf("master-%v-1", c))
+				case "gcp":
+					ip = gcp_get_node_ip(statusName, fmt.Sprintf("%v-master-%v-1", config.Name, c))
+				case "vsphere":
+					ip = vsphere_get_node_ip(&config, fmt.Sprintf("%v-master-%v", config.Name, c))
+				}
+				// get content of node tracking file (-> each node will add its entry when finished cloud-init/vagrant scripts)
+				cmd := exec.Command("ssh", "-q", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, "cat /var/log/px-deploy/completed/tracking")
+				out, err := cmd.CombinedOutput()
+				if err != nil {
+					die(err.Error())
+				} else {
+					scanner := bufio.NewScanner(strings.NewReader(string(out)))
+					ready_nodes := make(map[string]string)
+					for scanner.Scan() {
+						entry := strings.Fields(scanner.Text())
+						ready_nodes[entry[0]] = entry[1]
+					}
+					if ready_nodes[fmt.Sprintf("master-%v", c)] != "" {
+						fmt.Printf("Ready\tmaster-%v \t  %v\n", c, ip)
+					} else {
+						fmt.Printf("NotReady\tmaster-%v \t (%v)\n", c, ip)
+					}
+					if config.Platform == "ocp4" {
+						if ready_nodes["url"] != "" {
+							fmt.Printf("  URL: %v \n", ready_nodes["url"])
+						} else {
+							fmt.Printf("  OCP4 URL not yet available\n")
+						}
+						if ready_nodes["cred"] != "" {
+							fmt.Printf("  Credentials: kubeadmin / %v \n", ready_nodes["cred"])
+						} else {
+							fmt.Printf("  OCP4 credentials not yet available\n")
+						}
+					}
+					for n := 1; n <= Nodes; n++ {
+						if ready_nodes[fmt.Sprintf("node-%v-%v", c, n)] != "" {
+							fmt.Printf("Ready\t node-%v-%v\n", c, n)
+						} else {
+							fmt.Printf("NotReady\t node-%v-%v\n", c, n)
+						}
+					}
+				}
+			}
+			//			} else {
+			//				ip := get_ip(statusName)
+			//				c := `
+			//        masters=$(grep master /etc/hosts | cut -f 2 -d " ")
+			//        for m in $masters; do
+			//          ip=$(sudo ssh -oStrictHostKeyChecking=no $m "curl http://ipinfo.io/ip" 2>/dev/null)
+			//          hostname=$(sudo ssh -oStrictHostKeyChecking=no $m "curl http://ipinfo.io/hostname" 2>/dev/null)
+			//          echo $m $ip $hostname
+			//        done`
+			//				syscall.Exec("/usr/bin/ssh", []string{"ssh", "-q", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa." + config.Cloud + "." + config.Name, "root@" + ip, c}, []string{})
+			//			}
 		},
 	}
 
@@ -790,6 +762,15 @@ func main() {
 		Long:  "Creates vSphere template",
 		Run: func(cmd *cobra.Command, args []string) {
 			vsphere_init()
+		},
+	}
+
+	cmdVsphereCheckTemplateVersion := &cobra.Command{
+		Use:   "vsphere-check-template",
+		Short: "Checks version of vSphere template",
+		Long:  "Checks version of vSphere template",
+		Run: func(cmd *cobra.Command, args []string) {
+			vsphere_check_templateversion(statusName)
 		},
 	}
 
@@ -856,9 +837,12 @@ func main() {
 	cmdStatus.Flags().StringVarP(&statusName, "name", "n", "", "name of deployment")
 	cmdStatus.MarkFlagRequired("name")
 
+	cmdVsphereCheckTemplateVersion.Flags().StringVarP(&statusName, "name", "n", "", "name of deployment")
+	cmdVsphereCheckTemplateVersion.MarkFlagRequired("name")
+
 	cmdHistory.Flags().StringVarP(&historyNumber, "number", "n", "", "deployment ID")
 
-	rootCmd.AddCommand(cmdCreate, cmdDestroy, cmdConnect, cmdKubeconfig, cmdList, cmdTemplates, cmdStatus, cmdCompletion, cmdVsphereInit, cmdVersion, cmdHistory)
+	rootCmd.AddCommand(cmdCreate, cmdDestroy, cmdConnect, cmdKubeconfig, cmdList, cmdTemplates, cmdStatus, cmdCompletion, cmdVsphereInit, cmdVsphereCheckTemplateVersion, cmdVersion, cmdHistory)
 	rootCmd.Execute()
 }
 
@@ -1338,11 +1322,80 @@ func create_deployment(config Config) int {
 		}
 	case "vsphere":
 		{
-			output, _ = exec.Command("bash", "-c", `
-        yes | ssh-keygen -q -t rsa -b 2048 -f keys/id_rsa.vsphere.`+config.Name+` -N ''
-	_Vsphere_userdata=$(echo -e '#cloud-config\nusers:\n  - default\n  - name: rocky\n    primary_group: rocky\n    sudo: ALL=(ALL) NOPASSWD:ALL\n    groups: sudo, wheel\n    ssh_import_id: None\n    lock_passwd: true\n    ssh_authorized_keys:\n    - '$(cat keys/id_rsa.vsphere.`+config.Name+`.pub) | base64 -w0)
-	echo vsphere__userdata: $_Vsphere_userdata >>deployments/`+config.Name+`.yml
-      `).CombinedOutput()
+			// create directory for deployment and copy terraform scripts
+			err = os.Mkdir("/px-deploy/.px-deploy/tf-deployments/"+config.Name, 0755)
+			if err != nil {
+				die(err.Error())
+			}
+			//maybe there is a better way to copy templates to working dir ?
+			exec.Command("cp", "-a", `/px-deploy/terraform/vsphere/main.tf`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
+			exec.Command("cp", "-a", `/px-deploy/terraform/vsphere/variables.tf`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
+			exec.Command("cp", "-a", `/px-deploy/terraform/vsphere/cloud-init.tpl`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
+			exec.Command("cp", "-a", `/px-deploy/terraform/vsphere/metadata.tpl`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
+
+			// also copy terraform modules
+			//exec.Command("cp", "-a", `/px-deploy/terraform/gcp/.terraform`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
+			// creating symlink for .terraform as performance on mac significantly improves when not on bind mount issue #397
+			exec.Command("ln", "-s", `/px-deploy/terraform/vsphere/.terraform`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name+`/.terraform`).Run()
+			exec.Command("cp", "-a", `/px-deploy/terraform/vsphere/.terraform.lock.hcl`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
+
+			write_nodescripts(config)
+
+			write_tf_file(config.Name, ".tfvars", vsphere_create_variables(&config))
+			// now run terraform plan & terraform apply
+			fmt.Println(White + "running terraform PLAN" + Reset)
+			cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-input=false", "-parallelism=50", "-out=tfplan", "-var-file", ".tfvars")
+			cmd.Stderr = os.Stderr
+			err = cmd.Run()
+			if err != nil {
+				fmt.Println(Yellow + "ERROR: terraform plan failed. Check validity of terraform scripts" + Reset)
+				die(err.Error())
+			} else {
+				if config.Dry_Run == "true" {
+					fmt.Printf("Dry run only. No deployment on target cloud. Run 'px-deploy destroy -n %s' to remove local files\n", config.Name)
+					die("Exit")
+				}
+				fmt.Println(White + "running terraform APPLY" + Reset)
+				cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "apply", "-input=false", "-parallelism=50", "-auto-approve", "tfplan")
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+				errapply = cmd.Run()
+				if errapply != nil {
+					fmt.Println(Yellow + "ERROR: terraform apply failed. Check validity of terraform scripts" + Reset)
+					die(errapply.Error())
+				}
+
+				// apply the terraform nodemap.txt to deployment yml file (list of VM name / VM mobId / mac address)
+				readFile, err := os.Open("/px-deploy/.px-deploy/tf-deployments/" + config.Name + "/nodemap.txt")
+				if err != nil {
+					die(err.Error())
+				}
+				fileScanner := bufio.NewScanner(readFile)
+				fileScanner.Split(bufio.ScanLines)
+				var fileLines []string
+				fileLines = append(fileLines, "vsphere_nodemap:\n")
+
+				for fileScanner.Scan() {
+					fileLines = append(fileLines, fmt.Sprintf("  %s\n", strings.TrimSpace(fileScanner.Text())))
+				}
+				readFile.Close()
+
+				file, err := os.OpenFile("/px-deploy/.px-deploy/deployments/"+config.Name+".yml", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+				if err != nil {
+					die(err.Error())
+				}
+				defer file.Close()
+
+				for _, line := range fileLines {
+					_, err = file.WriteString(line)
+					if err != nil {
+						die(err.Error())
+					}
+				}
+				fmt.Println(Yellow + "Terraform infrastructure creation done. Please check master/node readiness/credentials using: px-deploy status -n " + config.Name + Reset)
+				vsphere_check_templateversion(config.Name)
+			}
+
 		}
 	default:
 		die("Invalid cloud '" + config.Cloud + "'")
@@ -1420,7 +1473,7 @@ func destroy_deployment(name string) {
 				fmt.Println("Running pre-delete scripts on all master nodes. Output is mixed")
 				for i := 1; i <= clusters; i++ {
 					wg.Add(1)
-					go run_predelete(config.Cloud, config.Name, fmt.Sprintf("master-%v-1", i), "script")
+					go run_predelete(&config, fmt.Sprintf("master-%v-1", i), "script")
 				}
 				wg.Wait()
 				fmt.Println("pre-delete scripts done")
@@ -1428,7 +1481,7 @@ func destroy_deployment(name string) {
 				fmt.Println(White + "Destroying OCP4 cluster(s), wait about 5 minutes (per cluster)... Output is mixed" + Reset)
 				for i := 1; i <= clusters; i++ {
 					wg.Add(1)
-					go run_predelete(config.Cloud, config.Name, fmt.Sprintf("master-%v-1", i), "platform")
+					go run_predelete(&config, fmt.Sprintf("master-%v-1", i), "platform")
 				}
 				wg.Wait()
 				fmt.Println("OCP4 cluster delete done")
@@ -1440,7 +1493,7 @@ func destroy_deployment(name string) {
 				fmt.Println("Running pre-delete scripts on all master nodes. Output will be mixed")
 				for i := 1; i <= clusters; i++ {
 					wg.Add(1)
-					go run_predelete(config.Cloud, config.Name, fmt.Sprintf("master-%v-1", i), "script")
+					go run_predelete(&config, fmt.Sprintf("master-%v-1", i), "script")
 				}
 				wg.Wait()
 				fmt.Println("pre-delete scripts done")
@@ -1460,7 +1513,7 @@ func destroy_deployment(name string) {
 				fmt.Println("Running pre-delete scripts on all master nodes. Output will be mixed")
 				for i := 1; i <= clusters; i++ {
 					wg.Add(1)
-					go run_predelete(config.Cloud, config.Name, fmt.Sprintf("master-%v-1", i), "script")
+					go run_predelete(&config, fmt.Sprintf("master-%v-1", i), "script")
 				}
 				wg.Wait()
 				fmt.Println("pre-delete scripts done")
@@ -1538,7 +1591,7 @@ func destroy_deployment(name string) {
 		fmt.Println("Running pre-delete scripts on all master nodes. Output will be mixed")
 		for i := 1; i <= clusters; i++ {
 			wg.Add(1)
-			go run_predelete(config.Cloud, config.Name, fmt.Sprintf("%v-master-%v-1", config.Name, i), "script")
+			go run_predelete(&config, fmt.Sprintf("%v-master-%v-1", config.Name, i), "script")
 		}
 		wg.Wait()
 		fmt.Println("pre-delete scripts done")
@@ -1657,18 +1710,40 @@ func destroy_deployment(name string) {
 		}
 		os.RemoveAll("deployments/" + name)
 	} else if config.Cloud == "vsphere" {
-		var url = config.Vsphere_User + `:` + config.Vsphere_Password + `@` + config.Vsphere_Host
-		output, err = exec.Command("bash", "-c", `
-      for i in $(govc find -u '`+url+`' -k / -type m | egrep "vagrant_`+config.Name+`-(master|node)"); do
-        if [ $(govc vm.info -u '`+url+`' -k -json $i | jq -r '.VirtualMachines[0].Config.ExtraConfig[] | select(.Key==("pxd.deployment")).Value') = `+config.Name+` ] ; then
-          disks="$disks $(govc vm.info -json -k -u '`+url+`' -k -json $i | jq -r ".VirtualMachines[].Layout.Disk[].DiskFile[0]" | grep -v vagrant | cut -f 2 -d ' ')"
-          govc vm.destroy -u '`+url+`' -k $i
-        fi
-      done
-      for i in $disks; do
-        govc datastore.rm -k -u '`+url+`' -ds `+config.Vsphere_Datastore+` "[`+config.Vsphere_Datastore+`] $i"
-      done
-    `).CombinedOutput()
+
+		clusters, _ := strconv.Atoi(config.Clusters)
+		fmt.Println("Running pre-delete scripts on all master nodes. Output will be mixed")
+		for i := 1; i <= clusters; i++ {
+			wg.Add(1)
+			go run_predelete(&config, fmt.Sprintf("%s-master-%v", config.Name, i), "script")
+		}
+		wg.Wait()
+		fmt.Println("pre-delete scripts done")
+
+		vsphere_prepare_destroy(&config)
+
+		fmt.Println(White + "running Terraform PLAN" + Reset)
+		cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-destroy", "-input=false", "-out=tfplan", "-var-file", ".tfvars")
+		cmd.Stderr = os.Stderr
+		err = cmd.Run()
+		if err != nil {
+			fmt.Println(Yellow + "ERROR: Terraform plan failed. Check validity of terraform scripts" + Reset)
+			die(err.Error())
+		} else {
+			fmt.Println(White + "running Terraform DESTROY" + Reset)
+			cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "apply", "-input=false", "-auto-approve", "tfplan")
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			errdestroy = cmd.Run()
+
+			if errdestroy != nil {
+				fmt.Println(Yellow + "ERROR: Terraform destroy failed. Check validity of terraform scripts" + Reset)
+				die(errdestroy.Error())
+			} else {
+				os.RemoveAll("tf-deployments/" + config.Name)
+			}
+		}
+		os.RemoveAll("deployments/" + name)
 	} else {
 		die("Bad cloud")
 	}
@@ -1744,35 +1819,38 @@ func get_ip(deployment string) string {
 	} else if config.Cloud == "azure" {
 		output = []byte(azure_get_node_ip(deployment, "master-1-1"))
 	} else if config.Cloud == "vsphere" {
-		var url = config.Vsphere_User + `:` + config.Vsphere_Password + `@` + config.Vsphere_Host
-		output, _ = exec.Command("bash", "-c", `govc vm.info -u '`+url+`' -k -json $(govc find -u '`+url+`' -k / -type m -runtime.powerState poweredOn | grep `+deployment+`-master) | jq -r '.VirtualMachines[0].Guest.IpAddress' 2>/dev/null`).Output()
+		output = []byte(vsphere_get_node_ip(&config, config.Name+"-master-1"))
 	}
 	return strings.TrimSuffix(string(output), "\n")
 }
 
-func run_predelete(confCloud string, confName string, confNode string, confPath string) {
+func run_predelete(config *Config, confNode string, confPath string) {
 	var ip string
 
 	defer wg.Done()
 
-	switch confCloud {
+	switch config.Cloud {
 	case "aws":
 		{
-			ip = aws_get_node_ip(confName, confNode)
+			ip = aws_get_node_ip(config.Name, confNode)
 		}
 	case "gcp":
 		{
-			ip = gcp_get_node_ip(confName, confNode)
+			ip = gcp_get_node_ip(config.Name, confNode)
+		}
+	case "vsphere":
+		{
+			ip = vsphere_get_node_ip(config, confNode)
 		}
 	default:
 		{
-			panic(fmt.Sprintf("pre_delete not implemented for cloud %v", confCloud))
+			panic(fmt.Sprintf("pre_delete not implemented for cloud %v", config.Cloud))
 		}
 
 	}
 	fmt.Printf("Running pre-delete scripts on %v (%v)\n", confNode, ip)
 
-	cmd := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-q", "-i", "keys/id_rsa."+confCloud+"."+confName, "root@"+ip, `
+	cmd := exec.Command("/usr/bin/ssh", "-oStrictHostKeyChecking=no", "-q", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, `
 		for i in /px-deploy/`+confPath+`-delete/*.sh; do bash $i ;done; exit 0
 	`)
 	cmd.Stdout = os.Stdout
@@ -1942,42 +2020,6 @@ func write_nodescripts(config Config) {
 			}
 		}
 	}
-}
-
-func vsphere_init() {
-	config := parse_yaml("defaults.yml")
-	if config.Vsphere_Host == "" {
-		die("Must define Vsphere_Host")
-	} else if config.Vsphere_Compute_Resource == "" {
-		die("Must define Vsphere_Compute_Resource")
-	} else if config.Vsphere_Resource_Pool == "" {
-		die("Must define Vsphere_Resource_Pool")
-	} else if config.Vsphere_Datacenter == "" {
-		die("Must define Vsphere_Datacenter")
-	} else if config.Vsphere_User == "" {
-		die("Must define Vsphere_User")
-	} else if config.Vsphere_Password == "" {
-		die("Must define Vsphere_Password")
-	} else if config.Vsphere_Template == "" {
-		die("Must define Vsphere_Template")
-	} else if config.Vsphere_Datastore == "" {
-		die("Must define Vsphere_Datastore")
-	} else if config.Vsphere_Network == "" {
-		die("Must define Vsphere_Network")
-	}
-	vsphere_template_dir := path.Dir(config.Vsphere_Template)
-	vsphere_template_base := path.Base(config.Vsphere_Template)
-	os.Setenv("vsphere_host", config.Vsphere_Host)
-	os.Setenv("vsphere_compute_resource", config.Vsphere_Compute_Resource)
-	os.Setenv("vsphere_resource_pool", config.Vsphere_Resource_Pool)
-	os.Setenv("vsphere_user", config.Vsphere_User)
-	os.Setenv("vsphere_password", config.Vsphere_Password)
-	os.Setenv("vsphere_template_dir", vsphere_template_dir)
-	os.Setenv("vsphere_template_base", vsphere_template_base)
-	os.Setenv("vsphere_datastore", config.Vsphere_Datastore)
-	os.Setenv("vsphere_datacenter", config.Vsphere_Datacenter)
-	os.Setenv("vsphere_network", config.Vsphere_Network)
-	syscall.Exec("/vsphere-init.sh", []string{}, os.Environ())
 }
 
 func version() {

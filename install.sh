@@ -48,6 +48,20 @@ if [ "$found_legacy" = true ]; then
         exit
 fi
 
+#find deployments being created by old vsphere code (no tf-deployments folder exists)
+found_legacy=false
+for i in $(grep -l 'cloud: vsphere' $HOME/.px-deploy/deployments/*.yml 2>/dev/null); do
+    if [ ! -d $HOME/.px-deploy/tf-deployments/$(basename $i .yml) ]; then
+        echo -e "${RED} vsphere Deployment $(basename $i .yml) is being created by px-deploy version < 5.3. Please remove prior to upgrading to version 5.3"
+        found_legacy=true
+    fi
+done
+if [ "$found_legacy" = true ]; then
+        echo -e "${RED}Old vsphere deployment(s) found. Please destroy before updating"
+        exit
+fi
+
+
 rm -rf /tmp/px-deploy.build
 mkdir /tmp/px-deploy.build
 cd /tmp/px-deploy.build
