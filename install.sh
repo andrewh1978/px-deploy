@@ -67,7 +67,7 @@ docker tag ghcr.io/andrewh1978/px-deploy:$ver px-deploy
 #  echo -e ${RED}Image build failed${NC}
 #  exit
 #fi
-mkdir -p $HOME/.px-deploy/{keys,deployments,kubeconfig,tf-deployments}
+mkdir -p $HOME/.px-deploy/{keys,deployments,kubeconfig,tf-deployments,docs}
 
 #remove remainders of terraform (outside container)
 #*** can be removed after sept 2023***
@@ -75,7 +75,7 @@ rm -rf $HOME/.px-deploy/terraform*
 
 # backup existing directories and force copy from current branch
 time=$(date +%s)
-for i in scripts templates assets; do
+for i in scripts templates assets docs; do
   [ -e $HOME/.px-deploy/$i ] && echo Backing up $HOME/.px-deploy/$i to $HOME/.px-deploy/$i.$time && cp -r $HOME/.px-deploy/$i $HOME/.px-deploy/$i.$time
   cp -rf $i $HOME/.px-deploy
 done
