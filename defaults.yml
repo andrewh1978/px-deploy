@@ -35,7 +35,7 @@ azure_client_secret: ""
 azure_client_id: ""
 azure_tenant_id: ""
 azure_subscription_id: ""
-aks_version: "1.25.5"
+aks_version: "1.25.6"
 
 vsphere_host: ""
 vsphere_compute_resource: ""

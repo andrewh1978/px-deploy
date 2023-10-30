@@ -21,7 +21,7 @@ RUN vagrant box add FEBO/oracle8 --provider vsphere
 RUN curl -Ls https://github.com/vmware/govmomi/releases/download/v0.23.0/govc_linux_amd64.gz | zcat >/usr/bin/govc
 RUN mkdir -p /root/go/src/px-deploy
 RUN curl -s https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo >/etc/yum.repos.d/terraform-repo.repo
-RUN dnf install -y terraform-1.3.9
+RUN dnf install -y terraform-1.6.1
 COPY go.mod go.sum *.go /root/go/src/px-deploy/
 COPY vagrant /px-deploy/vagrant
 COPY terraform /px-deploy/terraform

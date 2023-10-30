@@ -2,7 +2,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "5.5.0"
+      version = "5.19.0"
     }
     local = {
       source = "hashicorp/local"
@@ -200,6 +200,61 @@ resource "aws_security_group" "sg_px-deploy" {
 		}
 }
 
+resource "aws_iam_policy" "px-policy" {
+  name = format("px-policy-%s-%s",var.name_prefix,var.config_name)
+  description = "portworx node policy"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+            Sid = "" 
+            Effect = "Allow"
+            Action = [
+                "ec2:AttachVolume",
+                "ec2:ModifyVolume",
+                "ec2:DetachVolume",
+                "ec2:CreateTags",
+                "ec2:CreateVolume",
+                "ec2:DeleteTags",
+                "ec2:DeleteVolume",
+                "ec2:DescribeTags",
+                "ec2:DescribeVolumeAttribute",
+                "ec2:DescribeVolumesModifications",
+                "ec2:DescribeVolumeStatus",
+                "ec2:DescribeVolumes",
+                "ec2:DescribeInstances",
+                "autoscaling:DescribeAutoScalingGroups"
+            ]
+            Resource = "*"
+        }]
+  })
+}
+
+resource "aws_iam_role" "node-iam-role" {
+  name = format("%s-%s-nodes",var.name_prefix,var.config_name)
+
+  assume_role_policy = jsonencode({
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+    }]
+    Version = "2012-10-17"
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "px-pol-attach" {
+  role       = aws_iam_role.node-iam-role.name
+  policy_arn = aws_iam_policy.px-policy.arn
+}
+
+resource "aws_iam_instance_profile" "ec2_profile" {
+	name = format("%s-%s-inst-prof",var.name_prefix,var.config_name)
+	role = aws_iam_role.node-iam-role.name
+}
+
 locals {
   nodeconfig = [
     for vm in var.nodeconfig : [
@@ -223,6 +278,7 @@ resource "aws_instance" "node" {
 	for_each 					=	{for server in local.instances: server.instance_name =>  server}
 	ami 						= 	data.aws_ami.rocky.id
 	instance_type				=	each.value.instance_type
+	iam_instance_profile		=	aws_iam_instance_profile.ec2_profile.name	
 	vpc_security_group_ids 		=	[aws_security_group.sg_px-deploy.id]
 	subnet_id					=	aws_subnet.subnet[each.value.cluster - 1].id
 	private_ip 					= 	format("%s.%s.%s",var.ip_base,each.value.cluster+100, each.value.ip_start + each.value.nodenum)

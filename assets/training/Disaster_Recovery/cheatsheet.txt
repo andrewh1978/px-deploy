@@ -1,0 +1,39 @@
+pxctl license activate <CHANGEME>
+
+storkctl create clusterpair dest-cluster \
+--dest-kube-file /home/training<n>/.kube/config \
+--src-kube-file $HOME/.kube/config \
+--namespace kube-system \
+--provider s3 \
+--s3-endpoint s3.amazonaws.com \
+--s3-access-key <CHANGEME> \
+--s3-secret-key <CHANGEME> \
+--s3-region eu-west-1 \
+--bucket <CHANGEME> \
+--unidirectional
+
+storkctl get clusterpair -n kube-system
+
+kubectl get clusterpair -n kube-system -o yaml
+
+storkctl get schedulepolicy
+
+storkctl get migrationschedule -n kube-system
+
+storkctl get migration -n kube-system
+
+kubectl get pod -l app=postgres -n postgres
+
+kubectl exec $POD -n postgres -- createdb pxdemo
+
+kubectl exec $POD -n postgres -- pgbench -i -s 50 pxdemo
+
+kubectl exec $POD -n postgres -- psql pxdemo -c 'select count(*) from pgbench_accounts'
+
+kubectl describe deployment postgres -n postgres
+
+storkctl suspend migrationschedule migrationschedule -n kube-system
+
+storkctl activate migration -n postgres
+
+kubectl get deployment -n postgres

@@ -81,6 +81,7 @@ resource "local_file" "ocp4-install-config" {
         content = templatefile("${path.module}/ocp4-install-config.tpl", {
 			                  tpl_sshkey 	=  tls_private_key.ssh.public_key_openssh  
                         tpl_aws_region  = var.aws_region
+                        tpl_aws_iamrole = aws_iam_role.node-iam-role.name
                         tpl_ocp4domain  = var.ocp4_domain
                         tpl_ocp4pullsecret = base64decode(var.ocp4_pull_secret)
                         tpl_cluster     = each.key
