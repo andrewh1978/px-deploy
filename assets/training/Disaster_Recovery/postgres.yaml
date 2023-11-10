@@ -11,7 +11,7 @@ provisioner: kubernetes.io/portworx-volume
 parameters:
   #openstorage.io/auth-secret-name: px-user-token
   #openstorage.io/auth-secret-namespace: portworx
-  repl: "2"
+  repl: "3"
   io_profile: "db_remote"
   priority_io: "high"
 allowVolumeExpansion: true
