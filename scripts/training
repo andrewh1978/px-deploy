@@ -26,3 +26,12 @@ while :; do
   [ $? -eq 22 ] && break
   sleep 2
 done
+
+for i in $(seq 1 $nodes); do
+  while :; do
+    ssh node-$cluster-$i "useradd training$cluster && passwd --stdin training$cluster <<<portworx && exit 22"
+    [ $? -eq 22 ] && break
+    sleep 2
+  done
+done
+
