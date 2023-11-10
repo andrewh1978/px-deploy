@@ -1,15 +1,15 @@
 pxctl license activate <CHANGEME>
 
 storkctl create clusterpair dest-cluster \
---dest-kube-file /home/training<n>/.kube/config \
---src-kube-file $HOME/.kube/config \
---namespace kube-system \
 --provider s3 \
 --s3-endpoint s3.amazonaws.com \
 --s3-access-key <CHANGEME> \
 --s3-secret-key <CHANGEME> \
 --s3-region eu-west-1 \
---bucket <CHANGEME>
+--bucket <CHANGEME> \
+--namespace kube-system \
+--src-kube-file $HOME/.kube/config \
+--dest-kube-file /home/training<n>/.kube/config 
 
 storkctl get clusterpair -n kube-system
 
