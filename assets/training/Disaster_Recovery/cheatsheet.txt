@@ -9,8 +9,7 @@ storkctl create clusterpair dest-cluster \
 --s3-access-key <CHANGEME> \
 --s3-secret-key <CHANGEME> \
 --s3-region eu-west-1 \
---bucket <CHANGEME> \
---unidirectional
+--bucket <CHANGEME>
 
 storkctl get clusterpair -n kube-system
 
