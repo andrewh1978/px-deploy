@@ -1,0 +1,3 @@
+kubectl get pods -n portworx -l name=portworx -o wide
+
+kubectl logs -f px-cluster-<CHANGEME> -c portworx -n portworx
