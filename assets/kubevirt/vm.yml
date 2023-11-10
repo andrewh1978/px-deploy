@@ -1,0 +1,60 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  labels:
+    kubevirt.io/vm: testvm1
+  name: testvm1
+spec:
+  dataVolumeTemplates:
+    - metadata:
+        name: ubuntu-dv
+      spec:
+        pvc:
+          storageClassName: px-virtualization
+          accessModes:
+            - ReadWriteMany
+          resources:
+            requests:
+              storage: 10Gi
+        source:
+          http:
+            url: "https://cloud-images.ubuntu.com/minimal/releases/mantic/release/ubuntu-23.10-minimal-cloudimg-amd64.img"
+  running: true
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: testvm1
+    spec:
+      domain:
+        cpu:
+          cores: 1
+        devices:
+          disks:
+            - bootOrder: 1
+              disk:
+                bus: virtio
+              name: test-datavolume
+            - bootOrder: 2
+              disk:
+                bus: virtio
+              name: cloudinitvolume
+        resources:
+          requests:
+            memory: 8Gi
+      volumes:
+        - dataVolume:
+            name: ubuntu-dv
+          name: test-datavolume
+        - cloudInitNoCloud:
+            userData: |
+              #cloud-config
+              hostname: testvm1
+              users:
+                - name: kubevirt
+                  gecos: KubeVirt Project
+                  sudo: ALL=(ALL) NOPASSWD:ALL
+                  passwd: $6$Q1dGl.LfuMeS8RPP$b4xynn.Z3n2/h.YqOV90H7GzoAfjLKPMAKP1rzCeeBxiYNhROkxOXAC4rmQNbQf3oZ.Om8/Q7W8XmTgHsdoLw.
+                  shell: /bin/bash
+                  home: /home/kubevirt
+                  lock_passwd: false
+          name: cloudinitvolume

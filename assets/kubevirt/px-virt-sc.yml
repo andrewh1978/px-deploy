@@ -1,0 +1,18 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: px-virtualization
+parameters:
+  autofstrim: "true"
+  cow_ondemand: "true"
+  disable_io_profile_protection: "1"
+  io_profile: auto
+  nodiscard: "true"
+  priority_io: high
+  repl: "3"
+  sharedv4: "true"
+  sharedv4_svc_type: ClusterIP
+  sharedv4_mount_options: vers=3.0,nolock
+provisioner: pxd.portworx.com
+reclaimPolicy: Retain
+volumeBindingMode: Immediate
