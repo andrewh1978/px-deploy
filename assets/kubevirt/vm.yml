@@ -1,3 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: testvm1-ssh
+spec:
+  ports:
+  - port: 22
+    protocol: TCP
+    targetPort: 22
+  selector:
+    kubevirt.io/vm: testvm1
+  type: NodePort
+---
 apiVersion: kubevirt.io/v1
 kind: VirtualMachine
 metadata:
@@ -15,7 +28,7 @@ spec:
             - ReadWriteMany
           resources:
             requests:
-              storage: 10Gi
+              storage: 5Gi
         source:
           http:
             url: "https://cloud-images.ubuntu.com/minimal/releases/mantic/release/ubuntu-23.10-minimal-cloudimg-amd64.img"
@@ -38,9 +51,15 @@ spec:
               disk:
                 bus: virtio
               name: cloudinitvolume
+          interfaces:
+          - name: default
+            masquerade: {}    
         resources:
           requests:
-            memory: 8Gi
+            memory: 2Gi
+      networks:
+      - name: default
+        pod: {}      
       volumes:
         - dataVolume:
             name: ubuntu-dv
@@ -51,10 +70,12 @@ spec:
               hostname: testvm1
               users:
                 - name: kubevirt
-                  gecos: KubeVirt Project
                   sudo: ALL=(ALL) NOPASSWD:ALL
                   passwd: $6$Q1dGl.LfuMeS8RPP$b4xynn.Z3n2/h.YqOV90H7GzoAfjLKPMAKP1rzCeeBxiYNhROkxOXAC4rmQNbQf3oZ.Om8/Q7W8XmTgHsdoLw.
                   shell: /bin/bash
                   home: /home/kubevirt
                   lock_passwd: false
+              runcmd:
+                - sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config.d/60-cloudimg-settings.conf
+                - systemctl restart ssh  
           name: cloudinitvolume
