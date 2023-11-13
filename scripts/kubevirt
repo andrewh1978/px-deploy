@@ -34,7 +34,7 @@ kubectl create -f https://github.com/kubevirt/containerized-data-importer/releas
 
 kubectl apply -f /assets/kubevirt/px-virt-sc.yml
 
-while [ ! kubectl patch storageprofile --type merge px-virtualization -p '{ "spec": { "claimPropertySets": [ { "accessModes": [ "ReadWriteMany" ], "volumeMode": "Filesystem" } ], "cloneStrategy": "csi-clone" } }' ]; do
+while ! kubectl patch storageprofile --type merge px-virtualization -p '{ "spec": { "claimPropertySets": [ { "accessModes": [ "ReadWriteMany" ], "volumeMode": "Filesystem" } ], "cloneStrategy": "csi-clone" } }'; do
   echo waiting for storageprofile
   sleep 2
 done
