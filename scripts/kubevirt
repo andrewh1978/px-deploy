@@ -11,8 +11,14 @@ while ! kubectl wait --for=condition=ready pod --timeout=300s -lname=virt-operat
     sleep 2
 done
 
-# this enables emulation (slow!!!) but now we can run non-metal ec2 instances
-#kubectl -n kubevirt patch kubevirts kubevirt --type=merge --patch '{"spec":{"configuration":{"developerConfiguration":{"useEmulation":true}}}}'
+# check if emulation (slow!!!) needed
+# hint: check only done on master node...
+egrep '^flags.*(vmx|svm)' /proc/cpuinfo >/dev/null
+if  [ $? = 1 ]; then
+  echo "No virtualizazion capabilities found on master node cpu"
+  echo "switching on software emulation (slow)"
+  kubectl -n kubevirt patch kubevirts kubevirt --type=merge --patch '{"spec":{"configuration":{"developerConfiguration":{"useEmulation":true}}}}'
+fi
 
 kubectl create -f https://github.com/kubevirt/kubevirt/releases/download/${KUBEVIRTVERSION}/kubevirt-cr.yaml
 
