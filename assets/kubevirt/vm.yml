@@ -70,7 +70,6 @@ spec:
               hostname: testvm1
               users:
                 - name: kubevirt
-                  gecos: KubeVirt Project
                   sudo: ALL=(ALL) NOPASSWD:ALL
                   passwd: $6$Q1dGl.LfuMeS8RPP$b4xynn.Z3n2/h.YqOV90H7GzoAfjLKPMAKP1rzCeeBxiYNhROkxOXAC4rmQNbQf3oZ.Om8/Q7W8XmTgHsdoLw.
                   shell: /bin/bash
