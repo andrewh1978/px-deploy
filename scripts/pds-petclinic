@@ -102,7 +102,7 @@ else
 	PDSPLATFORM=""
 fi
 
-helm install --create-namespace --namespace=pds-system pds pds-target --repo=https://portworx.github.io/pds-charts --version=$PDS_HELM_CHART_VERSION $PDSPLATFORM --set tenantId=$PDS_TENANT_ID --set bearerToken=$PDS_SERVICE_ACCOUNT_TOKEN --set apiEndpoint=$PDS_ENDPOINT
+helm install --create-namespace --namespace=pds-system pds pds-target --repo=https://pds.pure-px.io/charts/target --version=$PDS_HELM_CHART_VERSION $PDSPLATFORM --set tenantId=$PDS_TENANT_ID --set bearerToken=$PDS_SERVICE_ACCOUNT_TOKEN --set apiEndpoint=$PDS_ENDPOINT
 
 echo "Waiting for pds-agent to get ready"
 kubectl wait pods -n pds-system -l app=pds-agent  --for condition=Ready --timeout -1s
