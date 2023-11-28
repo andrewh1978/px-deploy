@@ -1,3 +1,5 @@
+# 5.3
+
 ## Fixes
  * Fix intermittent vSphere provisioning issue
  * Remove PDS backups before destroying
@@ -6,6 +8,7 @@
  * Migrate GCP to Terraform
  * Add PX-BBQ asset
  * Reduce Kubernetes provision time
+ * Basic Kubevirt template
 
 # 5.2
 
