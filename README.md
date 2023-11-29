@@ -182,6 +182,7 @@ The `defaults.yml` file sets a number of deployment variables:
  * `vsphere_network` - vSwitch or dvPortGroup for cluster ex: Team-SE-120
  * `vsphere_memory` - RAM in GB
  * `vsphere_cpu` - number of vCPUs
+ * `vsphere_repo` - repository to pull vsphere template
  * `ocp4_domain` - domain that has been delegated to route53
  * `ocp4_version` - eg `4.3.0`
  * `ocp4_pull_secret` - the pull secret `'{"auths" ... }'`
@@ -405,11 +406,11 @@ gcp_project: "[px-deploy-proj]"
 
 # Notes for vSphere
 
-Before you can start deploying in vSphere, a template must be built. The command
+Before you can start deploying in vSphere, a local VM template must be installed. The command
 ```
 $ px-deploy vsphere-init
 ```
-will read the vsphere variables from `defaults.yml` and provision a template at the path defined in `vsphere_template`.
+will read the vsphere variables from `defaults.yml` (please check in advance if they are correct) and provision a template at the path defined in `vsphere_template`.
 
 # Notes for OCP4 on AWS
 

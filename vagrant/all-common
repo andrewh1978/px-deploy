@@ -64,16 +64,16 @@ if [ $cloud = "aws" -o $cloud = "gcp" -o $cloud = "azure" ]; then
     done
   done
 elif [ $cloud = "vsphere" ]; then
-  curl -Ls https://github.com/vmware/govmomi/releases/download/v0.23.0/govc_linux_amd64.gz | zcat >/usr/bin/govc
+  curl -Ls https://github.com/vmware/govmomi/releases/download/v0.32.0/govc_Linux_x86_64.tar.gz | tar -xzf - -C /usr/bin/
   chmod 755 /usr/bin/govc
   export GOVC_URL=$vsphere_user:$vsphere_password@$vsphere_host
   export GOVC_INSECURE=1
   while :; do
     sleep 1
     rm -f /tmp/hosts
-    for i in $(govc find / -type m -runtime.powerState poweredOn | egrep "vagrant_$name-(master|node)"); do
-      ip=$(govc vm.info -json "$i" | jq -r '.VirtualMachines[0].Guest.IpAddress')
-      name=$(govc vm.info -json "$i" | jq -r '.VirtualMachines[0].Config.ExtraConfig[] | select(.Key==("pxd.hostname")).Value')
+    for i in $(govc find / -type m -runtime.powerState poweredOn | egrep "$name-(master|node)"); do
+      ip=$(govc vm.info -json "$i" | jq -r '.virtualMachines[0].guest.ipAddress')
+      name=$(govc vm.info -json "$i" | jq -r '.virtualMachines[0].config.extraConfig[] | select(.key==("pxd.hostname")).value')
       echo $ip $name >>/tmp/hosts
     done
     [ $(cat /tmp/hosts | wc -w) -eq $[($nodes+1)*$clusters*2] ] && break
