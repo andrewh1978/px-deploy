@@ -187,7 +187,7 @@ func main() {
 									fmt.Printf("Error processing recommended Versioning %s : %s", versioning_field, versioning_recommended)
 								}
 								if v1.LessThan(v2) {
-									fmt.Printf("%sWarning:%s %s: %s %sin defaults.yml is lower than recommended setting%s %s\n", Red, Reset, versioning_field, versioning_current, Red, Reset, versioning_recommended)
+									fmt.Printf("%sWarning:%s %s: %s %sin defaults.yml is lower than recommended setting%s %s\n", Yellow, Reset, versioning_field, versioning_current, Yellow, Reset, versioning_recommended)
 								}
 							}
 						} else if versioning_recommended == "" {
@@ -1413,7 +1413,7 @@ func destroy_clear(name string) {
 	os.Chdir("/px-deploy/.px-deploy")
 	config := parse_yaml("deployments/" + name + ".yml")
 
-	fmt.Println(Red + "Deleting local files for deployment " + name)
+	fmt.Println(Yellow + "Deleting local files for deployment " + name)
 	fmt.Println("If there is any deployment in cloud " + config.Cloud + " you need to remove manually now" + Reset)
 
 	os.Chdir("/px-deploy/.px-deploy")
@@ -1562,7 +1562,7 @@ func destroy_deployment(name string) {
 		cmd.Stderr = os.Stderr
 		err = cmd.Run()
 		if err != nil {
-			fmt.Println(Yellow + "ERROR: Terraform plan failed. Check validity of terraform scripts" + Reset)
+			fmt.Println(Red + "ERROR: Terraform plan failed. Check validity of terraform scripts" + Reset)
 			die(err.Error())
 		} else {
 			fmt.Println(White + "running Terraform DESTROY" + Reset)
