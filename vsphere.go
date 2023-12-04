@@ -284,17 +284,17 @@ func vsphere_check_templateversion(deployment string) {
 
 	if (rt == "0") || (lt == "0") {
 		if rt == "0" {
-			fmt.Printf("Warning: Could not get remote px-deploy template version\nLocal version is %s\n", lt)
+			fmt.Printf("%s Warning: Could not get remote px-deploy template version\nLocal version is %s %s \n", Yellow, lt, Reset)
 		}
 		if lt == "0" {
-			fmt.Printf("Warning: Could not get local px-deploy template version\nRemote version is %s\n", rt)
+			fmt.Printf("%s Warning: Could not get local px-deploy template version\nRemote version is %s %s \n", Yellow, rt, Reset)
 		}
 		return
 	}
 	if rt != lt {
-		fmt.Printf("px-deploy template (current version %s) update available (version %s).\nPlease run px-deploy vsphere-init to update\n", lt, rt)
+		fmt.Printf("%s px-deploy template (current version %s) update available (version %s).\nPlease run px-deploy vsphere-init to update%s \n", Yellow, lt, rt, Reset)
 	} else {
-		fmt.Printf("Info: local px-deploy template up-to-date (Version %s)\n", lt)
+		fmt.Printf("%s Info: local px-deploy template up-to-date (Version %s)%s \n", Green, lt, Reset)
 	}
 }
 
