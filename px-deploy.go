@@ -989,7 +989,7 @@ func create_deployment(config Config) int {
 				tf_variables = append(tf_variables, "    role = \"master\"")
 				tf_variables = append(tf_variables, "    ip_start = 89")
 				tf_variables = append(tf_variables, "    nodecount = 1")
-				tf_variables = append(tf_variables, "    instance_type = \""+config.Aws_Type+"\"")
+				tf_variables = append(tf_variables, "    instance_type = \"t3.large\"")
 				tf_variables = append(tf_variables, "    cluster = "+masternum)
 				tf_variables = append(tf_variables, "    ebs_block_devices = [] ")
 				tf_variables = append(tf_variables, "  },")
