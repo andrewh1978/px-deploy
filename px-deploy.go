@@ -357,9 +357,9 @@ func main() {
 					die("Invalid Azure disks '" + config.Azure_Disks + "'")
 				}
 			case "vsphere":
-				config.Vsphere_Template = strings.TrimLeft(config.Vsphere_Template, "/\\")
-				config.Vsphere_Folder = strings.TrimLeft(config.Vsphere_Folder, "/\\")
-				config.Vsphere_Folder = strings.TrimRight(config.Vsphere_Folder, "/\\")
+				config.Vsphere_Template = strings.TrimLeft(config.Vsphere_Template, "/")
+				config.Vsphere_Folder = strings.TrimLeft(config.Vsphere_Folder, "/")
+				config.Vsphere_Folder = strings.TrimRight(config.Vsphere_Folder, "/")
 			}
 
 			if createPlatform != "" {
