@@ -1,0 +1,112 @@
+kind: Template
+apiVersion: template.openshift.io/v1
+metadata:
+  name: ubuntu-minimal
+  namespace: openshift-cnv
+  labels:
+    app.kubernetes.io/name: custom-templates
+    os.template.kubevirt.io/ubuntu: 'true'
+    template.kubevirt.io/type: vm
+    vm.kubevirt.io/template: example
+    vm.kubevirt.io/template.namespace: openshift-cnv
+    workload.template.kubevirt.io/server: 'true'
+  annotations:
+    description: Ubuntu Minimal VM
+    iconClass: icon-ubuntu
+    name.os.template.kubevirt.io/ubuntu: ubuntu-minimal
+    openshift.io/display-name: Ubuntu VM
+    openshift.io/provider-display-name: ''
+    template.kubevirt.io/provider: ''
+objects:
+  - apiVersion: kubevirt.io/v1
+    kind: VirtualMachine
+    metadata:
+      name: '${NAME}'
+      annotations:
+        description: Ubuntu Minimal
+      labels:
+        app: '${NAME}'
+        vm.kubevirt.io/template: ubuntu-minimal
+        os.template.kubevirt.io/ubuntu: 'true'
+        vm.kubevirt.io/template.namespace: openshift-cnv
+    spec:
+      running: false
+      template:
+        metadata:
+          annotations:
+            vm.kubevirt.io/flavor: small
+            vm.kubevirt.io/os: ubuntu
+            vm.kubevirt.io/workload: server
+          labels:
+            kubevirt.io/domain: '${NAME}'
+            kubevirt.io/size: small
+        spec:
+          domain:
+            cpu:
+              cores: 1
+              sockets: 1
+              threads: 1
+            devices:
+              disks:
+                - name: rootdisk
+                  disk:
+                    bus: virtio
+                  bootOrder: 1
+                - disk:
+                    bus: virtio
+                  name: cloudinitdisk
+                  bootOrder: 2
+              interfaces:
+                - masquerade: {}
+                  model: virtio
+                  name: default
+              networkInterfaceMultiqueue: true
+              rng: {}
+            features:
+              acpi: {}
+              smm:
+                enabled: true
+            firmware:
+              bootloader:
+                efi: {}
+            machine:
+              type: q35
+            resources:
+              requests:
+                memory: 2Gi
+          hostname: '${NAME}'
+          networks:
+            - name: default
+              pod: {}
+          terminationGracePeriodSeconds: 180
+          volumes:
+            - name: rootdisk
+              dataVolume:
+                name: '${NAME}-rootdisk'
+            - name: cloudinitdisk
+              cloudInitNoCloud:
+                userData: |
+                  #cloud-config
+                  password: portworx
+                  chpasswd:
+                    expire: false
+                  user: kubevirt
+      dataVolumeTemplates:
+        - metadata:
+            name: '${NAME}-rootdisk'
+          spec:
+            storage:
+              resources:
+                requests:
+                  storage: 5Gi
+              storageClassName: px-csi-db
+            preallocation: false
+            source:
+              http:
+                url: >-
+                  https://cloud-images.ubuntu.com/minimal/releases/mantic/release/ubuntu-23.10-minimal-cloudimg-amd64.img
+parameters:
+  - name: NAME
+    description: Name for the new VM
+    generate: expression
+    from: 'ubuntu-[a-z0-9]{3}'
