@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -537,7 +536,7 @@ func main() {
 			y, _ := yaml.Marshal(config)
 			log("[ " + strings.Join(os.Args[1:], " ") + " ] " + base64.StdEncoding.EncodeToString(y))
 
-			err := ioutil.WriteFile("deployments/"+createName+".yml", y, 0644)
+			err := os.WriteFile("deployments/"+createName+".yml", y, 0644)
 			if err != nil {
 				die(err.Error())
 			}
@@ -617,7 +616,7 @@ func main() {
 				if err != nil {
 					die(err.Error())
 				}
-				err = ioutil.WriteFile("kubeconfig/"+config.Name+"."+strconv.Itoa(c), kubeconfig, 0644)
+				err = os.WriteFile("kubeconfig/"+config.Name+"."+strconv.Itoa(c), kubeconfig, 0644)
 				if err != nil {
 					die(err.Error())
 				}
@@ -912,7 +911,7 @@ func create_deployment(config Config) int {
 			for i, val := range ebs {
 				// split by : and create common .tfvars entry for all nodes
 				entry := strings.Split(val, ":")
-				tf_var_ebs = append(tf_var_ebs, "      {\n        ebs_type = \""+entry[0]+"\"\n        ebs_size = \""+entry[1]+"\"\n        ebs_device_name = \"/dev/sd"+string(i+98)+"\"\n      },")
+				tf_var_ebs = append(tf_var_ebs, fmt.Sprintf("      {\n        ebs_type = \"%s\"\n        ebs_size = \"%s\"\n        ebs_device_name = \"/dev/sd%c\"\n      },", entry[0], entry[1], i+98))
 			}
 			// other node ebs processing happens in cluster/node loop
 
@@ -1064,7 +1063,7 @@ func create_deployment(config Config) int {
 				}
 
 				// apply the terraform aws-returns-generated to deployment yml file (maintains compatibility to px-deploy behaviour, maybe not needed any longer)
-				content, err := ioutil.ReadFile("/px-deploy/.px-deploy/tf-deployments/" + config.Name + "/aws-returns-generated.yaml")
+				content, err := os.ReadFile("/px-deploy/.px-deploy/tf-deployments/" + config.Name + "/aws-returns-generated.yaml")
 				file, err := os.OpenFile("/px-deploy/.px-deploy/deployments/"+config.Name+".yml", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 				if err != nil {
 					die(err.Error())
@@ -1130,7 +1129,7 @@ func create_deployment(config Config) int {
 				}
 
 				// apply the terraform gcp-returns-generated to deployment yml file (network name needed for different functions)
-				content, err := ioutil.ReadFile("/px-deploy/.px-deploy/tf-deployments/" + config.Name + "/gcp-returns-generated.yaml")
+				content, err := os.ReadFile("/px-deploy/.px-deploy/tf-deployments/" + config.Name + "/gcp-returns-generated.yaml")
 				file, err := os.OpenFile("/px-deploy/.px-deploy/deployments/"+config.Name+".yml", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 				if err != nil {
 					die(err.Error())
@@ -1314,7 +1313,7 @@ func create_deployment(config Config) int {
 				}
 				/* do we still need
 						// apply the terraform aws-returns-generated to deployment yml file (maintains compatibility to px-deploy behaviour, maybe not needed any longer)
-						content, err := ioutil.ReadFile("/px-deploy/.px-deploy/tf-deployments/"+config.Name+"/aws-returns-generated.yaml")
+						content, err := os.ReadFile("/px-deploy/.px-deploy/tf-deployments/"+config.Name+"/aws-returns-generated.yaml")
 						file,err := os.OpenFile("/px-deploy/.px-deploy/deployments/" + config.Name+".yml", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 						if err != nil {
 							die(err.Error())
@@ -1917,7 +1916,7 @@ func write_nodescripts(config Config) {
 	tf_node_script = append(tf_node_script, "mkdir /var/log/px-deploy\n"...)
 
 	for _, filename := range tf_node_scripts {
-		content, err := ioutil.ReadFile("/px-deploy/vagrant/" + filename)
+		content, err := os.ReadFile("/px-deploy/vagrant/" + filename)
 		if err == nil {
 			tf_node_script = append(tf_node_script, "(\n"...)
 			tf_node_script = append(tf_node_script, "echo \"Started $(date)\"\n"...)
@@ -1941,7 +1940,7 @@ func write_nodescripts(config Config) {
 	tf_common_master_script = append(tf_common_master_script, "touch /var/log/px-deploy/completed/tracking\n"...)
 
 	for _, filename := range tf_master_scripts {
-		content, err := ioutil.ReadFile("/px-deploy/vagrant/" + filename)
+		content, err := os.ReadFile("/px-deploy/vagrant/" + filename)
 		if err == nil {
 			tf_common_master_script = append(tf_common_master_script, "(\n"...)
 			tf_common_master_script = append(tf_common_master_script, "echo \"Started $(date)\"\n"...)
@@ -1953,7 +1952,7 @@ func write_nodescripts(config Config) {
 
 	// add scripts from the "scripts" section of config.yaml to common master node script
 	for _, filename := range config.Scripts {
-		content, err := ioutil.ReadFile("/px-deploy/.px-deploy/scripts/" + filename)
+		content, err := os.ReadFile("/px-deploy/.px-deploy/scripts/" + filename)
 		if err == nil {
 			tf_common_master_script = append(tf_common_master_script, "(\n"...)
 			tf_common_master_script = append(tf_common_master_script, "echo \"Started $(date)\"\n"...)
@@ -1965,7 +1964,7 @@ func write_nodescripts(config Config) {
 
 	// add post_script if defined
 	if config.Post_Script != "" {
-		content, err := ioutil.ReadFile("/px-deploy/.px-deploy/scripts/" + config.Post_Script)
+		content, err := os.ReadFile("/px-deploy/.px-deploy/scripts/" + config.Post_Script)
 		if err == nil {
 			tf_post_script = append(tf_post_script, "(\n"...)
 			tf_post_script = append(tf_post_script, "echo \"Started $(date)\"\n"...)
@@ -1990,7 +1989,7 @@ func write_nodescripts(config Config) {
 		for _, clusterconf := range config.Cluster {
 			if clusterconf.Id == c {
 				for _, filename := range clusterconf.Scripts {
-					content, err := ioutil.ReadFile("/px-deploy/.px-deploy/scripts/" + filename)
+					content, err := os.ReadFile("/px-deploy/.px-deploy/scripts/" + filename)
 					if err == nil {
 						tf_master_script = append(tf_master_script, "(\n"...)
 						tf_master_script = append(tf_master_script, content...)
@@ -2116,7 +2115,7 @@ func log(msg string) {
 }
 
 func parse_yaml(filename string) Config {
-	b, err := ioutil.ReadFile(filename)
+	b, err := os.ReadFile(filename)
 	if err != nil {
 		die(err.Error())
 	}
@@ -2158,7 +2157,7 @@ func write_tf_file(deployment string, filename string, data []string) {
 }
 
 func get_version_current() string {
-	v, err := ioutil.ReadFile("/VERSION")
+	v, err := os.ReadFile("/VERSION")
 	if err != nil {
 		die(err.Error())
 	}
