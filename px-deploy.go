@@ -246,19 +246,120 @@ func main() {
 					die("setting cloud region not supported on " + config.Cloud)
 				}
 			}
+
+			// check for command-line overrides and parameter validity for each cloud
 			switch config.Cloud {
 			case "aws":
 				if !regexp.MustCompile(`^[a-zA-Z0-9_\-]+$`).MatchString(config.Aws_Region) {
 					die("Invalid region '" + config.Aws_Region + "'")
 				}
+
+				if createAwsType != "" {
+					config.Aws_Type = createAwsType
+				}
+				if !regexp.MustCompile(`^[0-9a-z\.]+$`).MatchString(config.Aws_Type) {
+					die("Invalid AWS type '" + config.Aws_Type + "'")
+				}
+
+				if createAwsAccessKeyId != "" {
+					config.Aws_Access_Key_Id = createAwsAccessKeyId
+				}
+				if createAwsSecretAccessKey != "" {
+					config.Aws_Secret_Access_Key = createAwsSecretAccessKey
+				}
+
+				if createAwsEbs != "" {
+					config.Aws_Ebs = createAwsEbs
+				}
+				if !regexp.MustCompile(`^[0-9a-z\ :]+$`).MatchString(config.Aws_Ebs) {
+					die("Invalid AWS EBS volumes '" + config.Aws_Ebs + "'")
+				}
+
+				if createEksVersion != "" {
+					config.Eks_Version = createEksVersion
+				}
+				if !regexp.MustCompile(`^[0-9\.]+$`).MatchString(config.Eks_Version) {
+					die("Invalid EKS version '" + config.Eks_Version + "'")
+				}
+
 			case "gcp":
 				if !regexp.MustCompile(`^[a-zA-Z0-9_\-]+$`).MatchString(config.Gcp_Region) {
 					die("Invalid region '" + config.Gcp_Region + "'")
 				}
+				if createGcpType != "" {
+					config.Gcp_Type = createGcpType
+				}
+				if !regexp.MustCompile(`^[0-9a-z\-]+$`).MatchString(config.Gcp_Type) {
+					die("Invalid GCP type '" + config.Gcp_Type + "'")
+				}
+
+				if createGcpDisks != "" {
+					config.Gcp_Disks = createGcpDisks
+				}
+				if !regexp.MustCompile(`^[0-9a-z\ :\-]+$`).MatchString(config.Gcp_Disks) {
+					die("Invalid GCP disks '" + config.Gcp_Disks + "'")
+				}
+
+				if createGcpZone != "" {
+					config.Gcp_Zone = createGcpZone
+				}
+
+				if createGcpProject != "" {
+					config.Gcp_Project = createGcpProject
+				}
+
+				if config.Gcp_Zone != "a" && config.Gcp_Zone != "b" && config.Gcp_Zone != "c" {
+					die("Invalid GCP zone '" + config.Gcp_Zone + "'")
+				}
+
+				if createGkeVersion != "" {
+					config.Gke_Version = createGkeVersion
+				}
+				if !regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+-gke\.[0-9]+$`).MatchString(config.Gke_Version) {
+					die("Invalid GKE version '" + config.Gke_Version + "'")
+				}
+
 			case "azure":
 				if !regexp.MustCompile(`^[a-zA-Z0-9_\-]+$`).MatchString(config.Azure_Region) {
 					die("Invalid region '" + config.Azure_Region + "'")
 				}
+				if createAzureClientId != "" {
+					config.Azure_Client_Id = createAzureClientId
+				}
+				if createAzureClientSecret != "" {
+					config.Azure_Client_Secret = createAzureClientSecret
+				}
+				if createAzureTenantId != "" {
+					config.Azure_Tenant_Id = createAzureTenantId
+				}
+				if createAzureSubscriptionId != "" {
+					config.Azure_Subscription_Id = createAzureSubscriptionId
+				}
+
+				if createAksVersion != "" {
+					config.Aks_Version = createAksVersion
+				}
+				if !regexp.MustCompile(`^[0-9\.]+$`).MatchString(config.Aks_Version) {
+					die("Invalid AKS version '" + config.Aks_Version + "'")
+				}
+
+				if createAzureType != "" {
+					config.Azure_Type = createAzureType
+				}
+				if !regexp.MustCompile(`^[0-9a-zA-Z\-\_]+$`).MatchString(config.Azure_Type) {
+					die("Invalid Azure type '" + config.Azure_Type + "'")
+				}
+
+				if createAzureDisks != "" {
+					config.Azure_Disks = createAzureDisks
+				}
+				if !regexp.MustCompile(`^[0-9a-zA-Z\ \_:]+$`).MatchString(config.Azure_Disks) {
+					die("Invalid Azure disks '" + config.Azure_Disks + "'")
+				}
+			case "vsphere":
+				config.Vsphere_Template = strings.TrimLeft(config.Vsphere_Template, "/")
+				config.Vsphere_Folder = strings.TrimLeft(config.Vsphere_Folder, "/")
+				config.Vsphere_Folder = strings.TrimRight(config.Vsphere_Folder, "/")
 			}
 
 			if createPlatform != "" {
@@ -318,37 +419,6 @@ func main() {
 			if createDryRun {
 				config.Dry_Run = "true"
 			}
-			if createAwsType != "" {
-				config.Aws_Type = createAwsType
-			}
-			if !regexp.MustCompile(`^[0-9a-z\.]+$`).MatchString(config.Aws_Type) {
-				die("Invalid AWS type '" + config.Aws_Type + "'")
-			}
-
-			if createAwsAccessKeyId != "" {
-				config.Aws_Access_Key_Id = createAwsAccessKeyId
-			}
-			if createAwsSecretAccessKey != "" {
-				config.Aws_Secret_Access_Key = createAwsSecretAccessKey
-			}
-			if createAzureClientId != "" {
-				config.Azure_Client_Id = createAzureClientId
-			}
-			if createAzureClientSecret != "" {
-				config.Azure_Client_Secret = createAzureClientSecret
-			}
-			if createAzureTenantId != "" {
-				config.Azure_Tenant_Id = createAzureTenantId
-			}
-			if createAzureSubscriptionId != "" {
-				config.Azure_Subscription_Id = createAzureSubscriptionId
-			}
-			if createAwsEbs != "" {
-				config.Aws_Ebs = createAwsEbs
-			}
-			if !regexp.MustCompile(`^[0-9a-z\ :]+$`).MatchString(config.Aws_Ebs) {
-				die("Invalid AWS EBS volumes '" + config.Aws_Ebs + "'")
-			}
 
 			if createTags != "" {
 				config.Tags = createTags
@@ -356,67 +426,6 @@ func main() {
 
 			if !regexp.MustCompile(`^((([\p{L}\p{Z}\p{N}_.:+\-]*)=([\p{L}\p{Z}\p{N}_.:+\-]*),)*(([\p{L}\p{Z}\p{N}_.:+\-]*)=([\p{L}\p{Z}\p{N}_.:+\-]*)){1})*$`).MatchString(config.Tags) {
 				die("Invalid tags '" + config.Tags + "'")
-			}
-
-			if createGcpType != "" {
-				config.Gcp_Type = createGcpType
-			}
-			if !regexp.MustCompile(`^[0-9a-z\-]+$`).MatchString(config.Gcp_Type) {
-				die("Invalid GCP type '" + config.Gcp_Type + "'")
-			}
-
-			if createGcpDisks != "" {
-				config.Gcp_Disks = createGcpDisks
-			}
-			if !regexp.MustCompile(`^[0-9a-z\ :\-]+$`).MatchString(config.Gcp_Disks) {
-				die("Invalid GCP disks '" + config.Gcp_Disks + "'")
-			}
-
-			if createGcpZone != "" {
-				config.Gcp_Zone = createGcpZone
-			}
-
-			if createGcpProject != "" {
-				config.Gcp_Project = createGcpProject
-			}
-
-			if config.Gcp_Zone != "a" && config.Gcp_Zone != "b" && config.Gcp_Zone != "c" {
-				die("Invalid GCP zone '" + config.Gcp_Zone + "'")
-			}
-
-			if createGkeVersion != "" {
-				config.Gke_Version = createGkeVersion
-			}
-			if !regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+-gke\.[0-9]+$`).MatchString(config.Gke_Version) {
-				die("Invalid GKE version '" + config.Gke_Version + "'")
-			}
-
-			if createAksVersion != "" {
-				config.Aks_Version = createAksVersion
-			}
-			if !regexp.MustCompile(`^[0-9\.]+$`).MatchString(config.Aks_Version) {
-				die("Invalid AKS version '" + config.Aks_Version + "'")
-			}
-
-			if createEksVersion != "" {
-				config.Eks_Version = createEksVersion
-			}
-			if !regexp.MustCompile(`^[0-9\.]+$`).MatchString(config.Eks_Version) {
-				die("Invalid EKS version '" + config.Eks_Version + "'")
-			}
-
-			if createAzureType != "" {
-				config.Azure_Type = createAzureType
-			}
-			if !regexp.MustCompile(`^[0-9a-zA-Z\-\_]+$`).MatchString(config.Azure_Type) {
-				die("Invalid Azure type '" + config.Azure_Type + "'")
-			}
-
-			if createAzureDisks != "" {
-				config.Azure_Disks = createAzureDisks
-			}
-			if !regexp.MustCompile(`^[0-9a-zA-Z\ \_:]+$`).MatchString(config.Azure_Disks) {
-				die("Invalid Azure disks '" + config.Azure_Disks + "'")
 			}
 
 			for _, c := range config.Cluster {
