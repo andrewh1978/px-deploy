@@ -440,3 +440,22 @@ openshift.example.com name server ns-730.awsdns-27.net.
 $ host -t soa openshift.example.com
 openshift.example.com has SOA record ns-730.awsdns-227.net. awsdns-hostmaster.amazon.com. 1 7200 900 1209600 86400
 ```
+
+# Known Issues 
+
+## Known Issues on EKS
+
+If you see on AWS UI an error message like this: `Your current IAM principal doesn’t have access to Kubernetes objects on this cluster.` the IAM user being used to create the deployment isn't the same IAM user running the AWS UI. 
+
+One reason could be that access to AWS UI is authenticated using SSO. 
+
+To fix the isse find out the user/role being used by AWS UI (e.g. by running `aws sts get-caller-identity` on AWS UI CloudShell) and set one of the following ENV variables in ~/.px-deploy/defaults.yml (in my example its the `OktaSSOAdminUser` Role / `developerUser1` user)
+
+```
+env:
+    AWS_EKS_ADD_IAM_ROLE: "OktaSSOAdminUser"
+    AWS_EKS_ADD_IAM_USER: "developerUser1"
+```
+
+More information can be found here https://docs.aws.amazon.com/eks/latest/userguide/view-kubernetes-resources.html#view-kubernetes-resources-permissions
+
