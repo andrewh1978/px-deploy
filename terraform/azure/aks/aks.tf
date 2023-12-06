@@ -19,13 +19,18 @@ variable "aksclusters" {
 	type 		= map
 }
 
+data "azurerm_kubernetes_service_versions" "current" {
+  location = azurerm_resource_group.rg.location
+  version_prefix = var.aks_version
+}
+
 resource "azurerm_kubernetes_cluster" "aks" {
   for_each            = var.aksclusters
   name                = format("%s-%s-%s",var.name_prefix,var.config_name, each.key)
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
   dns_prefix          = format("aks-%s",each.key)
-  kubernetes_version  = var.aks_version
+  kubernetes_version  = data.azurerm_kubernetes_service_versions.current.latest_version
 
   default_node_pool {
     name       = "default"
