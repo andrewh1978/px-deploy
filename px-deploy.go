@@ -116,6 +116,11 @@ type Config_Cluster struct {
 	Instance_Type string
 }
 
+type Deployment_Status_Return struct {
+	cluster int
+	status  string
+}
+
 var Reset = "\033[0m"
 var White = "\033[97m"
 var Red = "\033[31m"
@@ -675,81 +680,28 @@ func main() {
 
 	cmdStatus := &cobra.Command{
 		Use:   "status name",
-		Short: "Lists master IPs in a deployment",
-		Long:  "Lists master IPs in a deployment",
+		Short: "Returns status / IP of a deployment",
+		Long:  "Returns status / IP of a deployment",
 		Run: func(cmd *cobra.Command, args []string) {
 			config := parse_yaml("deployments/" + statusName + ".yml")
-
-			var ip string
-
 			Clusters, _ := strconv.Atoi(config.Clusters)
-			Nodes, _ := strconv.Atoi(config.Nodes)
 
-			if (config.Platform == "ocp4") || (config.Platform == "eks") || (config.Platform == "aks") || (config.Platform == "gke") {
-				Nodes = 0
-			}
-			// loop clusters and add master name/ip to tf var
+			clusterstatus := make(chan Deployment_Status_Return, Clusters)
+			wg.Add(Clusters)
 			for c := 1; c <= Clusters; c++ {
-
-				switch config.Cloud {
-				case "aws":
-					ip = aws_get_node_ip(statusName, fmt.Sprintf("master-%v-1", c))
-				case "azure":
-					ip = azure_get_node_ip(statusName, fmt.Sprintf("master-%v-1", c))
-				case "gcp":
-					ip = gcp_get_node_ip(statusName, fmt.Sprintf("%v-master-%v-1", config.Name, c))
-				case "vsphere":
-					ip = vsphere_get_node_ip(&config, fmt.Sprintf("%v-master-%v", config.Name, c))
-				}
-				// get content of node tracking file (-> each node will add its entry when finished cloud-init/vagrant scripts)
-				cmd := exec.Command("ssh", "-q", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, "cat /var/log/px-deploy/completed/tracking")
-				out, err := cmd.CombinedOutput()
-				if err != nil {
-					die(err.Error())
-				} else {
-					scanner := bufio.NewScanner(strings.NewReader(string(out)))
-					ready_nodes := make(map[string]string)
-					for scanner.Scan() {
-						entry := strings.Fields(scanner.Text())
-						ready_nodes[entry[0]] = entry[1]
-					}
-					if ready_nodes[fmt.Sprintf("master-%v", c)] != "" {
-						fmt.Printf("Ready\tmaster-%v \t  %v\n", c, ip)
-					} else {
-						fmt.Printf("NotReady\tmaster-%v \t (%v)\n", c, ip)
-					}
-					if config.Platform == "ocp4" {
-						if ready_nodes["url"] != "" {
-							fmt.Printf("  URL: %v \n", ready_nodes["url"])
-						} else {
-							fmt.Printf("  OCP4 URL not yet available\n")
-						}
-						if ready_nodes["cred"] != "" {
-							fmt.Printf("  Credentials: kubeadmin / %v \n", ready_nodes["cred"])
-						} else {
-							fmt.Printf("  OCP4 credentials not yet available\n")
-						}
-					}
-					for n := 1; n <= Nodes; n++ {
-						if ready_nodes[fmt.Sprintf("node-%v-%v", c, n)] != "" {
-							fmt.Printf("Ready\t node-%v-%v\n", c, n)
-						} else {
-							fmt.Printf("NotReady\t node-%v-%v\n", c, n)
-						}
-					}
-				}
+				go get_deployment_status(&config, c, clusterstatus)
 			}
-			//			} else {
-			//				ip := get_ip(statusName)
-			//				c := `
-			//        masters=$(grep master /etc/hosts | cut -f 2 -d " ")
-			//        for m in $masters; do
-			//          ip=$(sudo ssh -oStrictHostKeyChecking=no $m "curl http://ipinfo.io/ip" 2>/dev/null)
-			//          hostname=$(sudo ssh -oStrictHostKeyChecking=no $m "curl http://ipinfo.io/hostname" 2>/dev/null)
-			//          echo $m $ip $hostname
-			//        done`
-			//				syscall.Exec("/usr/bin/ssh", []string{"ssh", "-q", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa." + config.Cloud + "." + config.Name, "root@" + ip, c}, []string{})
-			//			}
+			wg.Wait()
+			close(clusterstatus)
+			m := make(map[int]string)
+
+			for elem := range clusterstatus {
+				m[elem.cluster] = elem.status
+			}
+
+			for i := 1; i <= Clusters; i++ {
+				fmt.Printf(m[i])
+			}
 		},
 	}
 
@@ -852,6 +804,67 @@ func main() {
 
 	rootCmd.AddCommand(cmdCreate, cmdDestroy, cmdConnect, cmdKubeconfig, cmdList, cmdTemplates, cmdStatus, cmdCompletion, cmdVsphereInit, cmdVsphereCheckTemplateVersion, cmdVersion, cmdHistory)
 	rootCmd.Execute()
+}
+
+func get_deployment_status(config *Config, cluster int, c chan Deployment_Status_Return) {
+	defer wg.Done()
+	var ip string
+	var returnvalue string
+	Nodes, _ := strconv.Atoi(config.Nodes)
+
+	if (config.Platform == "ocp4") || (config.Platform == "eks") || (config.Platform == "aks") || (config.Platform == "gke") {
+		Nodes = 0
+	}
+
+	switch config.Cloud {
+	case "aws":
+		ip = aws_get_node_ip(config.Name, fmt.Sprintf("master-%v-1", cluster))
+	case "azure":
+		ip = azure_get_node_ip(config.Name, fmt.Sprintf("master-%v-1", cluster))
+	case "gcp":
+		ip = gcp_get_node_ip(config.Name, fmt.Sprintf("%v-master-%v-1", config.Name, cluster))
+	case "vsphere":
+		ip = vsphere_get_node_ip(config, fmt.Sprintf("%v-master-%v", config.Name, cluster))
+	}
+	// get content of node tracking file (-> each node will add its entry when finished cloud-init/vagrant scripts)
+	cmd := exec.Command("ssh", "-q", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, "cat /var/log/px-deploy/completed/tracking")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		returnvalue = fmt.Sprintf("Error get status of cluster %v\n Message: %v\n", cluster, err.Error())
+		//c <- returnvalue
+	} else {
+		scanner := bufio.NewScanner(strings.NewReader(string(out)))
+		ready_nodes := make(map[string]string)
+		for scanner.Scan() {
+			entry := strings.Fields(scanner.Text())
+			ready_nodes[entry[0]] = entry[1]
+		}
+		if ready_nodes[fmt.Sprintf("master-%v", cluster)] != "" {
+			returnvalue = fmt.Sprintf("%vReady\tmaster-%v \t  %v\n", returnvalue, cluster, ip)
+		} else {
+			returnvalue = fmt.Sprintf("%vNotReady\tmaster-%v \t (%v)\n", returnvalue, cluster, ip)
+		}
+		if config.Platform == "ocp4" {
+			if ready_nodes["url"] != "" {
+				returnvalue = fmt.Sprintf("%v  URL: %v \n", returnvalue, ready_nodes["url"])
+			} else {
+				returnvalue = fmt.Sprintf("%v  OCP4 URL not yet available\n", returnvalue)
+			}
+			if ready_nodes["cred"] != "" {
+				returnvalue = fmt.Sprintf("%v  Credentials: kubeadmin / %v \n", returnvalue, ready_nodes["cred"])
+			} else {
+				returnvalue = fmt.Sprintf("%v  OCP4 credentials not yet available\n", returnvalue)
+			}
+		}
+		for n := 1; n <= Nodes; n++ {
+			if ready_nodes[fmt.Sprintf("node-%v-%v", cluster, n)] != "" {
+				returnvalue = fmt.Sprintf("%vReady\t node-%v-%v\n", returnvalue, cluster, n)
+			} else {
+				returnvalue = fmt.Sprintf("%vNotReady\t node-%v-%v\n", returnvalue, cluster, n)
+			}
+		}
+	}
+	c <- Deployment_Status_Return{cluster, returnvalue}
 }
 
 func create_deployment(config Config) int {
