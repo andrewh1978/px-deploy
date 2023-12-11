@@ -1304,7 +1304,7 @@ func create_deployment(config Config) int {
 			write_tf_file(config.Name, ".tfvars", tf_variables)
 			// now run terraform plan & terraform apply
 			fmt.Println(White + "running terraform PLAN" + Reset)
-			cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-input=false", "-out=tfplan", "-var-file", ".tfvars")
+			cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-input=false", "-parallelism=50", "-out=tfplan", "-var-file", ".tfvars")
 			cmd.Stderr = os.Stderr
 			err = cmd.Run()
 			if err != nil {
@@ -1316,7 +1316,7 @@ func create_deployment(config Config) int {
 					die("Exit")
 				}
 				fmt.Println(White + "running terraform APPLY" + Reset)
-				cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "apply", "-input=false", "-auto-approve", "tfplan")
+				cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "apply", "-input=false", "-parallelism=50", "-auto-approve", "tfplan")
 				cmd.Stdout = os.Stdout
 				cmd.Stderr = os.Stderr
 				errapply = cmd.Run()
@@ -1708,8 +1708,18 @@ func destroy_deployment(name string) {
 		os.RemoveAll("deployments/" + name)
 
 	} else if config.Cloud == "azure" {
+		clusters, _ := strconv.Atoi(config.Clusters)
+
+		fmt.Println("Running pre-delete scripts on all master nodes. Output will be mixed")
+		for i := 1; i <= clusters; i++ {
+			wg.Add(1)
+			go run_predelete(&config, fmt.Sprintf("master-%v-1", i), "script")
+		}
+		wg.Wait()
+		fmt.Println("pre-delete scripts done")
+
 		fmt.Println(White + "running Terraform PLAN" + Reset)
-		cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-destroy", "-input=false", "-out=tfplan", "-var-file", ".tfvars")
+		cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-destroy", "-input=false", "-parallelism=50", "-out=tfplan", "-var-file", ".tfvars")
 		cmd.Stderr = os.Stderr
 		err = cmd.Run()
 		if err != nil {
@@ -1717,7 +1727,7 @@ func destroy_deployment(name string) {
 			die(err.Error())
 		} else {
 			fmt.Println(White + "running Terraform DESTROY" + Reset)
-			cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "apply", "-input=false", "-auto-approve", "tfplan")
+			cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "apply", "-input=false", "-parallelism=50", "-auto-approve", "tfplan")
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			errdestroy = cmd.Run()
@@ -1862,6 +1872,10 @@ func run_predelete(config *Config, confNode string, confPath string) {
 	case "vsphere":
 		{
 			ip = vsphere_get_node_ip(config, confNode)
+		}
+	case "azure":
+		{
+			ip = azure_get_node_ip(config.Name, confNode)
 		}
 	default:
 		{
