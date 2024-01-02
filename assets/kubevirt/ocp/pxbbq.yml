@@ -1,0 +1,191 @@
+apiVersion: v1
+kind: Namespace                 
+metadata:
+  name: pxbbq
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+  labels:
+    app.kubernetes.io/name: mongo
+    app.kubernetes.io/component: backend
+  namespace: pxbbq
+spec:
+  ports:
+  - port: 27017
+    targetPort: 27017
+  type: ClusterIP
+  selector:
+    vm.kubevirt.io/name: ubuntu-mongodb
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pxbbq-web
+  namespace: pxbbq
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: pxbbq-web
+  template:
+    metadata:
+      labels:
+        app: pxbbq-web
+    spec:
+      containers:
+      - name: pxbbq-web
+        image: eshanks16/pxbbq:4.0
+        env:
+        - name: MONGO_INIT_USER
+          value: "porxie" #Mongo User with permissions to create additional databases and users. Typically "porxie" or "pds"
+        - name: MONGO_INIT_PASS
+          value: "porxie" #Required to connect the init user to the database. If using the mongodb yaml supplied, use "porxie"
+        - name: MONGO_NODES
+          value: "mongo" #COMMA SEPARATED LIST OF MONGO ENDPOINTS. Example: mongo1.dns.name,mongo2.dns.name
+        - name: MONGO_PORT
+          value: "27017"
+        - name: MONGO_USER
+          value: porxie #Mongo DB User that will be created by using the Init_User
+        - name: MONGO_PASS
+          value: "porxie" #Mongo DB Password for User that will be created by using the Init User
+        imagePullPolicy: Always
+        ports:
+          - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pxbbq-svc
+  namespace: pxbbq
+  labels:
+    app: pxbbq-web
+spec:
+  ports:
+  - port: 80
+    targetPort: 8080
+  type: ClusterIP
+  selector:
+    app: pxbbq-web
+---
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: pxbbq
+  namespace: pxbbq
+  labels:
+    app: pxbbq-web
+spec:
+  to:
+    kind: Service
+    name: pxbbq-svc
+    weight: 100
+  port:
+    targetPort: 8080
+  wildcardPolicy: None
+---
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: ubuntu-mongodb
+  annotations:
+    description: Ubuntu MongoDB
+  labels:
+    name: mongo
+    app: backend
+    os.template.kubevirt.io/ubuntu: 'true'
+  namespace: pxbbq
+spec:
+  running: true
+  template:
+    metadata:
+      annotations:
+        vm.kubevirt.io/flavor: small
+        vm.kubevirt.io/os: ubuntu
+        vm.kubevirt.io/workload: server
+      labels:
+        kubevirt.io/domain: ubuntu
+        kubevirt.io/size: small
+    spec:
+      domain:
+        cpu:
+          cores: 2
+          sockets: 1
+          threads: 1
+        devices:
+          disks:
+            - disk:
+                bus: virtio
+              name: rootdisk
+              bootOrder: 1
+            - disk:
+                bus: virtio
+              name: cloudinitdisk
+              bootOrder: 2
+          interfaces:
+            - masquerade: {}
+              model: virtio
+              name: default
+          networkInterfaceMultiqueue: true
+          rng: {}
+        features:
+          acpi: {}
+          smm:
+            enabled: true
+        firmware:
+          bootloader:
+            efi: {}
+        machine:
+          type: q35
+        resources:
+          requests:
+            memory: 2Gi
+      hostname: ubuntu-mongodb
+      networks:
+        - name: default
+          pod: {}
+      terminationGracePeriodSeconds: 180
+      volumes:
+        - name: rootdisk
+          dataVolume:
+            name: 'ubuntu-mongodb-rootdisk'
+        - cloudInitNoCloud:
+                userData: |
+                  #cloud-config
+                  password: portworx
+                  chpasswd:
+                    expire: false
+                  user: kubevirt
+                  write_files:
+                    - content: >
+                       db = connect( 'mongodb://localhost/admin' );
+                       db.createUser({user:'porxie', pwd:'porxie', roles:[{ role:'root', db:'admin'}]});
+                      path: /tmp/mongo.js
+                      permissions: '0600'
+                  runcmd:
+                  - sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config.d/60-cloudimg-settings.conf
+                  - apt update
+                  - apt install -y gnupg curl
+                  - curl -fsSL https://pgp.mongodb.com/server-7.0.asc | sudo gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
+                  - echo 'deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse' | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+                  - apt update
+                  - apt install -y mongodb-org
+                  - sed -i 's/127.0.0.1/0.0.0.0/' /etc/mongod.conf
+                  - sudo systemctl enable --now mongod
+                  - sleep 5
+                  - mongosh /tmp/mongo.js            
+          name: cloudinitdisk
+  dataVolumeTemplates:
+    - metadata:
+        name: 'ubuntu-mongodb-rootdisk'
+      spec:
+        storage:
+          resources:
+            requests:
+              storage: 5Gi
+          storageClassName: px-csi-db
+        preallocation: false
+        source:
+          http:
+            url: "https://cloud-images.ubuntu.com/minimal/releases/mantic/release/ubuntu-23.10-minimal-cloudimg-amd64.img"
