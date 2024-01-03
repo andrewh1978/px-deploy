@@ -2,31 +2,5 @@ apiVersion: hco.kubevirt.io/v1beta1
 kind: HyperConverged
 metadata:
   name: kubevirt-hyperconverged
-  annotations:
-    deployOVS: 'false'
   namespace: openshift-cnv
 spec:
-  liveMigrationConfig:
-    completionTimeoutPerGiB: 800
-    parallelMigrationsPerCluster: 5
-    parallelOutboundMigrationsPerNode: 2
-    progressTimeout: 150
-  certConfig:
-    ca:
-      duration: 48h0m0s
-      renewBefore: 24h0m0s
-    server:
-      duration: 24h0m0s
-      renewBefore: 12h0m0s
-  featureGates:
-    deployTektonTaskResources: false
-    disableMDevConfiguration: false
-    enableCommonBootImageImport: true
-    nonRoot: true
-    withHostPassthroughCPU: false
-  workloadUpdateStrategy:
-    batchEvictionInterval: 1m0s
-    batchEvictionSize: 10
-    workloadUpdateMethods:
-      - LiveMigrate
-  uninstallStrategy: BlockUninstallIfWorkloadsExist
