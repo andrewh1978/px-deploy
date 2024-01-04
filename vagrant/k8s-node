@@ -9,3 +9,5 @@ done
 echo "Executing '$command'"
 eval $command
 wait
+# set role for this node
+ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no master-$cluster kubectl label node $(hostname) node-role.kubernetes.io/worker=worker

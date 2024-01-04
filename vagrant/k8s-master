@@ -18,5 +18,8 @@ while true; do
     echo "kube api not ready. Waiting 5 seconds..."
     sleep 5
 done
+# label node
+kubectl label node $(hostname) node-role.kubernetes.io/master=master
+
 echo "Applying Flannel"
 kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/v0.22.0/Documentation/kube-flannel.yml
