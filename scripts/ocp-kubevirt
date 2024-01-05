@@ -1,0 +1,56 @@
+OPVERSION=$(kubectl get packagemanifests.packages.operators.coreos.com kubevirt-hyperconverged -o json | jq -r ".status.channels[0].currentCSV")
+
+echo "current kubevirt-hyperconverged operator version is $OPVERSION"
+
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-cnv
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: kubevirt-hyperconverged-group
+  namespace: openshift-cnv
+spec:
+  targetNamespaces:
+    - openshift-cnv
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: hco-operatorhub
+  namespace: openshift-cnv
+spec:
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  name: kubevirt-hyperconverged
+  startingCSV: $OPVERSION
+  channel: "stable"
+EOF
+
+
+echo "waiting for kubevirt-hyperconverged operator readiness"
+while ! kubectl wait clusterserviceversions.operators.coreos.com $OPVERSION -n openshift-cnv --timeout=300s --for=jsonpath='{.status.phase}'='Succeeded'; do
+  sleep 2
+done
+
+cat <<EOF | kubectl apply -f -
+apiVersion: hco.kubevirt.io/v1beta1
+kind: HyperConverged
+metadata:
+  name: kubevirt-hyperconverged
+  namespace: openshift-cnv
+spec:
+EOF
+
+# check if hyperconverged CRD has status condition containing ReconcileCompleted/True/Available
+# TODO: maybe there is a better way to detect if this CRD is ready?
+HC=$(kubectl get hyperconvergeds.hco.kubevirt.io kubevirt-hyperconverged -n openshift-cnv -ojson | jq -r '.status.conditions[] | select((.reason=="ReconcileCompleted") and (.status=="True") and (.type=="Available")) | .status')
+
+while [ ! "$HC" == "True" ]; do
+  echo "Waiting for hyperconverged CRD to complete reconcile"
+  sleep 5
+  HC=$(kubectl get hyperconvergeds.hco.kubevirt.io kubevirt-hyperconverged -n openshift-cnv -ojson | jq -r '.status.conditions[] | select((.reason=="ReconcileCompleted") and (.status=="True") and (.type=="Available")) | .status')
+done
