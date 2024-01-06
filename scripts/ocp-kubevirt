@@ -54,3 +54,7 @@ while [ ! "$HC" == "True" ]; do
   sleep 5
   HC=$(kubectl get hyperconvergeds.hco.kubevirt.io kubevirt-hyperconverged -n openshift-cnv -ojson | jq -r '.status.conditions[] | select((.reason=="ReconcileCompleted") and (.status=="True") and (.type=="Available")) | .status')
 done
+
+kubectl create ns pxbbq
+kubectl apply -f /assets/kubevirt/dv-ubuntu.yml
+kubectl apply -f /assets/kubevirt/ocp/pxbbq.yml

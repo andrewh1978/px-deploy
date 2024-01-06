@@ -1,9 +1,4 @@
 apiVersion: v1
-kind: Namespace                 
-metadata:
-  name: pxbbq
----
-apiVersion: v1
 kind: Service
 metadata:
   name: mongo
@@ -166,13 +161,14 @@ spec:
                   runcmd:
                   - sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config.d/60-cloudimg-settings.conf
                   - apt update
-                  - apt install -y gnupg curl
+                  - apt install -y gnupg curl qemu-guest-agent
+                  - systemctl enable --now qemu-guest-agent
                   - curl -fsSL https://pgp.mongodb.com/server-7.0.asc | sudo gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
                   - echo 'deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse' | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
                   - apt update
                   - apt install -y mongodb-org
                   - sed -i 's/127.0.0.1/0.0.0.0/' /etc/mongod.conf
-                  - sudo systemctl enable --now mongod
+                  - systemctl enable --now mongod
                   - sleep 5
                   - mongosh /tmp/mongo.js            
           name: cloudinitdisk
@@ -187,5 +183,6 @@ spec:
           storageClassName: px-csi-db
         preallocation: false
         source:
-          http:
-            url: "https://cloud-images.ubuntu.com/minimal/releases/mantic/release/ubuntu-23.10-minimal-cloudimg-amd64.img"
+          pvc:
+            name: ubuntu-image
+            namespace: pxbbq

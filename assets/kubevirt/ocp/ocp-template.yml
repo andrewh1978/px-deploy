@@ -91,6 +91,9 @@ objects:
                   chpasswd:
                     expire: false
                   user: kubevirt
+                  runcmd:
+                  - apt update
+                  - apt install -y qemu-guest-agent
       dataVolumeTemplates:
         - metadata:
             name: '${NAME}-rootdisk'
