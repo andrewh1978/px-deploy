@@ -22,7 +22,7 @@ aws eks update-kubeconfig --region $aws_region --name px-deploy-$name-$cluster
 
 
 # set roles/users in configmap aws-auth which might be needed to show cluster details in AWS UI
-if [ -n $AWS_ADD_EKS_IAM_ROLE ]; then
+if [[ ! -z $AWS_ADD_EKS_IAM_ROLE ]]; then
   echo "setting iamidentitymapping for ROLE $AWS_ADD_EKS_IAM_ROLE"
   kubectl apply -f https://s3.us-west-2.amazonaws.com/amazon-eks/docs/eks-console-full-access.yaml
   AWS_ACCOUNT_ID=$(aws sts get-caller-identity --output json | jq -r '.Account')
@@ -31,7 +31,7 @@ if [ -n $AWS_ADD_EKS_IAM_ROLE ]; then
     --no-duplicate-arns
 fi
 
-if [ -n $AWS_ADD_EKS_IAM_USER ]; then
+if [[ ! -z $AWS_ADD_EKS_IAM_USER ]]; then
   echo "setting iamidentitymapping for USER $AWS_ADD_EKS_IAM_USER"
   kubectl apply -f https://s3.us-west-2.amazonaws.com/amazon-eks/docs/eks-console-full-access.yaml
   AWS_ACCOUNT_ID=$(aws sts get-caller-identity --output json | jq -r '.Account')
