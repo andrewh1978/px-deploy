@@ -1,0 +1,47 @@
+BACKUP_POD_IP=$(kubectl get pods -n central -l app=px-backup -o jsonpath='{.items[*].status.podIP}' 2>/dev/null)
+AWS_ACCESS_KEY=$(sed -n 's/aws_access_key_id[ =]*//p' /root/.aws/credentials 2>/dev/null)
+AWS_SECRET_KEY=$(sed -n 's/aws_secret_access_key[ =]*//p' /root/.aws/credentials 2>/dev/null)
+pubIP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)
+backupPort=$(kubectl get svc px-backup-ui -n central -o=jsonpath='{.spec.ports[?(@.port==80)].nodePort}')
+client_secret=$(kubectl get secret --namespace central pxc-backup-secret -o jsonpath={.data.OIDC_CLIENT_SECRET} | base64 --decode)
+
+# Configures backup with clusters and locations
+pxbackupctl login -s http://$pubIP:$backupPort -u admin -p admin
+pxbackupctl create cloudcredential --aws-access-key $AWS_ACCESS_KEY --aws-secret-key $AWS_SECRET_KEY -e $BACKUP_POD_IP:10002 --orgID default -n s3 -p aws
+sleep 5
+cloud_credential_uid=$(pxbackupctl get cloudcredential -e $BACKUP_POD_IP:10002 --orgID default -o json | jq -cr '.[0].metadata.uid') 
+pxbackupctl create backuplocation --cloud-credential-name s3 --cloud-credential-Uid $cloud_credential_uid -n aws -p s3 --s3-endpoint https://s3.$aws_region.amazonaws.com --path $BACKUP_BUCKET --s3-region $aws_region -e $BACKUP_POD_IP:10002 --orgID default
+pxbackupctl create schedulepolicy --interval-minutes 15 --interval-retain 12 --name example-schedule -e $BACKUP_POD_IP:10002 --orgID default
+sleep 5
+ssh master-2 cat /root/.kube/config > /cluster-2-kube-config
+ssh master-3 cat /root/.kube/config > /cluster-3-kube-config
+pxbackupctl create cluster --name cluster-2 -k /cluster-2-kube-config -e $BACKUP_POD_IP:10002 --orgID default
+pxbackupctl create cluster --name cluster-3 -k /cluster-3-kube-config -e $BACKUP_POD_IP:10002 --orgID default
+
+# Patches Prometheus operator to allow multiple instances to run
+kubectl patch deployment prometheus-operator -n kube-system  --type=json -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "-namespaces=kube-system" }]'
+ssh master-2 <<EOF
+kubectl patch deployment prometheus-operator -n kube-system  --type=json -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "-namespaces=kube-system" }]'
+EOF
+ssh master-3 << EOF
+kubectl patch deployment prometheus-operator -n kube-system  --type=json -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "-namespaces=kube-system" }]'
+EOF
+
+# Enables monitoring and the license server
+kubectl label node node-1-1 px/ls=true
+kubectl label node node-1-2 px/ls=true
+
+helm get values --namespace central px-central -o yaml > values-px-upgrade.yaml && kubectl delete job pxcentral-post-install-hook --namespace central && helm upgrade px-central portworx/px-central --namespace central --version 2.6.0 --set pxlicenseserver.enabled=true,pxmonitor.enabled=true,persistentStorage.enabled=true,persistentStorage.storageClassName="px-repl3",installCRDs=true,pxmonitor.pxCentralEndpoint=$pubIP:$backupPort -f values-px-upgrade.yaml
+
+until (kubectl get po --namespace central -ljob-name=pxcentral-post-install-hook  -o wide | awk '{print $1, $2, $3}' |grep "Completed"); do echo "Waiting for post install hook";sleep 3; done
+
+cat <<EOF >> /etc/motd
++================================================+
+SAVE THE FOLLOWING DETAILS FOR FUTURE REFERENCES
++================================================+
+PX-Central User Interface Access URL : http://$pubIP:$backupPort
+PX-Central admin user name: admin
+PX-Central admin user password: admin
++================================================+
+EOF
+
