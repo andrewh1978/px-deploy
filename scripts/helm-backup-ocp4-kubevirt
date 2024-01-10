@@ -34,7 +34,7 @@ echo "PX Backup grpc LB ready: $BACKUP_POD_IP"
 curl --connect-timeout 2 $BACKUP_POD_IP:10002 2>/dev/null
 res=$?
 while [ "$res" != "23" ]; do
-  echo "Waiting for grpc to accept connections "
+  echo "Waiting for grpc to accept connections. Ret: $res "
   sleep 2
   curl --connect-timeout 2 $BACKUP_POD_IP:10002 2>/dev/null
   res=$?
