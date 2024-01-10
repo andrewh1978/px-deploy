@@ -1,5 +1,5 @@
 description: OpenShift Virtualization Demo on a bare-metal aws cluster
-scripts: ["install-px", "ocp-kubevirt"]
+scripts: ["install-px", "ocp-kubevirt", "helm-backup", "helm-backup-ocp4-kubevirt"]
 aws_type: "c5n.metal"
 platform: "ocp4"
 cloud: "aws"

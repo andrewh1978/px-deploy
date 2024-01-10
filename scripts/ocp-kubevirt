@@ -45,6 +45,8 @@ metadata:
 spec:
 EOF
 
+sleep 2
+
 # check if hyperconverged CRD has status condition containing ReconcileCompleted/True/Available
 # TODO: maybe there is a better way to detect if this CRD is ready?
 HC=$(kubectl get hyperconvergeds.hco.kubevirt.io kubevirt-hyperconverged -n openshift-cnv -ojson | jq -r '.status.conditions[] | select((.reason=="ReconcileCompleted") and (.status=="True") and (.type=="Available")) | .status')
