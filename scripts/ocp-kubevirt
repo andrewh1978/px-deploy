@@ -58,5 +58,8 @@ while [ ! "$HC" == "True" ]; do
 done
 
 kubectl create ns pxbbq
+kubectl label ns pxbbq app=pxbbq
+kubectl label ns pxbbq backup=true
+
 kubectl apply -f /assets/kubevirt/dv-ubuntu.yml
 kubectl apply -f /assets/kubevirt/ocp/pxbbq.yml
