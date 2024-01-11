@@ -39,7 +39,7 @@ echo "PX Backup grpc LB ready: $BACKUP_POD_IP"
 #  curl --connect-timeout 2 $BACKUP_POD_IP:10002 2>/dev/null
 #  res=$?
 #done
-sleep 5
+sleep 20
 # TODO: find a reliable way to detect if grpc is responding
 
 # get external px-backup route hostname
