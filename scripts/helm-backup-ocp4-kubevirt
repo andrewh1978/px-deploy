@@ -51,6 +51,7 @@ client_secret=$(kubectl get secret --namespace central pxc-backup-secret -o json
 
 # Configures backup with clusters and locations
 pxbackupctl login -s http://$pubIP:$backupPort -u admin -p admin
+pxbackupctl version -e $BACKUP_POD_IP:10002
 pxbackupctl create cloudcredential --aws-access-key $AWS_ACCESS_KEY --aws-secret-key $AWS_SECRET_KEY -e $BACKUP_POD_IP:10002 --orgID default -n s3 -p aws
 sleep 5
 cloud_credential_uid=$(pxbackupctl get cloudcredential -e $BACKUP_POD_IP:10002 --orgID default -o json | jq -cr '.[0].metadata.uid') 

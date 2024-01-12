@@ -31,7 +31,7 @@ spec:
     spec:
       containers:
       - name: pxbbq-web
-        image: eshanks16/pxbbq:v3.2
+        image: eshanks16/pxbbq:4.0
         env:
         - name: MONGO_INIT_USER
           value: "porxie" #Mongo User with permissions to create additional databases and users. Typically "porxie" or "pds"
@@ -71,6 +71,7 @@ metadata:
   namespace: pxbbq
   labels:
     app: pxbbq-web
+    px-dr: 'false'
 spec:
   to:
     kind: Service
