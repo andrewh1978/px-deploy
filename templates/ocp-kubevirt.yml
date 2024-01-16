@@ -1,8 +1,14 @@
-description: OpenShift Virtualization Demo on a bare-metal aws cluster
-scripts: ["install-px", "ocp-kubevirt"]
+description: Two Cluster OCP Virtualization Demo with Backup & AsyncDR on a aws bare-metal
+scripts: ["install-awscli","install-px", "licenses", "ocp-kubevirt"]
 aws_type: "c5n.metal"
 platform: "ocp4"
 cloud: "aws"
+clusters: 2
+cluster:
+  - id: 1
+    scripts: [ "ocp-kubevirt-apps", "helm-backup", "helm-backup-ocp4-kubevirt"]
+  - id: 2
+    scripts: ["clusterpair-dr"]
 env:
   cloud_drive: "type%3Dgp2%2Csize%3D150"
 

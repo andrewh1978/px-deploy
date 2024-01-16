@@ -1,0 +1,72 @@
+# create ocp route for backup UI
+cat <<EOF | kubectl apply -f -
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: px-backup-ui
+  namespace: central
+spec:
+  to:
+    kind: Service
+    name: px-backup-ui
+    weight: 100
+  port:
+    targetPort: http
+  wildcardPolicy: None
+EOF
+
+# expose px-backup service to run pxbackupctl
+# kubectl patch svc px-backup -n central -p '{"spec":{"type":"LoadBalancer"}}'
+
+kubectl patch svc px-backup -n central -p '{"spec":{"type":"LoadBalancer"}}'
+
+BACKUP_POD_IP=$(kubectl get svc px-backup -n central -o json | jq -r ".status.loadBalancer.ingress[0].hostname")
+
+while [ $BACKUP_POD_IP = "null" ]; do
+  sleep 2
+  echo "PX Backup grpc LB not ready"
+  BACKUP_POD_IP=$(kubectl get svc px-backup -n central -o json | jq -r ".status.loadBalancer.ingress[0].hostname")
+done
+
+echo "PX Backup grpc LB ready: $BACKUP_POD_IP"
+
+# now as the service has a IP assigned lets check if the service is available
+#curl --connect-timeout 2 $BACKUP_POD_IP:10002 2>/dev/null
+#res=$?
+#while [ "$res" != "23" ]; do
+#  echo "Waiting for grpc to accept connections. Ret: $res "
+#  sleep 2
+#  curl --connect-timeout 2 $BACKUP_POD_IP:10002 2>/dev/null
+#  res=$?
+#done
+sleep 20
+# TODO: find a reliable way to detect if grpc is responding
+
+# get external px-backup route hostname
+pubIP=$(kubectl get route px-backup-ui -n central -o json |jq -r ".status.ingress[0].host")
+AWS_ACCESS_KEY=$(sed -n 's/aws_access_key_id[ =]*//p' /root/.aws/credentials 2>/dev/null)
+AWS_SECRET_KEY=$(sed -n 's/aws_secret_access_key[ =]*//p' /root/.aws/credentials 2>/dev/null)
+backupPort=80
+client_secret=$(kubectl get secret --namespace central pxc-backup-secret -o jsonpath={.data.OIDC_CLIENT_SECRET} | base64 --decode)
+
+# Configures backup with clusters and locations
+pxbackupctl login -s http://$pubIP:$backupPort -u admin -p admin
+pxbackupctl version -e $BACKUP_POD_IP:10002
+pxbackupctl create cloudcredential --aws-access-key $AWS_ACCESS_KEY --aws-secret-key $AWS_SECRET_KEY -e $BACKUP_POD_IP:10002 --orgID default -n s3 -p aws
+sleep 5
+cloud_credential_uid=$(pxbackupctl get cloudcredential -e $BACKUP_POD_IP:10002 --orgID default -o json | jq -cr '.[0].metadata.uid') 
+pxbackupctl create backuplocation --cloud-credential-name s3 --cloud-credential-Uid $cloud_credential_uid -n $BACKUP_BUCKET -p s3 --s3-endpoint https://s3.$aws_region.amazonaws.com --path $BACKUP_BUCKET --s3-region $aws_region -e $BACKUP_POD_IP:10002 --orgID default
+pxbackupctl create schedulepolicy --interval-minutes 15 --interval-retain 12 --name example-schedule -e $BACKUP_POD_IP:10002 --orgID default
+sleep 5
+
+pxbackupctl create cluster --name cluster-1 -k /root/.kube/config -e $BACKUP_POD_IP:10002 --orgID default
+
+cat <<EOF >> /etc/motd
++================================================+
+How to access PX-BACKUP UI
++================================================+
+PX-Central User Interface Access URL : http://$pubIP:$backupPort
+PX-Central admin user name: admin
+PX-Central admin user password: admin
++================================================+
+EOF

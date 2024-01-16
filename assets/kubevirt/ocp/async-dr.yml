@@ -1,0 +1,24 @@
+apiVersion: stork.libopenstorage.org/v1alpha1
+kind: SchedulePolicy
+metadata:
+  name: 5-min
+policy:
+  interval:
+    intervalMinutes: 5
+---
+apiVersion: stork.libopenstorage.org/v1alpha1
+kind: MigrationSchedule
+metadata:
+  name: pxbbq
+  namespace: kube-system
+spec:
+  template:
+    spec:
+      clusterPair: remotecluster-2
+      includeResources: true
+      startApplications: false
+      excludeSelectors:
+        px-dr: 'false'
+      namespaces:
+      - pxbbq
+  schedulePolicyName: 5-min

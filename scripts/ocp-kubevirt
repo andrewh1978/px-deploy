@@ -1,3 +1,8 @@
+
+# restart PX to prevent CSI bug
+echo "restart PX to prevent CSI bug"
+kubectl delete pods -n portworx -l name=portworx
+
 OPVERSION=$(kubectl get packagemanifests.packages.operators.coreos.com kubevirt-hyperconverged -o json | jq -r ".status.channels[0].currentCSV")
 
 echo "current kubevirt-hyperconverged operator version is $OPVERSION"
@@ -45,6 +50,8 @@ metadata:
 spec:
 EOF
 
+sleep 2
+
 # check if hyperconverged CRD has status condition containing ReconcileCompleted/True/Available
 # TODO: maybe there is a better way to detect if this CRD is ready?
 HC=$(kubectl get hyperconvergeds.hco.kubevirt.io kubevirt-hyperconverged -n openshift-cnv -ojson | jq -r '.status.conditions[] | select((.reason=="ReconcileCompleted") and (.status=="True") and (.type=="Available")) | .status')
@@ -54,7 +61,3 @@ while [ ! "$HC" == "True" ]; do
   sleep 5
   HC=$(kubectl get hyperconvergeds.hco.kubevirt.io kubevirt-hyperconverged -n openshift-cnv -ojson | jq -r '.status.conditions[] | select((.reason=="ReconcileCompleted") and (.status=="True") and (.type=="Available")) | .status')
 done
-
-kubectl create ns pxbbq
-kubectl apply -f /assets/kubevirt/dv-ubuntu.yml
-kubectl apply -f /assets/kubevirt/ocp/pxbbq.yml
