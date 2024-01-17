@@ -288,9 +288,7 @@ resource "aws_instance" "node" {
 	root_block_device {
 	  	volume_size				=	50
 	  	delete_on_termination 	= 	true
-	  	tags					=  	{
-			Name 					= format("%s.%s.%s.%s",var.name_prefix,var.config_name,each.key,"root")
-	  	}
+		tags = merge({Name = format("%s.%s.%s.%s",var.name_prefix,var.config_name,each.key,"root")}, var.aws_tags)
 	}
 	
 	dynamic "ebs_block_device"{
@@ -298,9 +296,7 @@ resource "aws_instance" "node" {
     	content {
       		volume_type 		= ebs_block_device.value.ebs_type
       		volume_size 		= ebs_block_device.value.ebs_size
-      		tags 				= {
-				Name 				= format("%s.%s.%s.ebs%s",var.name_prefix,var.config_name,each.key,ebs_block_device.key)
-			}
+			tags = merge({Name = format("%s.%s.%s.%s",var.name_prefix,var.config_name,each.key,"root")}, var.aws_tags)
       		device_name 		= ebs_block_device.value.ebs_device_name
     	}
 	}
