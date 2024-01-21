@@ -1,3 +1,16 @@
+# next
+
+## Removal
+ * auto_destroy parameter
+ * quiet parameter
+
+## Improvements
+ * Migrate vsphere to Terraform
+ * introduce kubevirt-ocp template
+
+## Fixes
+ * Add environment variable AWS_ADD_EKS_IAM_ROLE to fix UI visibility of EKS cluster (see known Issues on EKS)
+ 
 # 5.3
 
 ## Fixes

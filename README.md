@@ -152,8 +152,6 @@ The `defaults.yml` file sets a number of deployment variables:
  * `tags` - a list of tags to be applied to each node. This is a comma-separate list of name=value pairs, for example: `"Owner=Bob,Purpose=Demo"`
  * `stop_after` - stop the intances after this many hours
  * `post_script` - script to run on each master after deployment, output will go to stdout
- * `quiet` - if "true", hide provisioning output
- * `auto_destroy` - if set to `true`, destroy deployment immediately after deploying (usually used with a `post_script` to output the results of a test or benchmark)
  * `nodes` - the number of worker nodes on each cluster
  * `platform` - can be set to either k8s, k3s, none, dockeree, ocp4, eks, gke or nomad
  * `azure_type` - the Azure machine type for each node
