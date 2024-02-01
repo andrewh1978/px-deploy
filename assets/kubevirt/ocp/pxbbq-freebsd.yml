@@ -12,7 +12,7 @@ spec:
     targetPort: 27017
   type: ClusterIP
   selector:
-    vm.kubevirt.io/name: ubuntu-mongodb
+    vm.kubevirt.io/name: freebsd-mongodb
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -84,13 +84,13 @@ spec:
 apiVersion: kubevirt.io/v1
 kind: VirtualMachine
 metadata:
-  name: ubuntu-mongodb
+  name: freebsd-mongodb
   annotations:
-    description: Ubuntu MongoDB
+    description: FreeBSD MongoDB
   labels:
     name: mongo
     app: backend
-    os.template.kubevirt.io/ubuntu: 'true'
+    os.template.kubevirt.io/freebsd: 'true'
   namespace: pxbbq
 spec:
   running: true
@@ -98,10 +98,10 @@ spec:
     metadata:
       annotations:
         vm.kubevirt.io/flavor: small
-        vm.kubevirt.io/os: ubuntu
+        vm.kubevirt.io/os: freebsd
         vm.kubevirt.io/workload: server
       labels:
-        kubevirt.io/domain: ubuntu
+        kubevirt.io/domain: freebsd
         kubevirt.io/size: small
     spec:
       domain:
@@ -131,13 +131,13 @@ spec:
             enabled: true
         firmware:
           bootloader:
-            efi: {}
+            bios: {}
         machine:
           type: q35
         resources:
           requests:
             memory: 2Gi
-      hostname: ubuntu-mongodb
+      hostname: freebsd-mongodb
       networks:
         - name: default
           pod: {}
@@ -145,37 +145,37 @@ spec:
       volumes:
         - name: rootdisk
           dataVolume:
-            name: 'ubuntu-mongodb-rootdisk'
+            name: 'freebsd-mongodb-rootdisk'
         - cloudInitNoCloud:
                 userData: |
                   #cloud-config
-                  password: portworx
-                  chpasswd:
-                    expire: false
-                  user: kubevirt
+                  hostname: mongodb
+                  users:
+                    - name: kubevirt
+                      sudo: ALL=(ALL) NOPASSWD:ALL
+                      passwd: $6$Q1dGl.LfuMeS8RPP$b4xynn.Z3n2/h.YqOV90H7GzoAfjLKPMAKP1rzCeeBxiYNhROkxOXAC4rmQNbQf3oZ.Om8/Q7W8XmTgHsdoLw.
+                      shell: /bin/sh
+                      home: /home/kubevirt
+                      lock_passwd: false
                   write_files:
-                    - content: >
-                       db = connect( 'mongodb://localhost/admin' );
-                       db.createUser({user:'porxie', pwd:'porxie', roles:[{ role:'root', db:'admin'}]});
-                      path: /tmp/mongo.js
+                    - content: |
+                       from pymongo import MongoClient
+                       client = MongoClient('localhost:27017')
+                       foo = client["admin"]
+                       foo.command("createUser", "porxie", pwd="porxie", roles=[{ 'role':'root', 'db':'admin'}])
+                      path: /tmp/init-mongo.py
                       permissions: '0600'
                   runcmd:
-                  - sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config.d/60-cloudimg-settings.conf
-                  - apt update
-                  - apt install -y gnupg curl qemu-guest-agent
-                  - systemctl enable --now qemu-guest-agent
-                  - curl -fsSL https://pgp.mongodb.com/server-7.0.asc | sudo gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
-                  - echo 'deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse' | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
-                  - apt update
-                  - apt install -y mongodb-org
-                  - sed -i 's/127.0.0.1/0.0.0.0/' /etc/mongod.conf
-                  - systemctl enable --now mongod
-                  - sleep 5
-                  - mongosh /tmp/mongo.js            
+                    - pkg install -y qemu-tools mongodb70
+                    - sed -i '' 's/bindIp:\ 127.0.0.1/bindIp:\ 0.0.0.0/' /usr/local/etc/mongodb.conf
+                    - echo 'mongod_enable="YES"' >>/etc/rc.conf
+                    - service mongod start
+                    - pkg install -y py39-pymongo
+                    - python3 /tmp/init-mongo.py                  
           name: cloudinitdisk
   dataVolumeTemplates:
     - metadata:
-        name: 'ubuntu-mongodb-rootdisk'
+        name: 'freebsd-mongodb-rootdisk'
       spec:
         storage:
           resources:
@@ -185,5 +185,5 @@ spec:
         preallocation: false
         source:
           pvc:
-            name: ubuntu-image
+            name: freebsd-image
             namespace: pxbbq
