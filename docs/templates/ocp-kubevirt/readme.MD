@@ -8,7 +8,7 @@
 $ px-deploy create -n mydeployment -t ocp-kubevirt
 ```
 
-* ensure your ~/.px-deploy/defaults.yml contains env variables containing valid DR license and defining existing & accessible S3 Buckets 
+* ensure your ~/.px-deploy/defaults.yml contains env variables with valid DR license and defining existing & accessible S3 Buckets 
 
 ```
 env:
@@ -21,22 +21,24 @@ env:
 
 * open 2 cli consoles
 
-* login to deployment on both consoles on console 1 stay on master-1 (**c1cli**), on console 2 ssh into master-2 (**c2cli**)
+* login to deployment on both consoles `$ px-deploy connect -n mydeployment`
+
+* on console 1 stay on master-1 (**c1cli**), on console 2 ssh into master-2 (**c2cli**)
 
 * both consoles will show login credentials to OCP, **c1cli** will also show PX-Backup credentials
 
-* login to PX-Backup (**pxbui**) & both OCP instances on Browser (**c1ui** **c2ui**)
+* login to PX-Backup UI (**pxbui**) & both OCP4 UI on Browser (**c1ui** **c2ui**)
 
 ### Check
 
-* **c1ui** on namespace pxbbq ubuntu-mongodb VM and 3 pxbbq pods are running
+* **c1ui**: on namespace pxbbq ubuntu-mongodb VM and 3 pxbbq pods are running
 
 * get route to app, open app, login to app and place an order
 
-* **c2ui** show pxbbq namespace does not exist
+* **c2ui**: show pxbbq namespace does not exist
 
 
-* **c1cli** 
+* **c1cli**: 
 
 * show and talk about ClusterPair, SchedulePolicy and MigrationSchedule 
 
@@ -56,13 +58,13 @@ env:
 
 * `$ storkctl suspend migrationschedules pxbbq -n kube-system`
 
-* **c2cli**  activate migration `$ storkctl activate migrations -n pxbbq`
+* **c2cli**:  activate migration `$ storkctl activate migrations -n pxbbq`
 
-* **c2ui** show pods / vm in pxbbq namespace coming up
+* **c2ui**: show pods / vm in pxbbq namespace coming up
 
-* **c1cli** DELETE PXBBQ namespace as this takes some time
+* **c1cli**: DELETE PXBBQ namespace as this takes some time
 
-* **c2ui** show missing route, talk about not having route migrated
+* **c2ui**: show missing route, talk about not having route migrated
 
 * create route to pxbbq app (service pxbbq-svc)
 
@@ -70,7 +72,7 @@ env:
 
 * login to app, show existing order, add another one
 
-* **pxbui** login to px-backup gui
+* **pxbui**: login to px-backup gui
 
 * check if cloud, object target are set
 
@@ -87,7 +89,7 @@ env:
 
 * in case pxbbq deployment fails you can delete the default (FreeBSD) Deployment and try Ubuntu
 
-* **c1cli** `$ kubectl delete -f /assets/kubevirt/ocp/pxbbq-freebsd.yml`
+* **c1cli**: `$ kubectl delete -f /assets/kubevirt/ocp/pxbbq-freebsd.yml`
 
 * `$ kubectl apply -f /assets/kubevirt/ubuntu-dv.yml`
 
