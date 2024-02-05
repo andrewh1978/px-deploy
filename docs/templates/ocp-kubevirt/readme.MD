@@ -1,46 +1,94 @@
-Prepare:
+## How to deploy
 
--open 2 cli consoles
--login to deployment on both consoles, on console 2 ssh into master-2
--both consoles will show login credentials to OCP, Console 1 will also show PX-Backup credentials
--login to PX-Backup & both OCP instances on Browser
+* ensure your px-deploy environment is able to create OCP4 deployments 
+ 
+* please consult the [readme](https://github.com/andrewh1978/px-deploy?tab=readme-ov-file#notes-for-ocp4-on-aws)
 
-Check:
-- Cluster 1: on namespace pxbbq ubuntu-mongodb VM and 3 pxbbq pods are running
+```
+$ px-deploy create -n mydeployment -t ocp-kubevirt
+```
 
+* ensure your ~/.px-deploy/defaults.yml contains env variables containing valid DR license and defining existing & accessible S3 Buckets 
 
-- get route to app, open app, Login to app and place an order
+```
+env:
+  DR_BUCKET: "mys3bucket"
+  BACKUP_BUCKET: "mys3bucket"
+  licenses: "xxx-xxxx-xxx"
+```
 
-- show cluster 2 does not have pxbbq installed
+## Prepare
 
+* open 2 cli consoles
 
-c1cli: storkctl get clusterpair -n kube-system
+* login to deployment on both consoles on console 1 stay on master-1 (**c1cli**), on console 2 ssh into master-2 (**c2cli**)
 
-c1cli: vi /assets/kubevirt/ocp/async-dr.yml
-c1cli: kubectl apply -f /assets/kubevirt/ocp/async-dr.yml
+* both consoles will show login credentials to OCP, **c1cli** will also show PX-Backup credentials
 
-c1cli: storkctl get migrations -n kube-system
+* login to PX-Backup (**pxbui**) & both OCP instances on Browser (**c1ui** **c2ui**)
 
-c1cli: storkctl suspend migrationschedules pxbbq -n kube-system
+### Check
 
-c2cli:  storkctl activate migrations -n pxbbq
+* **c1ui** on namespace pxbbq ubuntu-mongodb VM and 3 pxbbq pods are running
 
-c2ui: show pods / vm in pxbbq namespace coming up
+* get route to app, open app, login to app and place an order
 
-c1cli: DELETE PXBBQ namespace. takes some time
-
-c2ui: show missing route, talk about not having route migrated
-c2ui: create route to pxbbq app (service pxbbq-svc)
-access app from cluster to via route
-login, show existing order, add another one
-
-login to px-backup gui
-check if cloud, object target fit
-onboard cluster-2
-take a backup from pxbbq namespace. use namespace label app=pxbbq
-
-when backup is taken, restore to cluster-1. exclude route
-while restore running, switch to cluster1 ui to show everything is empty
+* **c2ui** show pxbbq namespace does not exist
 
 
-Document Ubuntu Fallback
+* **c1cli** 
+
+* show and talk about ClusterPair, SchedulePolicy and MigrationSchedule 
+
+* `$ storkctl get clusterpair -n kube-system`
+
+* `$ vi /assets/kubevirt/ocp/async-dr.yml`
+
+* apply SchedulePolicy & MigrationSchedule 
+
+* `$ kubectl apply -f /assets/kubevirt/ocp/async-dr.yml`
+
+* wait for first migration to finish
+ 
+* `$ storkctl get migrations -n kube-system`
+
+* suspend migration 
+
+* `$ storkctl suspend migrationschedules pxbbq -n kube-system`
+
+* **c2cli**  activate migration `$ storkctl activate migrations -n pxbbq`
+
+* **c2ui** show pods / vm in pxbbq namespace coming up
+
+* **c1cli** DELETE PXBBQ namespace as this takes some time
+
+* **c2ui** show missing route, talk about not having route migrated
+
+* create route to pxbbq app (service pxbbq-svc)
+
+* access app from cluster to via route
+
+* login to app, show existing order, add another one
+
+* **pxbui** login to px-backup gui
+
+* check if cloud, object target are set
+
+* onboard cluster-2
+
+* take a backup from pxbbq namespace on cluster-2. can use namespace label app=pxbbq
+
+* when backup is taken, restore to cluster-1. exclude route
+
+* while restore running, switch to cluster1 ui to show everything is empty
+
+
+### Known Issues
+
+* in case pxbbq deployment fails you can delete the default (FreeBSD) Deployment and try Ubuntu
+
+* **c1cli** `$ kubectl delete -f /assets/kubevirt/ocp/pxbbq-freebsd.yml`
+
+* `$ kubectl apply -f /assets/kubevirt/ubuntu-dv.yml`
+
+* `$ kubectl apply -f /assets/kubevirt/ocp/pxbbq-freebsd.yml`
