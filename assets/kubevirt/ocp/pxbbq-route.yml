@@ -1,0 +1,16 @@
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: pxbbq
+  namespace: pxbbq
+  labels:
+    app: pxbbq-web
+    px-dr: 'false'
+spec:
+  to:
+    kind: Service
+    name: pxbbq-svc
+    weight: 100
+  port:
+    targetPort: 8080
+  wildcardPolicy: None

@@ -6,7 +6,7 @@ cloud: "aws"
 clusters: 2
 cluster:
   - id: 1
-    scripts: [ "ocp-kubevirt-apps-freebsd", "helm-backup", "helm-backup-ocp4-kubevirt"]
+    scripts: [ "kubevirt-apps-freebsd", "helm-backup", "helm-backup-ocp4-kubevirt"]
   - id: 2
     scripts: ["clusterpair-dr"]
 env:
