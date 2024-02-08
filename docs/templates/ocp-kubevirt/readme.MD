@@ -89,8 +89,8 @@ env:
 
 * in case pxbbq deployment fails you can delete the default (FreeBSD) Deployment and try Ubuntu
 
-* **c1cli**: `$ kubectl delete -f /assets/kubevirt/ocp/pxbbq-freebsd.yml`
+* **c1cli**: `$ kubectl delete -f /assets/kubevirt/pxbbq-freebsd.yml`
 
 * `$ kubectl apply -f /assets/kubevirt/ubuntu-dv.yml`
 
-* `$ kubectl apply -f /assets/kubevirt/ocp/pxbbq-freebsd.yml`
+* `$ kubectl apply -f /assets/kubevirt/pxbbq.yml`

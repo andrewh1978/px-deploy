@@ -1,8 +1,0 @@
-kubectl create ns pxbbq
-kubectl label ns pxbbq app=pxbbq
-kubectl label ns pxbbq backup=true
-
-curl -O https://object-storage.public.mtl1.vexxhost.net/swift/v1/1dbafeefbd4f4c80864414a441e72dd2/bsd-cloud-image.org/images/freebsd/13.2/2023-04-21/zfs/freebsd-13.2-zfs-2023-04-21.qcow2
-virtctl image-upload pvc freebsd-image -n pxbbq --size 5Gi --insecure --storage-class px-csi-db --image-path=./freebsd-13.2-zfs-2023-04-21.qcow2
-
-kubectl apply -f /assets/kubevirt/ocp/pxbbq-freebsd.yml

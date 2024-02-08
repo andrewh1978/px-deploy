@@ -1,31 +1,31 @@
-export KUBEVIRTVERSION="v1.1.0"
-export CDIVERSION="v1.57.0"
+export KUBEVIRTVERSION="v1.1.1"
+export CDIVERSION="v1.58.1"
 
 #export KUBEVIRTVERSION=$(curl -s https://api.github.com/repos/kubevirt/kubevirt/releases | grep tag_name | grep -v -- '-rc' | sort -r | head -1 | awk -F': ' '{print $2}' | sed 's/,//' | xargs)
 
 echo "downloading kubevirt $KUBEVIRTVERSION"
-kubectl create -f https://github.com/kubevirt/kubevirt/releases/download/${KUBEVIRTVERSION}/kubevirt-operator.yaml
+kubectl apply -f https://github.com/kubevirt/kubevirt/releases/download/${KUBEVIRTVERSION}/kubevirt-operator.yaml
                  
 echo "waiting for kubevirt operator readiness"
 while ! kubectl wait --for=condition=ready pod --timeout=300s -lname=virt-operator -n kubevirt; do
     sleep 2
 done
 
-# check if emulation (slow!!!) needed
-# hint: check only done on master node...
-egrep '^flags.*(vmx|svm)' /proc/cpuinfo >/dev/null
-if  [ $? = 1 ]; then
-  echo "No virtualizazion capabilities found on master node cpu"
-  echo "switching on software emulation (slow)"
-  kubectl -n kubevirt patch kubevirts kubevirt --type=merge --patch '{"spec":{"configuration":{"developerConfiguration":{"useEmulation":true}}}}'
-fi
-
-kubectl create -f https://github.com/kubevirt/kubevirt/releases/download/${KUBEVIRTVERSION}/kubevirt-cr.yaml
+kubectl apply -f https://github.com/kubevirt/kubevirt/releases/download/${KUBEVIRTVERSION}/kubevirt-cr.yaml
 
 echo "waiting for kubevirt CRD readiness"
 while ! kubectl wait kubevirt.kubevirt.io/kubevirt -n kubevirt --timeout=300s --for=jsonpath='{.status.phase}'='Deployed'; do
   sleep 2
 done
+
+# check node-1-1 if emulation (slow!!!) needed
+echo "checking for virtualizazion capabilities on node-1-1 cpu"
+ssh node-1-1  egrep '^flags.*\(vmx\|svm\)' /proc/cpuinfo >/dev/null
+if  [ $? = 1 ]; then
+  echo "No virtualizazion capabilities found on node-1-1 cpu"
+  echo "enabling software emulation (slow)"
+  kubectl -n kubevirt patch kubevirts kubevirt --type=merge --patch '{"spec":{"configuration":{"developerConfiguration":{"useEmulation":true}}}}'
+fi
 
 echo "installing virtctl"
 ARCH=$(uname -s | tr A-Z a-z)-$(uname -m | sed 's/x86_64/amd64/') || windows-amd64.exe
@@ -35,12 +35,18 @@ chmod +x /tmp/virtctl
 sudo install /tmp/virtctl /usr/local/bin
 ln -s /usr/local/bin/virtctl /usr/local/bin/kubectl-virt 
 
-kubectl create -f https://github.com/kubevirt/containerized-data-importer/releases/download/${CDIVERSION}/cdi-operator.yaml
-kubectl create -f https://github.com/kubevirt/containerized-data-importer/releases/download/${CDIVERSION}/cdi-cr.yaml
+kubectl apply -f https://github.com/kubevirt/containerized-data-importer/releases/download/${CDIVERSION}/cdi-operator.yaml
+kubectl apply -f https://github.com/kubevirt/containerized-data-importer/releases/download/${CDIVERSION}/cdi-cr.yaml
 
-kubectl apply -f /assets/kubevirt/px-virt-sc.yml
-
-while ! kubectl patch storageprofile --type merge px-virtualization -p '{ "spec": { "claimPropertySets": [ { "accessModes": [ "ReadWriteMany" ], "volumeMode": "Filesystem" } ], "cloneStrategy": "csi-clone" } }'; do
-  echo waiting for storageprofile
+echo "waiting for cdi operator readiness"
+while ! kubectl wait cdis.cdi.kubevirt.io cdi -n cdi  --for=jsonpath='{.status.phase}'='Deployed'; do
   sleep 2
 done
+
+
+#kubectl apply -f /assets/kubevirt/px-virt-sc.yml
+
+#while ! kubectl patch storageprofile --type merge px-virtualization -p '{ "spec": { "claimPropertySets": [ { "accessModes": [ "ReadWriteMany" ], "volumeMode": "Filesystem" } ], "cloneStrategy": "csi-clone" } }'; do
+#  echo waiting for storageprofile
+#  sleep 2
+#done

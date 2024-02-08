@@ -697,7 +697,7 @@ func vsphere_init() {
 	var govc_opts []string
 
 	config := parse_yaml("defaults.yml")
-	fmt.Printf("Hint: there is a way faster way to deploy the base template. \n  Please follow this documentation:\n  https://github.com/andrewh1978/px-deploy/tree/master/docs/vsphere/README.md \n  Or get a coffee now\n")
+	fmt.Printf("Hint: there is a way faster way to deploy the base template. \n  Please follow this documentation:\n  https://github.com/andrewh1978/px-deploy/tree/master/docs/cloud/vsphere/README.md \n  Or get a coffee now\n")
 	checkvar := []string{"vsphere_compute_resource", "vsphere_datacenter", "vsphere_datastore", "vsphere_host", "vsphere_network", "vsphere_resource_pool", "vsphere_template", "vsphere_user", "vsphere_password", "vsphere_repo"}
 	emptyVars := isEmpty(config.Vsphere_Compute_Resource, config.Vsphere_Datacenter, config.Vsphere_Datastore, config.Vsphere_Host, config.Vsphere_Network, config.Vsphere_Resource_Pool, config.Vsphere_Template, config.Vsphere_User, config.Vsphere_Password, config.Vsphere_Repo)
 	if len(emptyVars) > 0 {

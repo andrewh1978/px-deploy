@@ -1,0 +1,17 @@
+kubectl create ns pxbbq
+kubectl label ns pxbbq app=pxbbq
+kubectl label ns pxbbq backup=true
+
+curl -O https://object-storage.public.mtl1.vexxhost.net/swift/v1/1dbafeefbd4f4c80864414a441e72dd2/bsd-cloud-image.org/images/freebsd/13.2/2023-04-21/zfs/freebsd-13.2-zfs-2023-04-21.qcow2
+virtctl image-upload pvc freebsd-image -n pxbbq --size 5Gi --insecure --storage-class px-csi-db --image-path=./freebsd-13.2-zfs-2023-04-21.qcow2
+
+kubectl apply -f /assets/kubevirt/pxbbq-freebsd.yml
+
+if [ "$platform" = ocp4 ]; then
+    kubectl apply -f /assets/kubevirt/ocp/pxbbq-route.yml
+else
+    kubectl patch svc pxbbq-svc -n pxbbq  --type='json' -p '[{"op":"replace","path":"/spec/type","value":"NodePort"}]'
+    pubIP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)
+    appPort=$(kubectl get svc pxbbq-svc -n pxbbq -o=jsonpath='{.spec.ports[?(@.port==80)].nodePort}')
+    echo "Access PXBBQ on http://$pubIP:$appPort" >> /etc/motd
+fi
