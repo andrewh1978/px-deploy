@@ -1493,8 +1493,8 @@ func write_nodescripts(config Config) {
 			tf_common_master_script = append(tf_common_master_script, "echo \"Started $(date)\"\n"...)
 			tf_common_master_script = append(tf_common_master_script, "echo \""+filename+"_start,$(date +%s)\" >>/var/log/px-deploy/script_tracking\n"...)
 			tf_common_master_script = append(tf_common_master_script, content...)
-			tf_common_master_script = append(tf_common_master_script, "echo \""+filename+"_stop,$(date +%s)\" >>/var/log/px-deploy/script_tracking\n"...)
 			tf_common_master_script = append(tf_common_master_script, "\necho \"Finished $(date)\"\n"...)
+			tf_common_master_script = append(tf_common_master_script, "echo \""+filename+"_stop,$(date +%s)\" >>/var/log/px-deploy/script_tracking\n"...)
 			tf_common_master_script = append(tf_common_master_script, "\n) >&/var/log/px-deploy/"+filename+"\n"...)
 		}
 	}
@@ -1507,8 +1507,8 @@ func write_nodescripts(config Config) {
 			tf_common_master_script = append(tf_common_master_script, "echo \"Started $(date)\"\n"...)
 			tf_common_master_script = append(tf_common_master_script, "echo \""+filename+"_start,$(date +%s)\" >>/var/log/px-deploy/script_tracking\n"...)
 			tf_common_master_script = append(tf_common_master_script, content...)
-			tf_common_master_script = append(tf_common_master_script, "echo \""+filename+"_stop,$(date +%s)\" >>/var/log/px-deploy/script_tracking\n"...)
 			tf_common_master_script = append(tf_common_master_script, "\necho \"Finished $(date)\"\n"...)
+			tf_common_master_script = append(tf_common_master_script, "echo \""+filename+"_stop,$(date +%s)\" >>/var/log/px-deploy/script_tracking\n"...)
 			tf_common_master_script = append(tf_common_master_script, "\n) >&/var/log/px-deploy/"+filename+"\n"...)
 		}
 	}
@@ -1521,8 +1521,8 @@ func write_nodescripts(config Config) {
 			tf_post_script = append(tf_post_script, "echo \"Started $(date)\"\n"...)
 			tf_post_script = append(tf_post_script, "echo \""+config.Post_Script+"_start,$(date +%s)\" >>/var/log/px-deploy/script_tracking\n"...)
 			tf_post_script = append(tf_post_script, content...)
-			tf_post_script = append(tf_post_script, "echo \""+config.Post_Script+"_stop,$(date +%s)\" >>/var/log/px-deploy/script_tracking\n"...)
 			tf_post_script = append(tf_post_script, "\necho \"Finished $(date)\"\n"...)
+			tf_post_script = append(tf_post_script, "echo \""+config.Post_Script+"_stop,$(date +%s)\" >>/var/log/px-deploy/script_tracking\n"...)
 			tf_post_script = append(tf_post_script, "\n) >&/var/log/px-deploy/"+config.Post_Script+"\n"...)
 		}
 	} else {
@@ -1549,6 +1549,7 @@ func write_nodescripts(config Config) {
 						tf_master_script = append(tf_master_script, "echo \""+filename+"_start,$(date +%s)\" >>/var/log/px-deploy/script_tracking\n"...)
 						tf_master_script = append(tf_master_script, content...)
 						tf_master_script = append(tf_master_script, "\necho \"Finished $(date)\"\n"...)
+						tf_master_script = append(tf_master_script, "echo \""+filename+"_stop,$(date +%s)\" >>/var/log/px-deploy/script_tracking\n"...)
 						tf_master_script = append(tf_master_script, "\n) >&/var/log/px-deploy/"+filename+"\n"...)
 					}
 				}
@@ -1570,6 +1571,12 @@ func write_nodescripts(config Config) {
 			die(err.Error())
 		}
 
+		cmd := exec.Command("bash", "-n", "/px-deploy/.px-deploy/tf-deployments/"+config.Name+"/master-"+masternum+"-1")
+		err = cmd.Run()
+		if err != nil {
+			die("PANIC: generated script '.px-deploy/tf-deployments/" + config.Name + "/master-" + masternum + "-1' is not valid Bash")
+		}
+
 		// loop nodes of cluster, add node name/ip to tf var and write individual cloud-init scripts file
 		for n := 1; n <= Nodes; n++ {
 			nodenum := strconv.Itoa(n)
@@ -1581,6 +1588,13 @@ func write_nodescripts(config Config) {
 			if err != nil {
 				die(err.Error())
 			}
+
+			cmd := exec.Command("bash", "-n", "/px-deploy/.px-deploy/tf-deployments/"+config.Name+"/node-"+masternum+"-"+nodenum)
+			err = cmd.Run()
+			if err != nil {
+				die("PANIC: generated script '.px-deploy/tf-deployments/" + config.Name + "/node-" + masternum + "-" + nodenum + "' is not valid Bash")
+			}
+
 		}
 	}
 }
