@@ -106,6 +106,7 @@ type Config struct {
 	Azure__Group             string `yaml:"azure__group,omitempty"`
 	Vsphere__Userdata        string `yaml:"vsphere__userdata,omitempty"`
 	Ssh_Pub_Key              string
+	Run_Predelete            bool
 }
 
 type Config_Cluster struct {
@@ -117,6 +118,11 @@ type Config_Cluster struct {
 type Deployment_Status_Return struct {
 	cluster int
 	status  string
+}
+
+type Predelete_Status_Return struct {
+	node    string
+	success bool
 }
 
 var Reset = "\033[0m"
@@ -132,7 +138,7 @@ var wg sync.WaitGroup
 
 func main() {
 	var createName, createTemplate, createRegion, createEnv, connectName, kubeconfigName, destroyName, statusName, historyNumber string
-	var destroyAll, destroyClear bool
+	var destroyAll, destroyClear, destroyForce bool
 	var flags Config
 	os.Chdir("/px-deploy/.px-deploy")
 	rootCmd := &cobra.Command{Use: "px-deploy"}
@@ -198,7 +204,7 @@ func main() {
 						return nil
 					}
 					config := parse_yaml(file)
-					destroy_deployment(config.Name)
+					destroy_deployment(config.Name, destroyForce)
 					return nil
 				})
 			} else {
@@ -208,7 +214,7 @@ func main() {
 				if destroyClear {
 					destroy_clear(destroyName)
 				} else {
-					destroy_deployment(destroyName)
+					destroy_deployment(destroyName, destroyForce)
 				}
 			}
 		},
@@ -403,11 +409,13 @@ func main() {
 	cmdCreate.Flags().StringVarP(&createRegion, "region", "r", "", "AWS, GCP or Azure region (default "+defaults.Aws_Region+", "+defaults.Gcp_Region+" or "+defaults.Azure_Region+")")
 	cmdCreate.Flags().StringVarP(&flags.Cloud, "cloud", "C", "", "aws | gcp | azure | vsphere (default "+defaults.Cloud+")")
 	cmdCreate.Flags().StringVarP(&flags.Ssh_Pub_Key, "ssh_pub_key", "", "", "ssh public key which will be added for root access on each node")
+	cmdCreate.Flags().BoolVarP(&flags.Run_Predelete, "predelete", "", false, "run predelete scripts on destruction (true/false)")
 	cmdCreate.Flags().StringVarP(&createEnv, "env", "e", "", "Comma-separated list of environment variables to be passed, for example foo=bar,abc=123")
 	cmdCreate.Flags().BoolVarP(&flags.DryRun, "dry_run", "d", false, "dry-run, create local files only. Works only on aws / azure")
 
 	cmdDestroy.Flags().BoolVarP(&destroyAll, "all", "a", false, "destroy all deployments")
 	cmdDestroy.Flags().BoolVarP(&destroyClear, "clear", "c", false, "destroy local deployment files (use with caution!)")
+	cmdDestroy.Flags().BoolVarP(&destroyForce, "force", "f", false, "destroy even if predelete script exec fails")
 	cmdDestroy.Flags().StringVarP(&destroyName, "name", "n", "", "name of deployment to be destroyed")
 
 	cmdConnect.Flags().StringVarP(&connectName, "name", "n", "", "name of deployment to connect to")
@@ -1007,7 +1015,7 @@ func destroy_clear(name string) {
 	}
 }
 
-func destroy_deployment(name string) {
+func destroy_deployment(name string, destroyForce bool) {
 	os.Chdir("/px-deploy/.px-deploy")
 	config := parse_yaml("deployments/" + name + ".yml")
 	var output []byte
@@ -1046,35 +1054,12 @@ func destroy_deployment(name string) {
 		switch config.Platform {
 		case "ocp4":
 			{
-
-				clusters, _ := strconv.Atoi(config.Clusters)
-				fmt.Println("Running pre-delete scripts on all master nodes. Output is mixed")
-				for i := 1; i <= clusters; i++ {
-					wg.Add(1)
-					go run_predelete(&config, fmt.Sprintf("master-%v-1", i), "script")
-				}
-				wg.Wait()
-				fmt.Println("pre-delete scripts done")
-
-				fmt.Println(White + "Destroying OCP4 cluster(s), wait about 5 minutes (per cluster)... Output is mixed" + Reset)
-				for i := 1; i <= clusters; i++ {
-					wg.Add(1)
-					go run_predelete(&config, fmt.Sprintf("master-%v-1", i), "platform")
-				}
-				wg.Wait()
-				fmt.Println("OCP4 cluster delete done")
+				prepare_predelete(&config, "script", destroyForce)
+				prepare_predelete(&config, "platform", destroyForce)
 			}
 		case "eks":
 			{
-				clusters, _ := strconv.Atoi(config.Clusters)
-
-				fmt.Println("Running pre-delete scripts on all master nodes. Output will be mixed")
-				for i := 1; i <= clusters; i++ {
-					wg.Add(1)
-					go run_predelete(&config, fmt.Sprintf("master-%v-1", i), "script")
-				}
-				wg.Wait()
-				fmt.Println("pre-delete scripts done")
+				prepare_predelete(&config, "script", destroyForce)
 
 				err := aws_delete_nodegroups(&config)
 				if err != nil {
@@ -1087,14 +1072,8 @@ func destroy_deployment(name string) {
 				// if there are no px clouddrive volumes
 				// terraform will terminate instances
 				// otherwise terminate instances to enable volume deletion
-				clusters, _ := strconv.Atoi(config.Clusters)
-				fmt.Println("Running pre-delete scripts on all master nodes. Output will be mixed")
-				for i := 1; i <= clusters; i++ {
-					wg.Add(1)
-					go run_predelete(&config, fmt.Sprintf("master-%v-1", i), "script")
-				}
-				wg.Wait()
-				fmt.Println("pre-delete scripts done")
+
+				prepare_predelete(&config, "script", destroyForce)
 
 				if len(aws_volumes) > 0 {
 					fmt.Printf("Waiting for termination of %v instances: (timeout 5min) \n", len(aws_instances))
@@ -1148,15 +1127,7 @@ func destroy_deployment(name string) {
 			die("Error: outdated deployment")
 		}
 
-		clusters, _ := strconv.Atoi(config.Clusters)
-
-		fmt.Println("Running pre-delete scripts on all master nodes. Output will be mixed")
-		for i := 1; i <= clusters; i++ {
-			wg.Add(1)
-			go run_predelete(&config, fmt.Sprintf("%v-master-%v-1", config.Name, i), "script")
-		}
-		wg.Wait()
-		fmt.Println("pre-delete scripts done")
+		prepare_predelete(&config, "script", destroyForce)
 
 		instances, err := gcp_get_instances(config.Name, &config)
 		if err != nil {
@@ -1232,15 +1203,7 @@ func destroy_deployment(name string) {
 		}
 
 	} else if config.Cloud == "azure" {
-		clusters, _ := strconv.Atoi(config.Clusters)
-
-		fmt.Println("Running pre-delete scripts on all master nodes. Output will be mixed")
-		for i := 1; i <= clusters; i++ {
-			wg.Add(1)
-			go run_predelete(&config, fmt.Sprintf("master-%v-1", i), "script")
-		}
-		wg.Wait()
-		fmt.Println("pre-delete scripts done")
+		prepare_predelete(&config, "script", destroyForce)
 
 		tf_error := run_terraform_destroy(&config)
 		if tf_error != "" {
@@ -1253,14 +1216,7 @@ func destroy_deployment(name string) {
 			die("Error: outdated deployment")
 		}
 
-		clusters, _ := strconv.Atoi(config.Clusters)
-		fmt.Println("Running pre-delete scripts on all master nodes. Output will be mixed")
-		for i := 1; i <= clusters; i++ {
-			wg.Add(1)
-			go run_predelete(&config, fmt.Sprintf("%s-master-%v", config.Name, i), "script")
-		}
-		wg.Wait()
-		fmt.Println("pre-delete scripts done")
+		prepare_predelete(&config, "script", destroyForce)
 
 		vsphere_prepare_destroy(&config)
 
@@ -1373,7 +1329,77 @@ func get_ip(deployment string) string {
 	return strings.TrimSuffix(string(output), "\n")
 }
 
-func run_predelete(config *Config, confNode string, confPath string) {
+func prepare_predelete(config *Config, runtype string, destroyForce bool) {
+	// master node naming scheme on clouds:
+	//aws:     master-[clusternum]-1
+	//azure:   master-[clusternum]-1
+	//gcp:     [configname]-master-[clusternum]-1
+	//vsphere: [configname]-master-[clusternum]
+
+	var name_pre, name_post string
+
+	if config.Run_Predelete != true && runtype == "scripts" {
+		return
+	}
+
+	clusters, _ := strconv.Atoi(config.Clusters)
+	predelete_status := make(chan Predelete_Status_Return, clusters)
+
+	switch config.Cloud {
+	case "aws":
+		{
+			name_pre = "master-"
+			name_post = "-1"
+		}
+	case "azure":
+		{
+			name_pre = "master-"
+			name_post = "-1"
+		}
+	case "gcp":
+		{
+			name_pre = fmt.Sprintf("%v-master-", config.Name)
+			name_post = "-1"
+		}
+	case "vsphere":
+		{
+			name_pre = fmt.Sprintf("%v-master-", config.Name)
+			name_post = ""
+		}
+	}
+
+	if config.Platform == "ocp4" && runtype == "platform" {
+		fmt.Printf("Destroying OCP4 cluster(s), wait about 15 minutes (per cluster)... Output is mixed\n")
+	} else {
+		fmt.Printf("Running pre-delete scripts on all master nodes. Output is mixed\n")
+	}
+
+	wg.Add(clusters)
+	for i := 1; i <= clusters; i++ {
+		go exec_predelete(config, fmt.Sprintf("%v%v%v", name_pre, i, name_post), runtype, predelete_status)
+	}
+	wg.Wait()
+	close(predelete_status)
+
+	for elem := range predelete_status {
+		if elem.success == false {
+			if destroyForce {
+				fmt.Printf("%v %v failed %v predelete. --force parmeter set. Continuing delete%v\n", Red, elem.node, runtype, Reset)
+			} else {
+				fmt.Printf("%v %v failed %v predelete. canceled deletion process.\nensure %v is powered on and can be accessed by ssh, then retry\n(to enforce deletion use --force parameter)%v\n", Red, elem.node, runtype, elem.node, Reset)
+				os.Exit(1)
+			}
+		}
+	}
+
+	if config.Platform == "ocp4" && runtype == "platform" {
+		fmt.Printf("OCP4 cluster delete done\n")
+	} else {
+		fmt.Printf("pre-delete %v done\n", runtype)
+	}
+}
+
+func exec_predelete(config *Config, confNode string, confPath string, success chan Predelete_Status_Return) {
 	var ip string
 
 	defer wg.Done()
@@ -1411,6 +1437,9 @@ func run_predelete(config *Config, confNode string, confPath string) {
 	err := cmd.Run()
 	if err != nil {
 		fmt.Println(Yellow + "Failed to run pre-delete script:" + err.Error() + Reset)
+		success <- Predelete_Status_Return{confNode, false}
+	} else {
+		success <- Predelete_Status_Return{confNode, true}
 	}
 
 }

@@ -3,6 +3,7 @@
 description: Deploy single k8s/px cluster, register at PDS controlplane, deploy Postgres using API, install petclinic demo app
 clusters: 1
 scripts: ["install-px", "pds-petclinic"]
+run_predelete: true
 
 env:
 #  PDS_TOKEN: "[your pds user api token]" -> set this as env variable in your defaults.yml
