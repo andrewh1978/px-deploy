@@ -156,6 +156,10 @@ func main() {
 			}
 			config := parse_yaml("defaults.yml")
 
+			// should be there by default
+			// we dont put in into defaults.yml as it defines a path within container
+			config.Gcp_Auth_Json = "/px-deploy/.px-deploy/gcp.json"
+
 			if config.Aws_Tags != "" {
 				fmt.Printf("Parameter 'aws_tags: %s' is deprecated and will be ignored. Please change to 'tags: %s'  in ~/.px-deploy/defaults.yml \n", config.Aws_Tags, config.Aws_Tags)
 			}
@@ -491,8 +495,6 @@ func validate_config(config *Config) []string {
 
 		if _, err := os.Stat("/px-deploy/.px-deploy/gcp.json"); os.IsNotExist(err) {
 			errormsg = append(errormsg, "~/.px-deploy/gcp.json not found. refer to readme.md how to create it")
-		} else {
-			config.Gcp_Auth_Json = "/px-deploy/.px-deploy/gcp.json"
 		}
 
 		if !regexp.MustCompile(`^[a-zA-Z0-9_\-]+$`).MatchString(config.Gcp_Region) {
