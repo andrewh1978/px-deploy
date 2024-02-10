@@ -1242,8 +1242,15 @@ func destroy_deployment(name string, destroyForce bool) {
 	fmt.Println(White + "Destroyed." + Reset)
 }
 func run_terraform_destroy(config *Config) string {
+	var cmd *exec.Cmd
 	fmt.Println(White + "running Terraform PLAN" + Reset)
-	cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-destroy", "-input=false", "-refresh=false", "-parallelism=50", "-out=tfplan", "-var-file", ".tfvars")
+	// vsphere terraform must refresh, otherwise complains about missing disks
+	// other clouds do no refresh as this saves time @scale
+	if config.Cloud == "vsphere" {
+		cmd = exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-destroy", "-input=false", "-refresh=true", "-parallelism=50", "-out=tfplan", "-var-file", ".tfvars")
+	} else {
+		cmd = exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-destroy", "-input=false", "-refresh=false", "-parallelism=50", "-out=tfplan", "-var-file", ".tfvars")
+	}
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
 	if err != nil {
@@ -1338,7 +1345,8 @@ func prepare_predelete(config *Config, runtype string, destroyForce bool) {
 
 	var name_pre, name_post string
 
-	if config.Run_Predelete != true && runtype == "scripts" {
+	// script predelete only executes if set in config
+	if config.Run_Predelete != true && runtype == "script" {
 		return
 	}
 
