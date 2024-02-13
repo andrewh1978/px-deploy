@@ -68,7 +68,7 @@ done
 if [ $cluster == "1" ]; then
   bgcolor='#fe5000'
 else
-  bgcolor='#326be6'
+  bgcolor='#40b605'
 fi
 
 cat <<EOF | kubectl apply -f -

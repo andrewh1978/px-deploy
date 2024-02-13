@@ -6,7 +6,7 @@ metadata:
 spec:
   source:
     http:
-      url: "https://px-deploy.s3.eu-west-1.amazonaws.com/image/freebsd-13.2-zfs-2023-04-21.raw"
+      url: "https://px-deploy.s3.eu-west-1.amazonaws.com/image/freebsd-13.2-zfs-2023-04-21.qcow2"
   pvc:
     storageClassName: px-csi-db
     accessModes:
