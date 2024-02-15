@@ -112,6 +112,17 @@ Resolution:
 
 ensure your vsphere_user has StorageProfile.View privilege (non-propagating) on the root vCenter object
 
+error on destroy:
+
+```
+
+Error: Invalid datastore path '/vmfs/volumes/...'
+
+```
+
+Resolution:
+
+re-run the destroy command
 
 
 ## How does px-deploy vsphere templating work

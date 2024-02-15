@@ -655,6 +655,7 @@ func vsphere_prepare_destroy(config *Config) error {
 
 		//import clouddrives into tf state
 		vsphere_import_tf_clouddrive(config)
+		os.Rename("/px-deploy/.px-deploy/tf-deployments/"+config.Name+"/import.tf", "/px-deploy/.px-deploy/tf-deployments/"+config.Name+"/import.tf.done")
 
 		fmt.Printf("waiting to power off VMs\n")
 		for i := 1; i <= clusters; i++ {
