@@ -63,3 +63,22 @@ while [ ! "$HC" == "True" ]; do
   sleep 5
   HC=$(kubectl get hyperconvergeds.hco.kubevirt.io kubevirt-hyperconverged -n openshift-cnv -ojson | jq -r '.status.conditions[] | select((.reason=="ReconcileCompleted") and (.status=="True") and (.type=="Available")) | .status')
 done
+
+# add colored console notification on OCP GUI
+if [ $cluster == "1" ]; then
+  bgcolor='#fe5000'
+else
+  bgcolor='#40b605'
+fi
+
+cat <<EOF | kubectl apply -f -
+apiVersion: console.openshift.io/v1
+kind: ConsoleNotification
+metadata:
+  name: clusternumber
+spec:
+  text: cluster-$cluster
+  location: BannerTop
+  color: '#fff'
+  backgroundColor: '$bgcolor'
+EOF
