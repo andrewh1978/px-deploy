@@ -1,8 +1,3 @@
-
-# restart PX to prevent CSI bug
-echo "restart PX to prevent CSI bug"
-kubectl delete pods -n portworx -l name=portworx
-
 OPVERSION=$(kubectl get packagemanifests.packages.operators.coreos.com kubevirt-hyperconverged -o json | jq -r ".status.channels[0].currentCSV")
 
 echo "current kubevirt-hyperconverged operator version is $OPVERSION"
