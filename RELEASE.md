@@ -1,16 +1,23 @@
-# next
+# 6.0
 
+## Improvements
+ * Completed migration to Terraform
+ * Introduce kubevirt-ocp template
+ * Bump Kubernetes to 1.26.4
+ * Bump Portworx to 3.0.4
+ * Add PX-BBQ
+ * Documentation
+ * Add tags to EBS volumes
+ * Use AWS node roles for EBS provisioning
+
+## Fixes
+ * Add environment variable AWS_ADD_EKS_IAM_ROLE to fix UI visibility of EKS cluster (see known Issues on EKS)
+ * Metro template now works with OCP
+ 
 ## Removal
  * auto_destroy parameter
  * quiet parameter
 
-## Improvements
- * Migrate vsphere to Terraform
- * introduce kubevirt-ocp template
-
-## Fixes
- * Add environment variable AWS_ADD_EKS_IAM_ROLE to fix UI visibility of EKS cluster (see known Issues on EKS)
- 
 # 5.3
 
 ## Fixes
