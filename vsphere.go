@@ -484,7 +484,7 @@ func vsphere_get_clouddrives(nodemap string, v *vsphereRestClient, clouddrives *
 
 	if resp.StatusCode == 200 {
 		for diskid, val := range responseobj.Disks {
-			if regexp.MustCompile(`\[[A-Za-z0-9]*\]\ fcd\/[0-9a-f]{32}\.vmdk`).MatchString(val.Backing.Vmdk_file) {
+			if regexp.MustCompile(`\[[A-Za-z0-9\-]*\]\ fcd\/[0-9a-f]{32}\.vmdk`).MatchString(val.Backing.Vmdk_file) {
 				//fmt.Printf("Disk Path %v \n", val.Backing.Vmdk_file)
 				disk.diskid = diskid
 				disk.mobid = mobid
