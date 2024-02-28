@@ -278,7 +278,7 @@ func gcp_create_variables(config *Config) []string {
 		tags := strings.Split(config.Tags, ",")
 		for _, val := range tags {
 			entry := strings.Split(val, "=")
-			tf_var_tags = append(tf_var_tags, "  "+strings.ToLower(strings.TrimSpace(entry[0]))+" = \""+strings.TrimSpace(entry[1])+"\"")
+			tf_var_tags = append(tf_var_tags, "  "+strings.ToLower(strings.TrimSpace(entry[0]))+" = \""+strings.ToLower(strings.TrimSpace(entry[1]))+"\"")
 		}
 	}
 	// get PXDUSER env and apply to tf_variables
