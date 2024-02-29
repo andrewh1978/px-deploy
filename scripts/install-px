@@ -39,7 +39,6 @@ EOF
   done
 fi
 
-ctr -n k8s.io images pull docker.io/$(curl -sk https://install.portworx.com/$px_version?comp=stork | awk '/image: openstorage.stork/{print$2}') &
 k8s_version=$((kubectl version --short 2>&1 || kubectl version) | awk -Fv '/Server Version: / {print $3}')
 url="https://install.portworx.com/$px_version?kbver=$k8s_version&b=true&c=px-deploy-$cluster&stork=true&st=k8s&lh=true&mon=true&promop=true"
 [ -e /usr/bin/oc ] && url="$url&osft=true"
@@ -154,7 +153,11 @@ if [ "$operator" != false ]; then
 fi
 
 # install storkctl
-STORK_POD=$(kubectl get pods -n $namespace -l name=stork -o jsonpath='{.items[0].metadata.name}') &&
-kubectl cp -n $namespace $STORK_POD:/storkctl/linux/storkctl /usr/local/bin/storkctl
+STORK_POD=$(kubectl get pods -n $namespace -l name=stork -o jsonpath='{.items[0].metadata.name}')
+while ! kubectl cp -n $namespace $STORK_POD:/storkctl/linux/storkctl /usr/local/bin/storkctl ; do
+    echo "trying to kubectl cp storkctl out of $STORK_POD"
+    sleep 2
+    STORK_POD=$(kubectl get pods -n $namespace -l name=stork -o jsonpath='{.items[0].metadata.name}')
+done
 chmod +x /usr/local/bin/storkctl
 
