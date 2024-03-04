@@ -1,4 +1,4 @@
-# 6.1
+# 6.0.1
 
 ## Improvements
  * OCP4 documentation
