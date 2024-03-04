@@ -1,3 +1,12 @@
+# 6.1
+
+## Improvements
+ * OCP4 documentation
+
+## Fixes
+ * Switch to new Kubernetes yum repo
+ * Clean up vSphere clouddrives
+
 # 6.0
 
 ## Improvements
