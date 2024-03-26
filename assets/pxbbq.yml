@@ -3,24 +3,10 @@ kind: Namespace
 metadata:
   name: pxbbq
   labels:
----
-  apiVersion: "v1"
-  kind: "PersistentVolumeClaim"
-  metadata: 
-    name: "mongodb-pvc"
-    namespace: "pxbbq"
-    labels: 
-      app: "mongo-db"
-  spec: 
-    accessModes: 
-      - ReadWriteOnce
-    resources: 
-      requests: 
-        storage: 5Gi
-    storageClassName: px-db
+    pds.portworx.com/available: "true" # Make PXBBQ namespace available for PDS
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: mongo
   labels:
@@ -28,6 +14,7 @@ metadata:
     app.kubernetes.io/component: backend
   namespace: pxbbq
 spec:
+  serviceName: "mongo"
   selector:
     matchLabels:
       app.kubernetes.io/name: mongo
@@ -43,13 +30,13 @@ spec:
       - name: mongo
         image: mongo
         env:
-          - name: MONGO_INITDB_ROOT_USERNAME
-            value: porxie
-          - name: MONGO_INITDB_ROOT_PASSWORD
-            value: "porxie"
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: porxie
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          value: "porxie"
         args:
-          - --bind_ip
-          - 0.0.0.0
+        - "--bind_ip"
+        - "0.0.0.0"
         resources:
           requests:
             cpu: 100m
@@ -59,10 +46,32 @@ spec:
         volumeMounts:
         - name: mongo-data-dir
           mountPath: /data/db
-      volumes:
-      - name: mongo-data-dir
-        persistentVolumeClaim:
-          claimName: mongodb-pvc
+        livenessProbe:
+          exec:
+            command: ["mongo", "--eval", "db.runCommand('ping').ok"]
+          initialDelaySeconds: 30  # Give MongoDB time to start before the first check
+          timeoutSeconds: 5
+          periodSeconds: 10  # How often to perform the probe
+          failureThreshold: 3 
+      tolerations:
+      - key: "node.kubernetes.io/unreachable"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 10
+      - key: "node.kubernetes.io/not-ready"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 10
+      terminationGracePeriodSeconds: 5
+  volumeClaimTemplates:
+  - metadata:
+      name: mongo-data-dir
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi
+      storageClassName: px-csi-db
 ---
 apiVersion: v1
 kind: Service
@@ -98,7 +107,7 @@ spec:
     spec:                        
       containers:
       - name: pxbbq-web
-        image: eshanks16/pxbbq:v3.2
+        image: eshanks16/pxbbq:v4.1
         env:
         - name: MONGO_INIT_USER
           value: "porxie" #Mongo User with permissions to create additional databases and users. Typically "porxie" or "pds"
@@ -114,7 +123,32 @@ spec:
           value: "porxie" #Mongo DB Password for User that will be created by using the Init User
         imagePullPolicy: Always
         ports:
-          - containerPort: 8080    
+          - containerPort: 8080
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 15 
+          timeoutSeconds: 3  
+          periodSeconds: 10  
+          failureThreshold: 1 
+      tolerations:
+      - key: "node.kubernetes.io/unreachable"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 10
+      - key: "node.kubernetes.io/not-ready"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 10
+      terminationGracePeriodSeconds: 0
 ---
 apiVersion: v1
 kind: Service
@@ -127,6 +161,7 @@ spec:
   ports:
   - port: 80
     targetPort: 8080
-  type: LoadBalancer
+    nodePort: 30005 #OMIT
+  type: NodePort #Fix
   selector:
     app: pxbbq-web
