@@ -1,7 +1,7 @@
 FROM --platform=linux/amd64 golang:1.20-alpine3.18 AS build
 RUN wget -P / https://releases.hashicorp.com/terraform/1.6.1/terraform_1.6.1_linux_amd64.zip
 RUN unzip /terraform_1.6.1_linux_amd64.zip -d /usr/bin/
-RUN wget -P / https://github.com/vmware/govmomi/releases/download/v0.33.0/govc_Linux_x86_64.tar.gz
+RUN wget -P / https://github.com/vmware/govmomi/releases/download/v0.36.1/govc_Linux_x86_64.tar.gz
 RUN tar -xzf /govc_Linux_x86_64.tar.gz -C /usr/bin/
 RUN mkdir -p /root/go/src/px-deploy
 COPY go.mod go.sum *.go /root/go/src/px-deploy/

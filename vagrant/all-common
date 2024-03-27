@@ -64,9 +64,12 @@ if [ $cloud = "aws" -o $cloud = "gcp" -o $cloud = "azure" ]; then
     done
   done
 elif [ $cloud = "vsphere" ]; then
-  curl -Ls https://github.com/vmware/govmomi/releases/download/v0.32.0/govc_Linux_x86_64.tar.gz | tar -xzf - -C /usr/bin/
+  curl -Ls https://github.com/vmware/govmomi/releases/download/v0.36.1/govc_Linux_x86_64.tar.gz | tar -xzf - -C /usr/bin/
   chmod 755 /usr/bin/govc
-  export GOVC_URL=$vsphere_user:$vsphere_password@$vsphere_host
+  export GOVC_URL=$vsphere_host
+  export GOVC_USERNAME=$vsphere_user
+  export GOVC_PASSWORD=$vsphere_password
+  export GOVC_DATACENTER=$vsphere_datacenter
   export GOVC_INSECURE=1
   while :; do
     sleep 1
