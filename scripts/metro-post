@@ -1,0 +1,60 @@
+# Install PX-Metro across the clusters
+
+if [ "$platform" = ocp4 ]; then
+ port=17001
+else
+ port=9001
+fi
+
+#while : ; do
+#  n=$(ssh master-1 'kubectl exec -it -n portworx -c portworx $(kubectl get pod -n portworx -lname=portworx -o jsonpath="{.items[0].metadata.name}") -- curl http://localhost:'$port'/status | jq .QuorumMap | grep true | wc -l')
+#  [ $n -eq $[$nodes*$clusters] ] && break
+#  sleep 1
+#  echo Waiting for Portworx cluster to come up before patching
+#done
+
+#if [ "$operator" = false ]; then
+#  x=$(kubectl get ds/portworx -n kube-system -o json | jq -c '.spec.template.spec.containers[0].args')
+#  x="${x%]},-cluster_domain, cluster-$cluster]"
+#  kubectl patch ds/portworx -n kube-system --type json -p="[{\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/args\", \"value\":$x}]"
+#else
+#  kubectl patch stc metro-cluster -n portworx --type json -p='[{"op": "add", "path": "/metadata/annotations/portworx.io~1misc-args", "value":"-cluster_domain cluster-'$cluster'"}]'
+#  echo
+#fi
+
+while : ; do
+  n=$(ssh master-1 'kubectl exec -it -n portworx -c portworx $(kubectl get pod -n portworx -lname=portworx -o jsonpath="{.items[0].metadata.name}") -- curl http://localhost:'$port'/status | jq .QuorumMap | grep true | wc -l')
+  [ $n -eq $[$nodes*$clusters] ] && break
+  sleep 1
+  echo Waiting for Portworx cluster to come up after patching
+done
+
+if [ $cluster = 1 ]; then
+  while [ "$(kubectl get crd | grep -E 'migrationschedules|schedulepolicies' | wc -l)" -lt 2 ]; do
+    echo waiting for CRDs
+    sleep 1
+  done
+  kubectl apply -f /assets/metro-schedule.yml
+fi
+
+# check for app pods being ready
+# investigated that some might not be ready even quorum map fits & stc is state "running"
+echo "wait for portworx-api pods being ready"
+while ! kubectl wait pod -n portworx --for=condition=ready --selector name=portworx-api; do
+    sleep 1
+done
+
+echo "wait for portworx pods being ready"
+while ! kubectl wait pod -n portworx --for=condition=ready --selector name=portworx; do
+    sleep 1
+done
+
+echo "wait for portworx-pvc-controller pods being ready"
+while ! kubectl wait pod -n portworx --for=condition=ready --selector name=portworx-pvc-controller; do
+    sleep 1
+done
+
+echo "wait for portworx-csi-driver pods being ready"
+while ! kubectl wait pod -n portworx --for=condition=ready --selector app=px-csi-driver; do
+    sleep 1
+done

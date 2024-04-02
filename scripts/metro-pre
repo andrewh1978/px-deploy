@@ -1,0 +1,1 @@
+echo "portworx.io/misc-args: \"-cluster_domain cluster-$cluster\"" > /tmp/metro

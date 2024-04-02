@@ -9,9 +9,9 @@ env:
   etcd: "EXTERNAL"
 cluster:
   - id: 1
-    scripts: ["etcd", "install-px", "metro", "aws-elb", "licenses", "petclinic"]
+    scripts: ["etcd", "metro-pre", "install-px", "metro-post", "aws-elb", "licenses", "petclinic"]
   - id: 2
-    scripts: ["install-px", "metro", "clusterpair-metro"]
+    scripts: ["metro-pre", "install-px", "metro-post", "clusterpair-metro"]
 
 # NOTE: edit env.licenses above, or define in defaults.yml
 # Verify all is working with `storkctl get clusterdomainsstatus` (take around 7 minutes)
