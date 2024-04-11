@@ -1,4 +1,97 @@
 ---
+apiVersion: v1
+kind: Namespace                 
+metadata:
+  name: pxbbq
+  labels:
+    pds.portworx.com/available: "true"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongo
+  labels:
+    app.kubernetes.io/name: mongo
+    app.kubernetes.io/component: backend
+  namespace: pxbbq
+spec:
+  serviceName: "mongo"
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mongo
+      app.kubernetes.io/component: backend
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: mongo
+        app.kubernetes.io/component: backend
+    spec:
+      containers:
+      - name: mongo
+        image: mongo
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: porxie
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          value: "porxie"
+        args:
+        - "--bind_ip"
+        - "0.0.0.0"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        ports:
+        - containerPort: 27017
+        volumeMounts:
+        - name: mongo-data-dir
+          mountPath: /data/db
+        livenessProbe:
+          exec:
+            command: ["mongo", "--eval", "db.runCommand('ping').ok"]
+          initialDelaySeconds: 30  # Give MongoDB time to start before the first check
+          timeoutSeconds: 5
+          periodSeconds: 10  # How often to perform the probe
+          failureThreshold: 3 
+      tolerations:
+      - key: "node.kubernetes.io/unreachable"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 10
+      - key: "node.kubernetes.io/not-ready"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 10
+      terminationGracePeriodSeconds: 5
+  volumeClaimTemplates:
+  - metadata:
+      name: mongo-data-dir
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi
+      storageClassName: px-csi-db
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+  labels:
+    app.kubernetes.io/name: mongo
+    app.kubernetes.io/component: backend
+  namespace: pxbbq
+spec:
+  ports:
+  - port: 27017
+    targetPort: 27017
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: mongo
+    app.kubernetes.io/component: backend
+---
+---
 apiVersion: apps/v1
 kind: Deployment                 
 metadata:
