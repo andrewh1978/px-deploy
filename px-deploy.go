@@ -165,15 +165,6 @@ func main() {
 			}
 
 			check_for_recommended_settings(&config)
-			configerr := validate_config(&config)
-			if configerr != nil {
-				fmt.Print(Red)
-				fmt.Printf("Found %v errors in config \n", len(configerr))
-				for elem := range configerr {
-					fmt.Println(configerr[elem])
-				}
-				fmt.Print(Reset)
-			}
 
 			prepare_error := prepare_deployment(&config, &flags, createName, createEnv, createTemplate, createRegion)
 			if prepare_error != "" {
@@ -446,7 +437,6 @@ func main() {
 
 func validate_config(config *Config) []string {
 	var errormsg []string
-
 	if config.Cloud != "aws" && config.Cloud != "gcp" && config.Cloud != "azure" && config.Cloud != "vsphere" {
 		errormsg = append(errormsg, "Cloud must be 'aws', 'gcp', 'azure' or 'vsphere' (not '"+config.Cloud+"')")
 	}
@@ -663,6 +653,17 @@ func prepare_deployment(config *Config, flags *Config, createName string, create
 	config.Env = env
 
 	mergo.MergeWithOverwrite(config, flags)
+	configerr := validate_config(config)
+	if configerr != nil {
+		var validate_error []byte
+		validate_error = append(validate_error, fmt.Sprint(Red)...)
+		validate_error = append(validate_error, fmt.Sprintf("Found %v errors in config \n", len(configerr))...)
+		for elem := range configerr {
+			validate_error = append(validate_error, fmt.Sprintln(configerr[elem])...)
+		}
+		validate_error = append(validate_error, fmt.Sprint(Reset)...)
+		return string(validate_error)
+	}
 
 	if createName != "" {
 		if !regexp.MustCompile(`^[a-z0-9_\-\.]+$`).MatchString(createName) {
