@@ -1,4 +1,4 @@
-dnf install -y docker
+dnf install -y docker wget
 systemctl enable --now docker
 
 # install awscli2
@@ -9,8 +9,8 @@ unzip -o /tmp/awscliv2.zip -d /tmp >/dev/null
 ln -s /usr/local/bin/aws /usr/bin/aws
 eval $(ssh-agent)
 cd /tmp
-curl -sO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/$ocp4_version/openshift-install-linux-$ocp4_version.tar.gz
-curl -sO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/$ocp4_version/openshift-client-linux-$ocp4_version.tar.gz
+wget -q https://mirror.openshift.com/pub/openshift-v4/clients/ocp/$ocp4_version/openshift-install-linux-$ocp4_version.tar.gz
+wget -q https://mirror.openshift.com/pub/openshift-v4/clients/ocp/$ocp4_version/openshift-client-linux-$ocp4_version.tar.gz
 tar xzf openshift-install-linux-$ocp4_version.tar.gz
 tar xzf openshift-client-linux-$ocp4_version.tar.gz
 mv openshift-install oc kubectl /usr/bin
