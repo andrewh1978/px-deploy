@@ -59,7 +59,7 @@ fi
 [ "$security" = true ] && url="$url&security=true"
 [ -n "$csi" ] && url="$url&csi=$csi"
 #[ "$etcd" = EXTERNAL ] && url="$url&k=etcd:http://$(ssh master-1 curl https://ipinfo.io/ip):2382"
-[ "$etcd" = EXTERNAL ] && url="$url&k=etcd:http://master-1:2382"
+[ "$etcd" = EXTERNAL ] && url="$url&k=etcd:http://$(grep master-1 /etc/hosts | cut -d\  -f1):2382"
 
 if [ "$platform" = ocp4 ]; then
   oc apply -f - <<EOF
