@@ -1,3 +1,14 @@
+# 6.0.2
+
+## Improvements
+ * Add healthchecks for pxbbq
+ * Improve parameter validation
+
+## Fixes
+ * Metro now works on OCP
+ * Fix strange curl issue on openshift-install
+ * Fix metro race condition
+
 # 6.0.1
 
 ## Improvements
