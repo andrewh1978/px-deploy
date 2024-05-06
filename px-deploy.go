@@ -502,7 +502,7 @@ func validate_config(config *Config) []string {
 			errormsg = append(errormsg, "Invalid GCP zone '"+config.Gcp_Zone+"'")
 		}
 
-		if !regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+-gke\.[0-9]+$`).MatchString(config.Gke_Version) {
+		if !regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+`).MatchString(config.Gke_Version) {
 			errormsg = append(errormsg, "Invalid GKE version '"+config.Gke_Version+"'")
 		}
 
