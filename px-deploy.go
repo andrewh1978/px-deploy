@@ -1481,7 +1481,11 @@ func write_nodescripts(config Config) {
 	e := reflect.ValueOf(&config).Elem()
 	for i := 0; i < e.NumField(); i++ {
 		if e.Type().Field(i).Type.Name() == "string" {
-			tf_env_script = append(tf_env_script, "export "+strings.ToLower(strings.TrimSpace(e.Type().Field(i).Name))+"=\""+strings.TrimSpace(e.Field(i).Interface().(string))+"\"\n"...)
+			if strings.ToLower(strings.TrimSpace(e.Type().Field(i).Name)) == "vsphere_password" {
+				tf_env_script = append(tf_env_script, "export "+strings.ToLower(strings.TrimSpace(e.Type().Field(i).Name))+"='"+strings.TrimSpace(e.Field(i).Interface().(string))+"'\n"...)
+			} else {
+				tf_env_script = append(tf_env_script, "export "+strings.ToLower(strings.TrimSpace(e.Type().Field(i).Name))+"=\""+strings.TrimSpace(e.Field(i).Interface().(string))+"\"\n"...)
+			}
 		}
 	}
 
