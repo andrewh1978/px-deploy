@@ -1,7 +1,7 @@
-FROM --platform=linux/amd64 golang:1.20-alpine3.18 AS build
-RUN wget -P / https://releases.hashicorp.com/terraform/1.6.1/terraform_1.6.1_linux_amd64.zip
-RUN unzip /terraform_1.6.1_linux_amd64.zip -d /usr/bin/
-RUN wget -P / https://github.com/vmware/govmomi/releases/download/v0.36.1/govc_Linux_x86_64.tar.gz
+FROM --platform=linux/amd64 golang:1.22-alpine3.19 AS build
+RUN wget -P / https://releases.hashicorp.com/terraform/1.8.3/terraform_1.8.3_linux_amd64.zip
+RUN unzip /terraform_1.8.3_linux_amd64.zip -d /usr/bin/
+RUN wget -P / https://github.com/vmware/govmomi/releases/download/v0.37.1/govc_Linux_x86_64.tar.gz
 RUN tar -xzf /govc_Linux_x86_64.tar.gz -C /usr/bin/
 RUN mkdir -p /root/go/src/px-deploy
 COPY go.mod go.sum *.go /root/go/src/px-deploy/
@@ -13,7 +13,7 @@ RUN terraform -chdir=/px-deploy/terraform/gcp/ init
 RUN terraform -chdir=/px-deploy/terraform/vsphere/ init
 
 
-FROM --platform=linux/amd64 alpine:3.18
+FROM --platform=linux/amd64 alpine:3.19
 RUN apk add --no-cache openssh-client-default bash
 RUN echo ServerAliveInterval 300 >/etc/ssh/ssh_config
 RUN echo ServerAliveCountMax 2 >>/etc/ssh/ssh_config
@@ -21,7 +21,6 @@ RUN echo TCPKeepAlive yes >>/etc/ssh/ssh_config
 COPY --from=build /usr/bin/terraform /usr/bin/terraform
 COPY --from=build /usr/bin/govc /usr/bin/govc
 COPY vagrant /px-deploy/vagrant
-#COPY terraform /px-deploy/terraform
 COPY VERSION /
 COPY --from=build /go/bin/px-deploy /root/go/bin/px-deploy
 COPY --from=build /px-deploy/terraform/aws /px-deploy/terraform/aws 

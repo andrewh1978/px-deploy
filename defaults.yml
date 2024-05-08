@@ -3,8 +3,8 @@ platform: k8s
 clusters: 1
 nodes: 3
 #ssh_pub_key: "ssh-rsa XXXXXXXXXXXXXXXXXXXXXX user@example"
-k8s_version: 1.26.4
-px_version: 3.0.4
+k8s_version: 1.28.9
+px_version: 3.1.1
 stop_after: 6
 post_script: show-ip
 quiet: false
@@ -15,14 +15,14 @@ aws_type: t3.large
 aws_ebs: "gp2:50"
 aws_access_key_id: ""
 aws_secret_access_key: "" 
-eks_version: "1.26"
+eks_version: "1.28"
 #aws_ebs: "gp2:20 standard:30"
 
 gcp_region: europe-north1
 gcp_zone: b
 gcp_type: n1-standard-4
 gcp_disks: "pd-standard:50"
-gke_version: "1.28.3"
+gke_version: "1.28.7"
 #gcp_disks: "pd-standard:20 pd-ssd:30"
 #gcp_project: "px-deploy"
 
@@ -35,7 +35,7 @@ azure_client_secret: ""
 azure_client_id: ""
 azure_tenant_id: ""
 azure_subscription_id: ""
-aks_version: "1.27"
+aks_version: "1.28"
 
 vsphere_host: ""
 vsphere_compute_resource: ""
@@ -53,7 +53,7 @@ vsphere_repo: "https://px-deploy.s3.eu-west-1.amazonaws.com/templates/"
 #vsphere_folder: ""
 
 ocp4_domain: ""
-ocp4_version: 4.12.12
+ocp4_version: 4.14.16
 ocp4_pull_secret: ""
 
 #env:
