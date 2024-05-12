@@ -1066,7 +1066,7 @@ func destroy_deployment(name string, destroyForce bool) {
 
 				err := aws_delete_nodegroups(&config)
 				if err != nil {
-					panic(fmt.Sprintf("error deleting eks nodegroups %v \n", err.Error()))
+					fmt.Printf("%v error deleting eks nodegroups \n %v \n You might need to remove PX clouddrives manually %v\n", Red, err.Error(), Reset)
 				}
 
 			}
