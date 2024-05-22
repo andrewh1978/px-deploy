@@ -26,8 +26,8 @@ env:
 ```
 
 * `operator: true` ensures that Portworx is deployed as an operator.
-`licenses:` requires a valid license activation code that includes DR (the trial license does not include DR!!).
-`DR_BUCKET` is the name of the bucket created earlier.
+* `licenses:` requires a valid license activation code that includes DR (the trial license does not include DR!!).
+* `DR_BUCKET` is the name of the bucket created earlier.
 
 
 ## Deploy the template
