@@ -13,7 +13,7 @@ env:
   PDS_ENDPOINT: "https://prod.pds.portworx.com/api"
   PDS_NAMESPACE: "pds-petclinic"
   PDS_DATASERVICE: "pg"
-  PDS_DATASERVICE_VERSION: "13.11"
+  PDS_DATASERVICE_VERSION: "13.13"
   PDS_APP_CONFIG_TEMPLATE: "Default"
   PDS_APP_RESOURCE_TEMPLATE: "Tiny"
   PDS_APP_STORAGE_TEMPLATE: "Volume%20replication%20(best-effort%20spread)"
