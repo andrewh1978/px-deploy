@@ -1,3 +1,14 @@
+# 6.1
+
+## Improvements
+ * Bump Kubernetes to 1.28.9
+ * Bump Portworx to 3.1.1
+ * Bump PX-Central to 2.7.0
+ * Bump various versions
+
+## Fixes
+ * Prevent crash when nodegroup deletion fails
+
 # 6.0.2
 
 ## Improvements
