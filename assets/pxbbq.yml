@@ -29,7 +29,7 @@ spec:
     spec:
       containers:
       - name: mongo
-        image: mongo
+        image: mongo:7.0.9
         env:
         - name: MONGO_INITDB_ROOT_USERNAME
           value: porxie
@@ -49,7 +49,7 @@ spec:
           mountPath: /data/db
         livenessProbe:
           exec:
-            command: ["mongo", "--eval", "db.runCommand('ping').ok"]
+            command: ["mongosh", "--eval", "db.adminCommand({ping: 1})"]
           initialDelaySeconds: 30  # Give MongoDB time to start before the first check
           timeoutSeconds: 5
           periodSeconds: 10  # How often to perform the probe
@@ -91,7 +91,6 @@ spec:
     app.kubernetes.io/name: mongo
     app.kubernetes.io/component: backend
 ---
----
 apiVersion: apps/v1
 kind: Deployment                 
 metadata:
@@ -109,7 +108,7 @@ spec:
     spec:                        
       containers:
       - name: pxbbq-web
-        image: eshanks16/pxbbq:v4.1
+        image: eshanks16/pxbbq:v4.2
         env:
         - name: MONGO_INIT_USER
           value: "porxie" #Mongo User with permissions to create additional databases and users. Typically "porxie" or "pds"
@@ -123,6 +122,15 @@ spec:
           value: porxie #Mongo DB User that will be created by using the Init_User
         - name: MONGO_PASS
           value: "porxie" #Mongo DB Password for User that will be created by using the Init User
+          ########## CHATBOT SECTION #############
+        - name: CHATBOT_ENABLED #If CHATBOT is set to False, the other variables in this section are not needed.
+          value: "false" #Set to True to enable a LLAMA3 chatbot - Requires the AIDemo to be deployed first
+        - name: PXBBQ_URI
+          value: "EXTERNAL_IP_ADDRESS_OF_PXBBQ_HERE" #MUST Be the external svc name for the PXBBQ application (PXBBQ NodePort/LoadBalaner)
+        - name: MODEL_SERVER_URI
+          value: "http://ollama.genai.svc.cluster.local:11434" #MUST be the internal svc name for the ollama service (CLUSERIP)
+        - name: NEO4J_URI
+          value: "bolt://database.genai.svc.cluster.local:7687" #MUST be the internal svc name for the new4j service (CLUSTERIP)
         imagePullPolicy: Always
         ports:
           - containerPort: 8080
