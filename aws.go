@@ -24,6 +24,7 @@ func aws_create_variables(config *Config) []string {
 	var tf_variables_ocp4 []string
 	var tf_variables_eks []string
 	var tf_cluster_instance_type string
+	var tf_cluster_nodes string
 	var tf_var_ebs []string
 	var tf_var_tags []string
 	// create EBS definitions
@@ -103,6 +104,7 @@ func aws_create_variables(config *Config) []string {
 	for c := 1; c <= Clusters; c++ {
 		masternum := strconv.Itoa(c)
 		tf_cluster_instance_type = config.Aws_Type
+		tf_cluster_nodes = strconv.Itoa(Nodes)
 
 		// if exist, apply individual scripts/aws_type settings for nodes of a cluster
 		for _, clusterconf := range config.Cluster {
@@ -110,6 +112,9 @@ func aws_create_variables(config *Config) []string {
 				//is there a cluster specific aws_type override? if not, set from generic config
 				if clusterconf.Instance_Type != "" {
 					tf_cluster_instance_type = clusterconf.Instance_Type
+				}
+				if clusterconf.Nodes != "" {
+					tf_cluster_nodes = clusterconf.Nodes
 				}
 			}
 		}
@@ -127,7 +132,7 @@ func aws_create_variables(config *Config) []string {
 		tf_variables = append(tf_variables, "  {")
 		tf_variables = append(tf_variables, "    role = \"node\"")
 		tf_variables = append(tf_variables, "    ip_start = 100")
-		tf_variables = append(tf_variables, "    nodecount = "+strconv.Itoa(Nodes))
+		tf_variables = append(tf_variables, "    nodecount = "+tf_cluster_nodes)
 		tf_variables = append(tf_variables, "    instance_type = \""+tf_cluster_instance_type+"\"")
 		tf_variables = append(tf_variables, "    cluster = "+masternum)
 		tf_variables = append(tf_variables, "    ebs_block_devices = [")

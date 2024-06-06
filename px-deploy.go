@@ -113,6 +113,7 @@ type Config_Cluster struct {
 	Id            int
 	Scripts       []string
 	Instance_Type string
+	Nodes         string
 }
 
 type Deployment_Status_Return struct {
