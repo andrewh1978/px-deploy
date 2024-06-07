@@ -17,11 +17,10 @@ metadata:
    labels:
       app: postgres
    name: postgres-data
-   annotations:
-     volume.beta.kubernetes.io/storage-class: px-postgres-sc
 spec:
    accessModes:
      - ReadWriteOnce
+   storageClassName: px-postgres-sc
    resources:
      requests:
        storage: 2Gi
