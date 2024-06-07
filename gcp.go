@@ -331,7 +331,7 @@ func gcp_create_variables(config *Config) []string {
 		tf_cluster_instance_type = config.Gcp_Type
 		tf_cluster_nodes = strconv.Itoa(Nodes)
 
-		// if exist, apply individual scripts/aws_type settings for nodes of a cluster
+		// if exist, apply individual scripts/settings for nodes of a cluster
 		for _, clusterconf := range config.Cluster {
 			if clusterconf.Id == c {
 				//is there a cluster specific aws_type override? if not, set from generic config

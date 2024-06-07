@@ -250,7 +250,7 @@ func vsphere_create_variables(config *Config) []string {
 		masternum := strconv.Itoa(c)
 		tf_cluster_nodes = strconv.Itoa(Nodes)
 
-		// if exist, apply individual scripts/aws_type settings for nodes of a cluster
+		// if exist, apply individual scripts/settings for nodes of a cluster
 		for _, clusterconf := range config.Cluster {
 			if clusterconf.Id == c {
 				if clusterconf.Nodes != "" {
