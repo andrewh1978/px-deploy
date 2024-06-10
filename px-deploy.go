@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -49,6 +50,7 @@ type Config struct {
 	Stop_After               string
 	Post_Script              string
 	DryRun                   bool
+	Lock                     bool
 	Aws_Type                 string
 	Aws_Ebs                  string
 	Aws_Tags                 string
@@ -199,18 +201,32 @@ func main() {
 						return nil
 					}
 					config := parse_yaml(file)
-					destroy_deployment(config.Name, destroyForce)
+					if _, err := os.Stat("tf-deployments/" + config.Name + "/" + config.Name + ".lock"); err == nil {
+						fmt.Printf("%s deployment %s is locked.\nPlease unlock using 'px-deploy unlock -n %s' first%s\n", Yellow, config.Name, config.Name, Reset)
+					} else if errors.Is(err, os.ErrNotExist) {
+						destroy_deployment(config.Name, destroyForce)
+					} else {
+						die(err.Error())
+					}
 					return nil
 				})
 			} else {
 				if destroyName == "" {
 					die("Must specify deployment to destroy")
 				}
-				if destroyClear {
-					destroy_clear(destroyName)
+
+				if _, err := os.Stat("tf-deployments/" + destroyName + "/" + destroyName + ".lock"); err == nil {
+					fmt.Printf("%s deployment %s is locked.\nPlease unlock using 'px-deploy unlock -n %s' first%s\n", Yellow, destroyName, destroyName, Reset)
+				} else if errors.Is(err, os.ErrNotExist) {
+					if destroyClear {
+						destroy_clear(destroyName)
+					} else {
+						destroy_deployment(destroyName, destroyForce)
+					}
 				} else {
-					destroy_deployment(destroyName, destroyForce)
+					die(err.Error())
 				}
+
 			}
 		},
 	}
@@ -301,8 +317,24 @@ func main() {
 		},
 	}
 
+	cmdUnlock := &cobra.Command{
+		Use:   "unlock",
+		Short: "Unlock deployment",
+		Long:  "Unlock deployment",
+		Run: func(cmd *cobra.Command, args []string) {
+			if err := os.Remove("tf-deployments/" + statusName + "/" + statusName + ".lock"); err == nil {
+				fmt.Printf("%sunlocked deployment %s\nyou can run 'px-deploy destroy -n %s' now%s\n", Green, statusName, statusName, Reset)
+			} else if errors.Is(err, os.ErrNotExist) {
+				fmt.Printf("%slockfile for deployment %s does not exist%s\n", Yellow, statusName, Reset)
+			} else {
+				panic(err)
+			}
+
+		},
+	}
+
 	cmdStatus := &cobra.Command{
-		Use:   "status name",
+		Use:   "status",
 		Short: "Returns status / IP of a deployment",
 		Long:  "Returns status / IP of a deployment",
 		Run: func(cmd *cobra.Command, args []string) {
@@ -407,7 +439,7 @@ func main() {
 	cmdCreate.Flags().BoolVarP(&flags.Run_Predelete, "predelete", "", false, "run predelete scripts on destruction (true/false)")
 	cmdCreate.Flags().StringVarP(&createEnv, "env", "e", "", "Comma-separated list of environment variables to be passed, for example foo=bar,abc=123")
 	cmdCreate.Flags().BoolVarP(&flags.DryRun, "dry_run", "d", false, "dry-run, create local files only. Works only on aws / azure")
-
+	cmdCreate.Flags().BoolVarP(&flags.Lock, "lock", "", false, "protect deployment from deletion. run px-deploy unlock -n ... before deletion")
 	cmdDestroy.Flags().BoolVarP(&destroyAll, "all", "a", false, "destroy all deployments")
 	cmdDestroy.Flags().BoolVarP(&destroyClear, "clear", "c", false, "destroy local deployment files (use with caution!)")
 	cmdDestroy.Flags().BoolVarP(&destroyForce, "force", "f", false, "destroy even if predelete script exec fails")
@@ -426,12 +458,15 @@ func main() {
 	cmdTesting.Flags().StringVarP(&testingTemplate, "template", "t", "", "name of template to test")
 	cmdTesting.MarkFlagRequired("template")
 
+	cmdUnlock.Flags().StringVarP(&statusName, "name", "n", "", "name of deployment")
+	cmdUnlock.MarkFlagRequired("name")
+
 	cmdVsphereCheckTemplateVersion.Flags().StringVarP(&statusName, "name", "n", "", "name of deployment")
 	cmdVsphereCheckTemplateVersion.MarkFlagRequired("name")
 
 	cmdHistory.Flags().StringVarP(&historyNumber, "number", "n", "", "deployment ID")
 
-	rootCmd.AddCommand(cmdCreate, cmdDestroy, cmdConnect, cmdTesting, cmdKubeconfig, cmdList, cmdTemplates, cmdStatus, cmdCompletion, cmdVsphereInit, cmdVsphereCheckTemplateVersion, cmdVersion, cmdHistory)
+	rootCmd.AddCommand(cmdCreate, cmdDestroy, cmdConnect, cmdTesting, cmdKubeconfig, cmdList, cmdTemplates, cmdStatus, cmdCompletion, cmdVsphereInit, cmdVsphereCheckTemplateVersion, cmdVersion, cmdHistory, cmdUnlock)
 	rootCmd.Execute()
 }
 
@@ -914,6 +949,13 @@ func create_deployment(config Config) bool {
 		return false
 	}
 
+	if config.Lock {
+		lockfile, err := os.OpenFile("tf-deployments/"+config.Name+"/"+config.Name+".lock", os.O_RDONLY|os.O_CREATE, 0644)
+		if err != nil {
+			panic(err.Error())
+		}
+		lockfile.Close()
+	}
 	return true
 }
 
