@@ -165,7 +165,6 @@ func main() {
 			}
 
 			check_for_recommended_settings(&config)
-
 			prepare_error := prepare_deployment(&config, &flags, createName, createEnv, createTemplate, createRegion)
 			if prepare_error != "" {
 				die(prepare_error)
@@ -806,6 +805,7 @@ func create_deployment(config Config) bool {
 				fmt.Printf("%s\n", tf_error)
 				return false
 			}
+			aws_show_iamkey_age(&config)
 		}
 	case "gcp":
 		{
@@ -1122,6 +1122,7 @@ func destroy_deployment(name string, destroyForce bool) {
 			fmt.Printf("%s\n", tf_error)
 			return
 		}
+		aws_show_iamkey_age(&config)
 
 	} else if config.Cloud == "gcp" {
 		drivelist := make(map[string]string)
