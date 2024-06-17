@@ -153,6 +153,7 @@ The `defaults.yml` file sets a number of deployment variables:
  * `stop_after` - stop the intances after this many hours
  * `post_script` - script to run on each master after deployment, output will go to stdout
  * `nodes` - the number of worker nodes on each cluster
+ * `lock` - prevents deployment from being deleted by `px-deploy destroy ...`. use `px-deploy unlock -n ...` to unlock 
  * `platform` - can be set to either k8s, k3s, none, dockeree, ocp4, eks, gke or nomad
  * `azure_type` - the Azure machine type for each node
  * `azure_disks` - similar to aws_ebs, for example: `"Standard_LRS:49 Premium_LRS:50"` 
