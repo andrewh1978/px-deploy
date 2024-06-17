@@ -216,6 +216,7 @@ func getvSphereNodeIp(mobId string, mac string, v *vsphereRestClient) (ip string
 
 func vsphere_create_variables(config *Config) []string {
 	var tf_variables []string
+	var tf_cluster_nodes string
 
 	Clusters, _ := strconv.Atoi(config.Clusters)
 	Nodes, _ := strconv.Atoi(config.Nodes)
@@ -247,6 +248,16 @@ func vsphere_create_variables(config *Config) []string {
 	// loop clusters (masters and nodes) to build tfvars and master/node scripts
 	for c := 1; c <= Clusters; c++ {
 		masternum := strconv.Itoa(c)
+		tf_cluster_nodes = strconv.Itoa(Nodes)
+
+		// if exist, apply individual scripts/settings for nodes of a cluster
+		for _, clusterconf := range config.Cluster {
+			if clusterconf.Id == c {
+				if clusterconf.Nodes != "" {
+					tf_cluster_nodes = clusterconf.Nodes
+				}
+			}
+		}
 		// process .tfvars file for deployment
 		tf_variables = append(tf_variables, "  {")
 		tf_variables = append(tf_variables, "    role = \"master\"")
@@ -256,7 +267,7 @@ func vsphere_create_variables(config *Config) []string {
 
 		tf_variables = append(tf_variables, "  {")
 		tf_variables = append(tf_variables, "    role = \"node\"")
-		tf_variables = append(tf_variables, "    nodecount = "+strconv.Itoa(Nodes))
+		tf_variables = append(tf_variables, "    nodecount = "+tf_cluster_nodes)
 		tf_variables = append(tf_variables, "    cluster = "+masternum)
 		tf_variables = append(tf_variables, "  },")
 	}

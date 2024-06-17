@@ -113,6 +113,7 @@ type Config_Cluster struct {
 	Id            int
 	Scripts       []string
 	Instance_Type string
+	Nodes         string
 }
 
 type Deployment_Status_Return struct {
@@ -702,11 +703,17 @@ func prepare_deployment(config *Config, flags *Config, createName string, create
 func get_deployment_status(config *Config, cluster int, c chan Deployment_Status_Return) {
 	defer wg.Done()
 	var ip string
+	var Nodes int
 	var returnvalue string
-	Nodes, _ := strconv.Atoi(config.Nodes)
 
 	if (config.Platform == "ocp4") || (config.Platform == "eks") || (config.Platform == "aks") || (config.Platform == "gke") {
 		Nodes = 0
+	} else {
+		if config.Cluster[cluster-1].Nodes != "" {
+			Nodes, _ = strconv.Atoi(config.Cluster[cluster-1].Nodes)
+		} else {
+			Nodes, _ = strconv.Atoi(config.Nodes)
+		}
 	}
 
 	switch config.Cloud {
