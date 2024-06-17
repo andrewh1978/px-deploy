@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -16,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go-v2/service/eks"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancing"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
 )
 
 func aws_create_variables(config *Config) []string {
@@ -631,5 +633,26 @@ func terminate_and_wait_nodegroup(eksclient *eks.Client, nodegroupName string, c
 	if err != nil {
 		fmt.Println("waiter error:", err)
 		return
+	}
+}
+
+func aws_show_iamkey_age(config *Config) {
+	cfg := aws_load_config(config)
+	iamclient := iam.NewFromConfig(cfg)
+	iamKeys, err := iamclient.ListAccessKeys(context.TODO(), &iam.ListAccessKeysInput{})
+
+	if err != nil {
+		fmt.Printf("Error getting information about AWS IAM key age: %s \n", err.Error())
+	}
+
+	for _, iamKey := range iamKeys.AccessKeyMetadata {
+		if iamKey.Status == "Active" {
+			duration := time.Now().Sub(*iamKey.CreateDate)
+			if math.Floor(duration.Hours()/24) > 70 {
+				fmt.Printf("%sHint: your AWS IAM access key %s is older than 70 days (%.0f)\n%s", Yellow, *iamKey.AccessKeyId, math.Floor(duration.Hours()/24), Reset)
+			} else {
+				fmt.Printf("AWS IAM access key %s age: %.0f days\n", *iamKey.AccessKeyId, math.Floor(duration.Hours()/24))
+			}
+		}
 	}
 }
