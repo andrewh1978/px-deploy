@@ -744,10 +744,12 @@ func get_deployment_status(config *Config, cluster int, c chan Deployment_Status
 	if (config.Platform == "ocp4") || (config.Platform == "eks") || (config.Platform == "aks") || (config.Platform == "gke") {
 		Nodes = 0
 	} else {
-		if config.Cluster[cluster-1].Nodes != "" {
-			Nodes, _ = strconv.Atoi(config.Cluster[cluster-1].Nodes)
-		} else {
-			Nodes, _ = strconv.Atoi(config.Nodes)
+		Nodes, _ = strconv.Atoi(config.Nodes)
+		//check for cluster specific node # overrides
+		for _, cl_entry := range config.Cluster {
+			if (cl_entry.Id == cluster) && (cl_entry.Nodes != "") {
+				Nodes, _ = strconv.Atoi(cl_entry.Nodes)
+			}
 		}
 	}
 
@@ -975,7 +977,7 @@ func run_terraform_apply(config *Config) string {
 		fmt.Println(Yellow + "ERROR: terraform plan failed. Check validity of terraform scripts" + Reset)
 		return err.Error()
 	} else {
-		if config.DryRun == true {
+		if config.DryRun {
 			fmt.Printf("Dry run only. No deployment on target cloud. Run 'px-deploy destroy -n %s' to remove local files\n", config.Name)
 			return ""
 		}
@@ -993,6 +995,10 @@ func run_terraform_apply(config *Config) string {
 		case "aws":
 			// apply the terraform aws-returns-generated to deployment yml file (maintains compatibility to px-deploy behaviour, maybe not needed any longer)
 			content, err := os.ReadFile("/px-deploy/.px-deploy/tf-deployments/" + config.Name + "/aws-returns-generated.yaml")
+			if err != nil {
+				return err.Error()
+			}
+
 			file, err := os.OpenFile("/px-deploy/.px-deploy/deployments/"+config.Name+".yml", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
 				return err.Error()
@@ -1005,6 +1011,9 @@ func run_terraform_apply(config *Config) string {
 		case "gcp":
 			// apply the terraform gcp-returns-generated to deployment yml file (network name needed for different functions)
 			content, err := os.ReadFile("/px-deploy/.px-deploy/tf-deployments/" + config.Name + "/gcp-returns-generated.yaml")
+			if err != nil {
+				return err.Error()
+			}
 			file, err := os.OpenFile("/px-deploy/.px-deploy/deployments/"+config.Name+".yml", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
 				return err.Error()
@@ -1399,7 +1408,7 @@ func prepare_predelete(config *Config, runtype string, destroyForce bool) {
 	var name_pre, name_post string
 
 	// script predelete only executes if set in config
-	if config.Run_Predelete != true && runtype == "script" {
+	if !config.Run_Predelete && runtype == "script" {
 		return
 	}
 
@@ -1443,7 +1452,7 @@ func prepare_predelete(config *Config, runtype string, destroyForce bool) {
 	close(predelete_status)
 
 	for elem := range predelete_status {
-		if elem.success == false {
+		if !elem.success {
 			if destroyForce {
 				fmt.Printf("%v %v failed %v predelete. --force parmeter set. Continuing delete%v\n", Red, elem.node, runtype, Reset)
 			} else {
@@ -1623,8 +1632,8 @@ func write_nodescripts(config Config) {
 		tf_post_script = nil
 	}
 
-	Clusters, err := strconv.Atoi(config.Clusters)
-	Nodes, err := strconv.Atoi(config.Nodes)
+	Clusters, _ := strconv.Atoi(config.Clusters)
+	Nodes, _ := strconv.Atoi(config.Nodes)
 
 	// loop clusters (masters and nodes) to build tfvars and master/node scripts
 	for c := 1; c <= Clusters; c++ {
@@ -1670,25 +1679,34 @@ func write_nodescripts(config Config) {
 		if err != nil {
 			die("PANIC: generated script '.px-deploy/tf-deployments/" + config.Name + "/master-" + masternum + "-1' is not valid Bash")
 		}
-
+		// set cluster specfic node # to config node #
+		CL_Nodes := Nodes
+		// check if there is a cluster specific node # override
+		for _, cl_entry := range config.Cluster {
+			if (cl_entry.Id == c) && (cl_entry.Nodes != "") {
+				CL_Nodes, _ = strconv.Atoi(cl_entry.Nodes)
+			}
+		}
 		// loop nodes of cluster, add node name/ip to tf var and write individual cloud-init scripts file
-		for n := 1; n <= Nodes; n++ {
-			nodenum := strconv.Itoa(n)
-			tf_individual_node_script = tf_node_script
-			tf_individual_node_script = append(tf_individual_node_script, "export IP=$(curl -s https://ipinfo.io/ip)\n"...)
-			tf_individual_node_script = append(tf_individual_node_script, "echo \"echo 'node-"+masternum+"-"+nodenum+" $IP' >> /var/log/px-deploy/completed/tracking \" | ssh root@master-"+masternum+" \n"...)
-			tf_individual_node_script = append(tf_individual_node_script, "scp /var/log/px-deploy/script_tracking root@master-"+masternum+":/var/log/px-deploy/script_tracking_node-"+masternum+"-"+nodenum+"\n"...)
-			err := os.WriteFile("/px-deploy/.px-deploy/tf-deployments/"+config.Name+"/node-"+masternum+"-"+nodenum, tf_individual_node_script, 0666)
-			if err != nil {
-				die(err.Error())
-			}
+		if CL_Nodes > 0 {
+			for n := 1; n <= CL_Nodes; n++ {
+				nodenum := strconv.Itoa(n)
+				tf_individual_node_script = tf_node_script
+				tf_individual_node_script = append(tf_individual_node_script, "export IP=$(curl -s https://ipinfo.io/ip)\n"...)
+				tf_individual_node_script = append(tf_individual_node_script, "echo \"echo 'node-"+masternum+"-"+nodenum+" $IP' >> /var/log/px-deploy/completed/tracking \" | ssh root@master-"+masternum+" \n"...)
+				tf_individual_node_script = append(tf_individual_node_script, "scp /var/log/px-deploy/script_tracking root@master-"+masternum+":/var/log/px-deploy/script_tracking_node-"+masternum+"-"+nodenum+"\n"...)
+				err := os.WriteFile("/px-deploy/.px-deploy/tf-deployments/"+config.Name+"/node-"+masternum+"-"+nodenum, tf_individual_node_script, 0666)
+				if err != nil {
+					die(err.Error())
+				}
 
-			cmd := exec.Command("bash", "-n", "/px-deploy/.px-deploy/tf-deployments/"+config.Name+"/node-"+masternum+"-"+nodenum)
-			err = cmd.Run()
-			if err != nil {
-				die("PANIC: generated script '.px-deploy/tf-deployments/" + config.Name + "/node-" + masternum + "-" + nodenum + "' is not valid Bash")
-			}
+				cmd := exec.Command("bash", "-n", "/px-deploy/.px-deploy/tf-deployments/"+config.Name+"/node-"+masternum+"-"+nodenum)
+				err = cmd.Run()
+				if err != nil {
+					die("PANIC: generated script '.px-deploy/tf-deployments/" + config.Name + "/node-" + masternum + "-" + nodenum + "' is not valid Bash")
+				}
 
+			}
 		}
 	}
 }
@@ -1846,7 +1864,7 @@ func get_version_latest() string {
 		return ""
 	}
 	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
+	body, _ := io.ReadAll(resp.Body)
 	v := strings.TrimSpace(string(body))
 	if regexp.MustCompile(`^[0-9\.]+$`).MatchString(v) {
 		return v

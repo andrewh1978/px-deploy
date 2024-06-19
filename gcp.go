@@ -154,7 +154,7 @@ func gcp_delete_wait_nodepools(config *Config, cluster string, nodepool string, 
 	}
 
 	deleted := false
-	for deleted != true {
+	for !deleted {
 		deletestatus, err := containerService.Projects.Zones.Operations.Get(config.Gcp_Project, fmt.Sprintf("%s-%s", config.Gcp_Region, config.Gcp_Zone), deletepoolresult.Name).Do()
 		if err != nil {
 			panic(err.Error())

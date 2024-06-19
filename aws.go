@@ -460,7 +460,7 @@ func delete_and_wait_elb(client *elasticloadbalancing.Client, elbName string) {
 	}
 
 	deleted := false
-	for deleted != true {
+	for !deleted {
 		_, err := client.DescribeLoadBalancers(context.TODO(), &elasticloadbalancing.DescribeLoadBalancersInput{
 			LoadBalancerNames: []string{elbName},
 		})
@@ -484,7 +484,7 @@ func delete_and_wait_elb(client *elasticloadbalancing.Client, elbName string) {
 func delete_and_wait_sg(client *ec2.Client, sgName string) {
 	defer wg.Done()
 	deleted := false
-	for deleted != true {
+	for !deleted {
 		_, err := client.DeleteSecurityGroup(context.TODO(), &ec2.DeleteSecurityGroupInput{
 			//DryRun: aws.Bool(true),
 			GroupId: aws.String(sgName),
@@ -534,7 +534,7 @@ func delete_and_wait_sgrule(client *ec2.Client, groupId string, ruleId string, i
 	// check if security rule is deleted in API
 	// to be replaced by a waiter as soon as implemented in AWS SDK
 	deleted := false
-	for deleted != true {
+	for !deleted {
 		sg_rules, err := client.DescribeSecurityGroupRules(context.TODO(), &ec2.DescribeSecurityGroupRulesInput{
 			Filters: []types.Filter{
 				{
