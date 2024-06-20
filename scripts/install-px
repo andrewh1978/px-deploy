@@ -47,6 +47,12 @@ if [ "$cloud_drive" ]; then
     url="$url&e=AZURE_CLIENT_ID%3D$azure_client_id%2CAZURE_CLIENT_SECRET%3D$azure_client_secret%2CAZURE_TENANT_ID%3D$azure_tenant_id"
   fi
   url="$url&s=%22$cloud_drive%22&mz=0&kd=$cloud_drive"
+  
+  [ "$cloud" = aws ] && url="$url&ce=aws"
+  [ "$cloud" = vsphere ] && url="$url&ce=vsphere"
+  [ "$cloud" = gcp ] && url="$url&ce=gce"
+  [ "$cloud" = azure ] && url="$url&ce=azure"
+
 fi
 if [ "$journal" ]; then
   url="$url&j=$journal"
