@@ -423,8 +423,8 @@ To fix the isse find out the user/role being used by AWS UI (e.g. by running `aw
 
 ```
 env:
-    AWS_EKS_ADD_IAM_ROLE: "OktaSSOAdminUser"
-    AWS_EKS_ADD_IAM_USER: "developerUser1"
+    AWS_ADD_EKS_IAM_ROLE: "OktaSSOAdminUser"
+    AWS_ADD_EKS_IAM_USER: "developerUser1"
 ```
 
 More information can be found here https://docs.aws.amazon.com/eks/latest/userguide/view-kubernetes-resources.html#view-kubernetes-resources-permissions
