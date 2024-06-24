@@ -182,9 +182,8 @@ func aws_load_config(config *Config) aws.Config {
 	return cfg
 }
 
-func aws_connect_ec2(config *Config, awscfg *aws.Config) *ec2.Client {
-	cfg := aws_load_config(config)
-	client := ec2.NewFromConfig(cfg)
+func aws_connect_ec2(awscfg *aws.Config) *ec2.Client {
+	client := ec2.NewFromConfig(*awscfg)
 	return client
 }
 
@@ -216,7 +215,7 @@ func aws_get_instances(config *Config, client *ec2.Client) ([]string, error) {
 	return aws_instances, nil
 }
 
-func aws_get_clouddrives(aws_instances_split []([]string), config *Config, client *ec2.Client) ([]string, error) {
+func aws_get_clouddrives(aws_instances_split []([]string), client *ec2.Client) ([]string, error) {
 	var aws_volumes []string
 
 	fmt.Printf("Searching for portworx clouddrive volumes:\n")
@@ -282,6 +281,11 @@ func aws_delete_nodegroups(config *Config) error {
 func aws_get_node_ip(deployment string, node string) string {
 	config := parse_yaml("/px-deploy/.px-deploy/deployments/" + deployment + ".yml")
 	var output []byte
+
+	// load default config as we need current aws credentials
+	defaultConfig := parse_yaml("/px-deploy/.px-deploy/defaults.yml")
+	config.Aws_Access_Key_Id = defaultConfig.Aws_Access_Key_Id
+	config.Aws_Secret_Access_Key = defaultConfig.Aws_Secret_Access_Key
 
 	// connect to aws API
 	cfg, err := awscfg.LoadDefaultConfig(
@@ -652,7 +656,7 @@ func aws_show_iamkey_age(config *Config) {
 
 	for _, iamKey := range iamKeys.AccessKeyMetadata {
 		if iamKey.Status == "Active" {
-			duration := time.Now().Sub(*iamKey.CreateDate)
+			duration := time.Since(*iamKey.CreateDate)
 			if math.Floor(duration.Hours()/24) > 70 {
 				fmt.Printf("%sHint: your AWS IAM access key %s is older than 70 days (%.0f)\n%s", Yellow, *iamKey.AccessKeyId, math.Floor(duration.Hours()/24), Reset)
 			} else {
