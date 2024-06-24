@@ -104,9 +104,9 @@ cp defaults.yml $HOME/.px-deploy/defaults.yml.$ver
 
 echo
 echo -e ${YELLOW}If you are using zsh, append this to your .zshrc:
-echo -e ${WHITE}'px-deploy() { [ "$DEFAULTS" ] && params="-v $DEFAULTS:/px-deploy/.px-deploy/defaults.yml" ; docker run --platform=linux/amd64 --network host -it -e PXDUSER=$USER --rm --name px-deploy.$$ $=params -v $HOME/.px-deploy:/px-deploy/.px-deploy px-deploy /root/go/bin/px-deploy $* ; }'
+echo -e ${WHITE}'px-deploy() { [ "$DEFAULTS" ] && params="-v $DEFAULTS:/px-deploy/.px-deploy/defaults.yml" ; docker run --network host -it -e PXDUSER=$USER --rm --name px-deploy.$$ $=params -v $HOME/.px-deploy:/px-deploy/.px-deploy px-deploy /root/go/bin/px-deploy $* ; }'
 echo -e ${YELLOW}If you are using bash, append this to your .bash_profile:
-echo -e ${WHITE}'px-deploy() { [ "$DEFAULTS" ] && params="-v $DEFAULTS:/px-deploy/.px-deploy/defaults.yml" ; docker run --platform=linux/amd64 --network host -it -e PXDUSER=$USER --rm --name px-deploy.$$ $params -v $HOME/.px-deploy:/px-deploy/.px-deploy px-deploy /root/go/bin/px-deploy "$@" ; }'
+echo -e ${WHITE}'px-deploy() { [ "$DEFAULTS" ] && params="-v $DEFAULTS:/px-deploy/.px-deploy/defaults.yml" ; docker run --network host -it -e PXDUSER=$USER --rm --name px-deploy.$$ $params -v $HOME/.px-deploy:/px-deploy/.px-deploy px-deploy /root/go/bin/px-deploy "$@" ; }'
 echo
 echo -e ${GREEN}When your px-deploy function is set, create a deployment with:
 echo -e "${WHITE}px-deploy create --name myDeployment --template px$NC"
