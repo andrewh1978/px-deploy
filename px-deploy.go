@@ -725,7 +725,14 @@ func prepare_deployment(config *Config, flags *Config, createName string, create
 		}
 	}
 
-	y, _ := yaml.Marshal(config)
+	// remove AWS credentials from deployment specific yml as we should not rely on it later
+	cleanConfig := *config
+	if cleanConfig.Cloud == "aws" {
+		cleanConfig.Aws_Access_Key_Id = ""
+		cleanConfig.Aws_Secret_Access_Key = ""
+	}
+	y, _ := yaml.Marshal(cleanConfig)
+
 	log("[ " + strings.Join(os.Args[1:], " ") + " ] " + base64.StdEncoding.EncodeToString(y))
 
 	err := os.WriteFile("deployments/"+createName+".yml", y, 0644)
@@ -840,9 +847,7 @@ func create_deployment(config Config) bool {
 					exec.Command("cp", "-a", `/px-deploy/terraform/aws/eks/eks_run_everywhere.tpl`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
 				}
 			}
-
 			write_nodescripts(config)
-
 			write_tf_file(config.Name, ".tfvars", aws_create_variables(&config))
 			tf_error := run_terraform_apply(&config)
 			if tf_error != "" {
@@ -972,6 +977,12 @@ func run_terraform_apply(config *Config) string {
 	fmt.Println(White + "running terraform PLAN" + Reset)
 	cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-input=false", "-parallelism=50", "-out=tfplan", "-var-file", ".tfvars")
 	cmd.Stderr = os.Stderr
+
+	if config.Cloud == "aws" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("AWS_ACCESS_KEY_ID=%s", config.Aws_Access_Key_Id))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%s", config.Aws_Secret_Access_Key))
+	}
+
 	err := cmd.Run()
 	if err != nil {
 		fmt.Println(Yellow + "ERROR: terraform plan failed. Check validity of terraform scripts" + Reset)
@@ -1089,8 +1100,12 @@ func destroy_deployment(name string, destroyForce bool) {
 			die("Error: outdated deployment")
 		}
 
+		defaultConfig := parse_yaml("/px-deploy/.px-deploy/defaults.yml")
+		config.Aws_Access_Key_Id = defaultConfig.Aws_Access_Key_Id
+		config.Aws_Secret_Access_Key = defaultConfig.Aws_Secret_Access_Key
+
 		cfg := aws_load_config(&config)
-		client := aws_connect_ec2(&config, &cfg)
+		client := aws_connect_ec2(&cfg)
 
 		aws_instances, err := aws_get_instances(&config, client)
 		if err != nil {
@@ -1105,7 +1120,7 @@ func destroy_deployment(name string, destroyForce bool) {
 			aws_instances_split[i/197] = append(aws_instances_split[i/197], val)
 		}
 
-		aws_volumes, err := aws_get_clouddrives(aws_instances_split, &config, client)
+		aws_volumes, err := aws_get_clouddrives(aws_instances_split, client)
 		if err != nil {
 			panic(fmt.Sprintf("error listing aws clouddrives %v \n", err.Error()))
 		}
