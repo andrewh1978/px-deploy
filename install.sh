@@ -70,6 +70,7 @@ git clone https://github.com/andrewh1978/px-deploy
 cd px-deploy
 if [ -z "$ver" ]; then
   ver=$(cat VERSION)
+  git checkout v$ver
 fi
 echo "Pulling image (version $ver)"
 docker pull ghcr.io/andrewh1978/px-deploy:$ver
