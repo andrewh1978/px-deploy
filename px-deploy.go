@@ -974,15 +974,17 @@ func create_deployment(config Config) bool {
 }
 
 func run_terraform_apply(config *Config) string {
+	var cloud_auth []string
 	fmt.Println(White + "running terraform PLAN" + Reset)
 	cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-input=false", "-parallelism=50", "-out=tfplan", "-var-file", ".tfvars")
 	cmd.Stderr = os.Stderr
 
-	if config.Cloud == "aws" {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("AWS_ACCESS_KEY_ID=%s", config.Aws_Access_Key_Id))
-		cmd.Env = append(cmd.Env, fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%s", config.Aws_Secret_Access_Key))
+	switch config.Cloud {
+	case "aws":
+		cloud_auth = append(cloud_auth, fmt.Sprintf("AWS_ACCESS_KEY_ID=%s", config.Aws_Access_Key_Id))
+		cloud_auth = append(cloud_auth, fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%s", config.Aws_Secret_Access_Key))
 	}
-
+	cmd.Env = append(cmd.Env, cloud_auth...)
 	err := cmd.Run()
 	if err != nil {
 		fmt.Println(Yellow + "ERROR: terraform plan failed. Check validity of terraform scripts" + Reset)
@@ -996,6 +998,7 @@ func run_terraform_apply(config *Config) string {
 		cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "apply", "-input=false", "-parallelism=50", "-auto-approve", "tfplan")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
+		cmd.Env = append(cmd.Env, cloud_auth...)
 		errapply := cmd.Run()
 		if errapply != nil {
 			fmt.Println(Yellow + "ERROR: terraform apply failed. Check validity of terraform scripts" + Reset)
@@ -1320,6 +1323,14 @@ func destroy_deployment(name string, destroyForce bool) {
 }
 func run_terraform_destroy(config *Config) string {
 	var cmd *exec.Cmd
+	var cloud_auth []string
+
+	switch config.Cloud {
+	case "aws":
+		cloud_auth = append(cloud_auth, fmt.Sprintf("AWS_ACCESS_KEY_ID=%s", config.Aws_Access_Key_Id))
+		cloud_auth = append(cloud_auth, fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%s", config.Aws_Secret_Access_Key))
+	}
+
 	fmt.Println(White + "running Terraform PLAN" + Reset)
 	// vsphere terraform must refresh, otherwise complains about missing disks
 	// other clouds do no refresh as this saves time @scale
@@ -1329,6 +1340,7 @@ func run_terraform_destroy(config *Config) string {
 		cmd = exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-destroy", "-input=false", "-refresh=false", "-parallelism=50", "-out=tfplan", "-var-file", ".tfvars")
 	}
 	cmd.Stderr = os.Stderr
+	cmd.Env = append(cmd.Env, cloud_auth...)
 	err := cmd.Run()
 	if err != nil {
 		fmt.Println(Red + "ERROR: Terraform plan failed. Check validity of terraform scripts" + Reset)
@@ -1338,6 +1350,7 @@ func run_terraform_destroy(config *Config) string {
 		cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "apply", "-input=false", "-parallelism=50", "-auto-approve", "tfplan")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
+		cmd.Env = append(cmd.Env, cloud_auth...)
 		errdestroy := cmd.Run()
 
 		if errdestroy != nil {
