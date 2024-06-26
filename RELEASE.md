@@ -1,3 +1,17 @@
+# 6.2
+
+## Improvements
+ * Bump Portworx to 3.1.2
+ * Bump PX-Central to 2.7.1
+ * Add native Apple Silicon support
+ * Improve release workflow
+ * Add lock flag
+ * Add parameter for cluster-specific number of nodes
+ * Display age of active AWS keys after each provision
+
+## Fixes
+ * Use default credentials for all Terraform actions (to allow key rotation)
+
 # 6.1
 
 ## Improvements
