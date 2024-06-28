@@ -1,0 +1,18 @@
+helm repo add rook-release https://charts.rook.io/release
+helm install --create-namespace --namespace rook-ceph rook-ceph rook-release/rook-ceph
+kubectl wait --for=condition=ready pod -l app=rook-ceph-operator -n rook-ceph --timeout 5m
+kubectl label ns rook-ceph pod-security.kubernetes.io/enforce=privileged
+helm upgrade --install --create-namespace --namespace rook-ceph rook-ceph-cluster --set operatorNamespace=rook-ceph rook-release/rook-ceph-cluster -f values-override.yaml
+(
+  set -x; cd "$(mktemp -d)" &&
+  OS="$(uname | tr '[:upper:]' '[:lower:]')" &&
+  ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" &&
+  KREW="krew-${OS}_${ARCH}" &&
+  curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" &&
+  tar zxvf "${KREW}.tar.gz" &&
+  ./"${KREW}" install krew
+)
+echo 'export PATH=$PATH:$HOME/.krew/bin' >>$HOME/.bash_profile
+source $HOME/.bash_profile
+kubectl krew install rook-ceph
+kubectl wait --for=jsonpath='{.status.phase}'=Ready cephclusters/rook-ceph  -n rook-ceph  --timeout 30m
