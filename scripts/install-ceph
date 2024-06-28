@@ -2,7 +2,7 @@ helm repo add rook-release https://charts.rook.io/release
 helm install --create-namespace --namespace rook-ceph rook-ceph rook-release/rook-ceph
 kubectl wait --for=condition=ready pod -l app=rook-ceph-operator -n rook-ceph --timeout 5m
 kubectl label ns rook-ceph pod-security.kubernetes.io/enforce=privileged
-helm upgrade --install --create-namespace --namespace rook-ceph rook-ceph-cluster --set operatorNamespace=rook-ceph rook-release/rook-ceph-cluster -f values-override.yaml
+helm upgrade --install --create-namespace --namespace rook-ceph rook-ceph-cluster --set operatorNamespace=rook-ceph rook-release/rook-ceph-cluster -f /assets/ceph/values-override.yaml
 (
   set -x; cd "$(mktemp -d)" &&
   OS="$(uname | tr '[:upper:]' '[:lower:]')" &&
