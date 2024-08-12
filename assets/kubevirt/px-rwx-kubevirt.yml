@@ -1,0 +1,12 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: px-rwx-kubevirt
+  annotations: storageclass.kubernetes.io/is-default-class: "true"
+provisioner: pxd.portworx.com
+parameters:
+  repl: "3"
+  sharedv4: "true"
+  sharedv4_mount_options: vers=3.0,nolock
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true

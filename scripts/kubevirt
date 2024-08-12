@@ -2,6 +2,7 @@ export KUBEVIRTVERSION="v1.1.1"
 export CDIVERSION="v1.58.1"
 
 #export KUBEVIRTVERSION=$(curl -s https://api.github.com/repos/kubevirt/kubevirt/releases | grep tag_name | grep -v -- '-rc' | sort -r | head -1 | awk -F': ' '{print $2}' | sed 's/,//' | xargs)
+kubectl apply -f /assets/kubevirt/px-rwx-kubevirt.yml
 
 echo "downloading kubevirt $KUBEVIRTVERSION"
 kubectl apply -f https://github.com/kubevirt/kubevirt/releases/download/${KUBEVIRTVERSION}/kubevirt-operator.yaml

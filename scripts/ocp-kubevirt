@@ -1,5 +1,8 @@
 OPVERSION=$(kubectl get packagemanifests.packages.operators.coreos.com kubevirt-hyperconverged -o json | jq -r ".status.channels[0].currentCSV")
 
+kubectl patch storageclass gp3-csi -p '{"metadata": {"annotations": {"storageclass.kubernetes.io/is-default-class": "false"}}}'
+kubectl apply -f /assets/kubevirt/px-rwx-kubevirt.yml
+
 echo "current kubevirt-hyperconverged operator version is $OPVERSION"
 
 cat <<EOF | kubectl apply -f -
