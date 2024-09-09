@@ -21,6 +21,8 @@ This will deploy one or more clusters in the cloud, with optional post-install t
 
 ## Install & Update
 
+0. You need a Unix-like OS. This can be Linux, MacOS or WSL if you are on Windows. Do not use Powershell or Git Bash.
+
 1. Install and enable a container runtime such as Docker. On MacOS with Apple Silicon, it is recommended you use [Docker Desktop](https://www.docker.com/products/docker-desktop/).
 
 2. Install the [Git CLI](https://github.com/git-guides/install-git).
