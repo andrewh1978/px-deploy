@@ -164,7 +164,7 @@ spec:
           resources:
             requests:
               storage: 5Gi
-          storageClassName: px-csi-db
+          storageClassName: px-rwx-kubevirt
         preallocation: false
         source:
           pvc:
