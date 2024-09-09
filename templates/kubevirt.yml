@@ -1,4 +1,4 @@
 description: Install kubevirt on a bare-metal cluster
-scripts: ["install-px","kubevirt","kubevirt-apps"]
+scripts: ["install-px","kubevirt","kubevirt-apps-freebsd"]
 #aws_type: "c5n.metal"
 

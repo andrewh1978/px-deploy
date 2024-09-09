@@ -149,11 +149,12 @@ spec:
                       path: /tmp/init-mongo.py
                       permissions: '0600'
                   runcmd:
+                    - pkg upgrade -y python
                     - pkg install -y qemu-tools mongodb70
                     - sed -i '' 's/bindIp:\ 127.0.0.1/bindIp:\ 0.0.0.0/' /usr/local/etc/mongodb.conf
                     - echo 'mongod_enable="YES"' >>/etc/rc.conf
                     - service mongod start
-                    - pkg install -y py39-pymongo
+                    - pkg install -y databases/py-pymongo
                     - python3 /tmp/init-mongo.py                  
           name: cloudinitdisk
   dataVolumeTemplates:
