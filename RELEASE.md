@@ -1,3 +1,11 @@
+# 6.2.1
+
+## Improvements
+ * Add Ceph template
+
+## Fixes
+ * Fix FreeBSD pymongo install
+
 # 6.2
 
 ## Improvements
