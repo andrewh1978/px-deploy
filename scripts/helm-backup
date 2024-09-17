@@ -23,8 +23,8 @@ parameters:
 allowVolumeExpansion: true
 EOF
 
-curl -O https://raw.githubusercontent.com/portworx/helm/master/stable/px-central-2.7.1.tgz
-/usr/local/bin/helm install px-central px-central-2.7.1.tgz --namespace central --create-namespace --version 2.7.1 --set persistentStorage.enabled=true,persistentStorage.storageClassName="px-repl3",pxbackup.enabled=true,oidc.centralOIDC.updateAdminProfile=false
+curl -O https://raw.githubusercontent.com/portworx/helm/master/stable/px-central-2.7.2.tgz
+/usr/local/bin/helm install px-central px-central-2.7.2.tgz --namespace central --create-namespace --version 2.7.2 --set persistentStorage.enabled=true,persistentStorage.storageClassName="px-repl3",pxbackup.enabled=true,oidc.centralOIDC.updateAdminProfile=false
 
 until (kubectl get po --namespace central -ljob-name=pxcentral-post-install-hook  -o wide | awk '{print $1, $2, $3}' |grep "Completed"); do echo "Waiting for post install hook";sleep 3; done
 until (kubectl get po --namespace central -lapp=px-backup  -o wide | awk '{print $1, $2, $3}' | grep "Running" | grep "1/1"); do echo "Waiting for backup service";sleep 3; done
