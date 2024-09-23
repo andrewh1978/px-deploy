@@ -1103,7 +1103,7 @@ func destroy_deployment(name string, destroyForce bool) {
 		die(err.Error())
 	}
 	for i := 1; i <= c; i++ {
-		fmt.Println(White + "Collecting logs for cluster '" + strconv.Itoa(i) + "'..." + Reset)
+		fmt.Println(White + "Collecting logs for cluster " + strconv.Itoa(i) + "..." + Reset)
 		err = os.Mkdir(logdir + "/" + strconv.Itoa(i), 0755)
 		if err != nil {
 			die(err.Error())
