@@ -1094,34 +1094,33 @@ func destroy_deployment(name string, destroyForce bool) {
 	os.Chdir("/px-deploy/.px-deploy")
 	config := parse_yaml("deployments/" + name + ".yml")
 	var output []byte
-	var err error
 
 	fmt.Println(White + "Destroying deployment '" + config.Name + "'..." + Reset)
 	c, _ := strconv.Atoi(config.Clusters)
 	logdir := "/px-deploy/.px-deploy/logs/" + name + "_" + time.Now().Format(time.RFC3339)
-	err = os.Mkdir(logdir, 0755)
+	err := os.Mkdir(logdir, 0755)
 	if err != nil {
-		die(err.Error())
+		die("Cannot create directory " + logdir + ": " + err.Error())
+	}
+	cmd := exec.Command("bash", "-c", "(cd logs ; ls -t | tail -n +11 | xargs -n 1 rm -rf)")
+	_, err = cmd.Output()
+	if err != nil {
+		die("Cannot purge old logs: " + err.Error())
 	}
 	for i := 1; i <= c; i++ {
 		fmt.Println(White + "Collecting logs for cluster " + strconv.Itoa(i) + "..." + Reset)
 		err = os.Mkdir(logdir + "/" + strconv.Itoa(i), 0755)
 		if err != nil {
-			die(err.Error())
+			die("Cannot create directory " + logdir + "/" + strconv.Itoa(i) + ": " + err.Error())
 		}
 		cmd := exec.Command("bash", "-c", "rsync -rtz -e 'ssh -oLoglevel=ERROR -oStrictHostKeyChecking=no -i keys/id_rsa." + config.Cloud + "." + name + " root@" + get_ip(name) + " ssh' master-" + strconv.Itoa(i) + ":/var/log/px-deploy/ " + logdir + "/" + strconv.Itoa(i))
 		_, err := cmd.Output()
 		if err != nil {
-			die(err.Error())
+			fmt.Println("Failed to collect logs: " + err.Error())
 		}
 	}
 
 	if config.Cloud == "aws" {
-		if _, err := os.Stat("/px-deploy/.px-deploy/tf-deployments/" + config.Name); os.IsNotExist(err) {
-			fmt.Println("Terraform Config for AWS deployment missing. If this has been created with a px-deploy Version <5.0.0 you need to destroy with the older version")
-			die("Error: outdated deployment")
-		}
-
 		defaultConfig := parse_yaml("/px-deploy/.px-deploy/defaults.yml")
 		config.Aws_Access_Key_Id = defaultConfig.Aws_Access_Key_Id
 		config.Aws_Secret_Access_Key = defaultConfig.Aws_Secret_Access_Key
