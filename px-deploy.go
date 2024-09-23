@@ -1096,7 +1096,8 @@ func destroy_deployment(name string, destroyForce bool) {
 	var output []byte
 	var err error
 
-	c, _ := strconv.Atoi(config.Clusters);
+	fmt.Println(White + "Destroying deployment '" + config.Name + "'..." + Reset)
+	c, _ := strconv.Atoi(config.Clusters)
 	logdir := "/px-deploy/.px-deploy/logs/" + name + "_" + time.Now().Format(time.RFC3339)
 	err = os.Mkdir(logdir, 0755)
 	if err != nil {
@@ -1115,7 +1116,6 @@ func destroy_deployment(name string, destroyForce bool) {
 		}
 	}
 
-	fmt.Println(White + "Destroying deployment '" + config.Name + "'..." + Reset)
 	if config.Cloud == "aws" {
 		if _, err := os.Stat("/px-deploy/.px-deploy/tf-deployments/" + config.Name); os.IsNotExist(err) {
 			fmt.Println("Terraform Config for AWS deployment missing. If this has been created with a px-deploy Version <5.0.0 you need to destroy with the older version")
