@@ -82,7 +82,7 @@ docker tag ghcr.io/andrewh1978/px-deploy:$ver px-deploy
 #  echo -e ${RED}Image build failed${NC}
 #  exit
 #fi
-mkdir -p $HOME/.px-deploy/{keys,deployments,kubeconfig,tf-deployments,docs}
+mkdir -p $HOME/.px-deploy/{keys,deployments,kubeconfig,tf-deployments,docs,logs}
 
 #remove remainders of terraform (outside container)
 #*** can be removed after sept 2023***
