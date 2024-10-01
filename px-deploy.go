@@ -1562,6 +1562,10 @@ func write_nodescripts(config Config) {
 	var tf_individual_node_script []byte
 	var tf_master_script []byte
 	var tf_env_script []byte
+	var tf_cluster_nodes []byte
+
+	Clusters, _ := strconv.Atoi(config.Clusters)
+	Nodes, _ := strconv.Atoi(config.Nodes)
 
 	// prepare ENV variables for node/master scripts
 	// to maintain compatibility, create a env variable of everything from the yml spec which is from type string
@@ -1576,6 +1580,22 @@ func write_nodescripts(config Config) {
 		}
 	}
 
+	// get cluster specific node overrides
+	// not possible to set in env as cloud-init doesnt seem to run on full bash, so array not working
+	tf_cluster_nodes = append(tf_cluster_nodes, "export clusternodes=( \"0\" "...)
+	for c := 1; c <= Clusters; c++ {
+		clusternodes := config.Nodes
+		for _, i := range config.Cluster {
+			if i.Id == c {
+				if i.Nodes != "" {
+					clusternodes = i.Nodes
+				}
+			}
+		}
+		tf_cluster_nodes = append(tf_cluster_nodes, fmt.Sprintf("\"%v\" ", clusternodes)...)
+	}
+	tf_cluster_nodes = append(tf_cluster_nodes, ")\n"...)
+
 	// set env variables from env spec
 	for key, val := range config.Env {
 		tf_env_script = append(tf_env_script, "export "+key+"=\""+val+"\"\n"...)
@@ -1588,7 +1608,7 @@ func write_nodescripts(config Config) {
 	// prepare (single) cloud-init script for all nodes
 	tf_node_scripts = []string{"all-common", config.Platform + "-common", config.Platform + "-node"}
 	tf_node_script = append(tf_node_script, "#!/bin/bash\n"...)
-
+	tf_node_script = append(tf_node_script, tf_cluster_nodes...)
 	tf_node_script = append(tf_node_script, "mkdir /var/log/px-deploy\n"...)
 
 	for _, filename := range tf_node_scripts {
@@ -1608,6 +1628,7 @@ func write_nodescripts(config Config) {
 	// prepare common cloud-init script for all master nodes
 	tf_master_scripts = []string{"all-common", config.Platform + "-common", "all-master", config.Platform + "-master"}
 	tf_common_master_script = append(tf_common_master_script, "#!/bin/bash\n"...)
+	tf_common_master_script = append(tf_common_master_script, tf_cluster_nodes...)
 	tf_common_master_script = append(tf_common_master_script, "mkdir /px-deploy\n"...)
 	tf_common_master_script = append(tf_common_master_script, "mkdir /px-deploy/platform-delete\n"...)
 	tf_common_master_script = append(tf_common_master_script, "mkdir /px-deploy/script-delete\n"...)
@@ -1659,9 +1680,6 @@ func write_nodescripts(config Config) {
 	} else {
 		tf_post_script = nil
 	}
-
-	Clusters, _ := strconv.Atoi(config.Clusters)
-	Nodes, _ := strconv.Atoi(config.Nodes)
 
 	// loop clusters (masters and nodes) to build tfvars and master/node scripts
 	for c := 1; c <= Clusters; c++ {
