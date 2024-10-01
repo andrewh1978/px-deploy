@@ -20,7 +20,7 @@ RUN cd /root/go/src/px-deploy; GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /$T
 COPY terraform /px-deploy/terraform
 
 FROM --platform=$TARGETPLATFORM alpine:3.19
-RUN apk add --no-cache openssh-client-default bash
+RUN apk add --no-cache openssh-client-default bash rsync
 RUN echo ServerAliveInterval 300 >/etc/ssh/ssh_config
 RUN echo ServerAliveCountMax 2 >>/etc/ssh/ssh_config
 RUN echo TCPKeepAlive yes >>/etc/ssh/ssh_config
