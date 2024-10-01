@@ -14,54 +14,6 @@ if [ $USER != root -a -d $HOME/.px-deploy ]; then
   fi
 fi
 
-# find existing deployments not supported by pxd5 
-found_legacy=false
-
-# find deployments with awstf
-for i in $(grep -l 'cloud: awstf' $HOME/.px-deploy/deployments/*.yml 2>/dev/null); do
-        echo -e "${RED} AWSTF Deployment $(basename $i .yml) is being created by px-deploy version < 5. Please remove prior to upgrading to version 5"
-        found_legacy=true
-done
-
-#find deployments being created by old aws code (no tf-deployments folder exists)
-for i in $(grep -l 'cloud: aws' $HOME/.px-deploy/deployments/*.yml 2>/dev/null); do
-    if [ ! -d $HOME/.px-deploy/tf-deployments/$(basename $i .yml) ]; then
-        echo -e "${RED} AWS Deployment $(basename $i .yml) is being created by px-deploy version < 5. Please remove prior to upgrading to version 5"
-        found_legacy=true
-    fi
-done
-if [ "$found_legacy" = true ]; then
-        echo -e "${RED}Old AWS deployment(s) found. Please destroy before updating"
-        exit
-fi
-
-#find deployments being created by old gcp code (no tf-deployments folder exists)
-found_legacy=false
-for i in $(grep -l 'cloud: gcp' $HOME/.px-deploy/deployments/*.yml 2>/dev/null); do
-    if [ ! -d $HOME/.px-deploy/tf-deployments/$(basename $i .yml) ]; then
-        echo -e "${RED} GCP Deployment $(basename $i .yml) is being created by px-deploy version < 5.3. Please remove prior to upgrading to version 5.3"
-        found_legacy=true
-    fi
-done
-if [ "$found_legacy" = true ]; then
-        echo -e "${RED}Old GCP deployment(s) found. Please destroy before updating"
-        exit
-fi
-
-#find deployments being created by old vsphere code (no tf-deployments folder exists)
-found_legacy=false
-for i in $(grep -l 'cloud: vsphere' $HOME/.px-deploy/deployments/*.yml 2>/dev/null); do
-    if [ ! -d $HOME/.px-deploy/tf-deployments/$(basename $i .yml) ]; then
-        echo -e "${RED} vsphere Deployment $(basename $i .yml) is being created by px-deploy version < 5.3. Please remove prior to upgrading to version 5.3"
-        found_legacy=true
-    fi
-done
-if [ "$found_legacy" = true ]; then
-        echo -e "${RED}Old vsphere deployment(s) found. Please destroy before updating"
-        exit
-fi
-
-
 rm -rf /tmp/px-deploy.build
 mkdir /tmp/px-deploy.build
 cd /tmp/px-deploy.build
@@ -83,10 +35,6 @@ docker tag ghcr.io/andrewh1978/px-deploy:$ver px-deploy
 #  exit
 #fi
 mkdir -p $HOME/.px-deploy/{keys,deployments,kubeconfig,tf-deployments,docs}
-
-#remove remainders of terraform (outside container)
-#*** can be removed after sept 2023***
-rm -rf $HOME/.px-deploy/terraform*
 
 # backup existing directories and force copy from current branch
 time=$(date +%s)
