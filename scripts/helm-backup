@@ -6,6 +6,8 @@ kubectl label node node-1-2 px/ls=true
 
 curl -O https://raw.githubusercontent.com/portworx/helm/master/stable/px-central-$VERSION.tgz
 helm install px-central px-central-$VERSION.tgz --namespace $NAMESPACE --create-namespace --version $VERSION --set persistentStorage.enabled=true,persistentStorage.storageClassName="px-csi-db",pxbackup.enabled=true,oidc.centralOIDC.updateAdminProfile=false,pxlicenseserver.enabled=true,pxmonitor.enabled=true,installCRDs=true
+kubectl scale sts -n central pxc-backup-mongodb --replicas 1
+kubectl scale sts -n central pxcentral-cortex-cassandra --replicas 1
 
 until (kubectl get po -n $NAMESPACE -ljob-name=pxcentral-post-install-hook  -o wide | awk '{print $1, $2, $3}' |grep "Completed"); do echo "Waiting for post install hook";sleep 3; done
 until (kubectl get po -n $NAMESPACE -lapp=px-backup  -o wide | awk '{print $1, $2, $3}' | grep "Running" | grep "1/1"); do echo "Waiting for backup service";sleep 3; done
