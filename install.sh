@@ -34,7 +34,7 @@ docker tag ghcr.io/andrewh1978/px-deploy:$ver px-deploy
 #  echo -e ${RED}Image build failed${NC}
 #  exit
 #fi
-mkdir -p $HOME/.px-deploy/{keys,deployments,kubeconfig,tf-deployments,docs}
+mkdir -p $HOME/.px-deploy/{keys,deployments,kubeconfig,tf-deployments,docs,logs}
 
 # backup existing directories and force copy from current branch
 time=$(date +%s)
