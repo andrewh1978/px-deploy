@@ -101,12 +101,8 @@ fi
 
 # last cluster
 if [ $cluster -eq $clusters ]; then
-curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
-chmod 700 get_helm.sh
-./get_helm.sh
-ln -s /usr/local/bin/helm /usr/bin/helm
-/usr/local/bin/helm repo add portworx http://charts.portworx.io/ && helm repo update
-/usr/local/bin/helm install px-central portworx/px-central --namespace central --create-namespace --version 2.4.2 --set persistentStorage.enabled=true,persistentStorage.storageClassName="px-replicated",pxbackup.enabled=true,oidc.centralOIDC.updateAdminProfile=false
+helm repo add portworx http://charts.portworx.io/ && helm repo update
+helm install px-central portworx/px-central --namespace central --create-namespace --version 2.4.2 --set persistentStorage.enabled=true,persistentStorage.storageClassName="px-replicated",pxbackup.enabled=true,oidc.centralOIDC.updateAdminProfile=false
 until (kubectl get po --namespace central -ljob-name=pxcentral-post-install-hook  -o wide | awk '{print $1, $2, $3}' |grep "Completed"); do echo "Waiting for post install hook";sleep 3; done
 until (kubectl get po --namespace central -lapp=px-backup  -o wide | awk '{print $1, $2, $3}' | grep "Running" | grep "1/1"); do echo "Waiting for backup service";sleep 3; done
 BACKUP_POD_NAME=$(kubectl get pods -n central -l app=px-backup -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
