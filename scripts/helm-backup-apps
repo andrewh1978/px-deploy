@@ -27,14 +27,6 @@ ssh master-3 << EOF
 kubectl patch deployment prometheus-operator -n kube-system  --type=json -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "-namespaces=kube-system" }]'
 EOF
 
-# Enables monitoring and the license server
-kubectl label node node-1-1 px/ls=true
-kubectl label node node-1-2 px/ls=true
-
-helm get values --namespace central px-central -o yaml > values-px-upgrade.yaml && kubectl delete job pxcentral-post-install-hook --namespace central && helm upgrade px-central px-central-2.7.2.tgz --namespace central --version 2.7.2 --set pxlicenseserver.enabled=true,pxmonitor.enabled=true,persistentStorage.enabled=true,persistentStorage.storageClassName="px-repl3",installCRDs=true,pxmonitor.pxCentralEndpoint=$pubIP:$backupPort -f values-px-upgrade.yaml
-
-until (kubectl get po --namespace central -ljob-name=pxcentral-post-install-hook  -o wide | awk '{print $1, $2, $3}' |grep "Completed"); do echo "Waiting for post install hook";sleep 3; done
-
 cat <<EOF >> /etc/motd
 +================================================+
 SAVE THE FOLLOWING DETAILS FOR FUTURE REFERENCES
