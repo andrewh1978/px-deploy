@@ -1097,6 +1097,15 @@ func destroy_deployment(name string, destroyForce bool) {
 
 	fmt.Println(White + "Destroying deployment '" + config.Name + "'..." + Reset)
 	c, _ := strconv.Atoi(config.Clusters)
+
+	if _, err := os.Stat("/px-deploy/.px-deploy/logs" + config.Name); os.IsNotExist(err) {
+
+		err := os.Mkdir("/px-deploy/.px-deploy/logs", 0755)
+		if err != nil {
+			die("Cannot create directory ~/.px-deploy/logs : " + err.Error())
+		}
+	}
+
 	logdir := "/px-deploy/.px-deploy/logs/" + name + "_" + time.Now().Format(time.RFC3339)
 	err := os.Mkdir(logdir, 0755)
 	if err != nil {
@@ -1109,11 +1118,11 @@ func destroy_deployment(name string, destroyForce bool) {
 	}
 	for i := 1; i <= c; i++ {
 		fmt.Println(White + "Collecting logs for cluster " + strconv.Itoa(i) + "..." + Reset)
-		err = os.Mkdir(logdir + "/" + strconv.Itoa(i), 0755)
+		err = os.Mkdir(logdir+"/"+strconv.Itoa(i), 0755)
 		if err != nil {
 			die("Cannot create directory " + logdir + "/" + strconv.Itoa(i) + ": " + err.Error())
 		}
-		cmd := exec.Command("bash", "-c", "rsync -rtz -e 'ssh -oLoglevel=ERROR -oStrictHostKeyChecking=no -i keys/id_rsa." + config.Cloud + "." + name + " root@" + get_ip(name) + " ssh' master-" + strconv.Itoa(i) + ":/var/log/px-deploy/ " + logdir + "/" + strconv.Itoa(i))
+		cmd := exec.Command("bash", "-c", "rsync -rtz -e 'ssh -oLoglevel=ERROR -oStrictHostKeyChecking=no -i keys/id_rsa."+config.Cloud+"."+name+" root@"+get_ip(name)+" ssh' master-"+strconv.Itoa(i)+":/var/log/px-deploy/ "+logdir+"/"+strconv.Itoa(i))
 		_, err := cmd.Output()
 		if err != nil {
 			fmt.Println("Failed to collect logs: " + err.Error())
