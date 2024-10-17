@@ -1098,8 +1098,7 @@ func destroy_deployment(name string, destroyForce bool) {
 	fmt.Println(White + "Destroying deployment '" + config.Name + "'..." + Reset)
 	c, _ := strconv.Atoi(config.Clusters)
 
-	if _, err := os.Stat("/px-deploy/.px-deploy/logs" + config.Name); os.IsNotExist(err) {
-
+	if _, err := os.Stat("/px-deploy/.px-deploy/logs"); os.IsNotExist(err) {
 		err := os.Mkdir("/px-deploy/.px-deploy/logs", 0755)
 		if err != nil {
 			die("Cannot create directory ~/.px-deploy/logs : " + err.Error())
