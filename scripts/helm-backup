@@ -1,8 +1,7 @@
 NAMESPACE=central
 VERSION=2.7.3
 
-kubectl label node node-1-1 px/ls=true
-kubectl label node node-1-2 px/ls=true
+kubectl label node $(kubectl get nodes | grep worker | cut -f 1 -d " " | sort | head -2) px/ls=true
 
 curl -O https://raw.githubusercontent.com/portworx/helm/master/stable/px-central-$VERSION.tgz
 helm install px-central px-central-$VERSION.tgz --namespace $NAMESPACE --create-namespace --version $VERSION --set persistentStorage.enabled=true,persistentStorage.storageClassName="px-csi-db",pxbackup.enabled=true,oidc.centralOIDC.updateAdminProfile=false,pxlicenseserver.enabled=true,pxmonitor.enabled=true,installCRDs=true
