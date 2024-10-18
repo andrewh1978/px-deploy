@@ -1,9 +1,6 @@
 # Deploy Helm, Harbor, along with PostgreSQL and Redis prerequisites
 NAMESPACE=harbor
 IP=$(curl -s https://ipinfo.io/ip)
-curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
-chmod 700 get_helm.sh
-HELM_INSTALL_DIR=/usr/bin ./get_helm.sh
 kubectl apply -f /assets/harbor/harbor.yml
 kubectl wait pod -lapp=postgres --for=condition=ready -n $NAMESPACE
 helm repo add harbor https://helm.goharbor.io

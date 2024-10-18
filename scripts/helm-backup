@@ -1,36 +1,19 @@
-while : ; do
-  n=$(kubectl get node  | grep -i ready | awk '{print$1}' | xargs kubectl get node  -o=jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.taints}{"\n"}{end}' | grep -iv noschedule | wc -l 2>&1)
-  [ $n -ge 3 ] && break
-  sleep 1
-  echo Waiting for Kubernetes cluster to come up
-done
+NAMESPACE=central
+VERSION=2.7.3
 
-curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
-chmod 700 get_helm.sh
-./get_helm.sh
-ln -s /usr/local/bin/helm /usr/bin/helm
+kubectl label node node-1-1 px/ls=true
+kubectl label node node-1-2 px/ls=true
 
-#/usr/local/bin/helm repo add portworx http://charts.portworx.io/ && helm repo update
+curl -O https://raw.githubusercontent.com/portworx/helm/master/stable/px-central-$VERSION.tgz
+helm install px-central px-central-$VERSION.tgz --namespace $NAMESPACE --create-namespace --version $VERSION --set persistentStorage.enabled=true,persistentStorage.storageClassName="px-csi-db",pxbackup.enabled=true,oidc.centralOIDC.updateAdminProfile=false,pxlicenseserver.enabled=true,pxmonitor.enabled=true,installCRDs=true
+kubectl scale sts -n central pxc-backup-mongodb --replicas 1
+kubectl scale sts -n central pxcentral-cortex-cassandra --replicas 1
 
-cat <<EOF | kubectl apply -f -
-kind: StorageClass
-apiVersion: storage.k8s.io/v1
-metadata:
-  name: px-repl3
-provisioner: pxd.portworx.com
-parameters:
-  repl: "3"
-allowVolumeExpansion: true
-EOF
-
-curl -O https://raw.githubusercontent.com/portworx/helm/master/stable/px-central-2.7.2.tgz
-/usr/local/bin/helm install px-central px-central-2.7.2.tgz --namespace central --create-namespace --version 2.7.2 --set persistentStorage.enabled=true,persistentStorage.storageClassName="px-repl3",pxbackup.enabled=true,oidc.centralOIDC.updateAdminProfile=false
-
-until (kubectl get po --namespace central -ljob-name=pxcentral-post-install-hook  -o wide | awk '{print $1, $2, $3}' |grep "Completed"); do echo "Waiting for post install hook";sleep 3; done
-until (kubectl get po --namespace central -lapp=px-backup  -o wide | awk '{print $1, $2, $3}' | grep "Running" | grep "1/1"); do echo "Waiting for backup service";sleep 3; done
+until (kubectl get po -n $NAMESPACE -ljob-name=pxcentral-post-install-hook  -o wide | awk '{print $1, $2, $3}' |grep "Completed"); do echo "Waiting for post install hook";sleep 3; done
+until (kubectl get po -n $NAMESPACE -lapp=px-backup  -o wide | awk '{print $1, $2, $3}' | grep "Running" | grep "1/1"); do echo "Waiting for backup service";sleep 3; done
 
 # kubectl patch svc px-backup-ui -n px-backup --type='json' -p '[{"op":"replace","path":"/spec/type","value":"NodePort"}]'
 
-BACKUP_POD_NAME=$(kubectl get pods -n central -l app=px-backup -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-kubectl cp -n central $BACKUP_POD_NAME:pxbackupctl/linux/pxbackupctl /usr/bin/pxbackupctl
+BACKUP_POD_NAME=$(kubectl get pods -n $NAMESPACE -l app=px-backup -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+kubectl cp -n $NAMESPACE $BACKUP_POD_NAME:pxbackupctl/linux/pxbackupctl /usr/bin/pxbackupctl
 chmod +x /usr/bin/pxbackupctl
