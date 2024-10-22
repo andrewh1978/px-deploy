@@ -2,7 +2,7 @@ NAMESPACE=central
 VERSION=2.7.3
 
 curl -O https://raw.githubusercontent.com/portworx/helm/master/stable/px-central-$VERSION.tgz
-helm install px-central px-central-$VERSION.tgz --namespace $NAMESPACE --create-namespace --version $VERSION --set persistentStorage.enabled=true,persistentStorage.storageClassName="px-csi-db",pxbackup.enabled=true,oidc.centralOIDC.updateAdminProfile=false,pxmonitor.enabled=true,installCRDs=true
+helm install px-central px-central-$VERSION.tgz --namespace $NAMESPACE --create-namespace --version $VERSION --set persistentStorage.enabled=true,persistentStorage.storageClassName="px-csi-db",pxbackup.enabled=true,oidc.centralOIDC.updateAdminProfile=false,installCRDs=true
 kubectl scale sts -n central pxc-backup-mongodb --replicas 1
 kubectl scale sts -n central pxcentral-cortex-cassandra --replicas 1
 
@@ -10,6 +10,13 @@ until (kubectl get po -n $NAMESPACE -ljob-name=pxcentral-post-install-hook  -o w
 until (kubectl get po -n $NAMESPACE -lapp=px-backup  -o wide | awk '{print $1, $2, $3}' | grep "Running" | grep "1/1"); do echo "Waiting for backup service";sleep 3; done
 
 # kubectl patch svc px-backup-ui -n px-backup --type='json' -p '[{"op":"replace","path":"/spec/type","value":"NodePort"}]'
+
+# enable pxmonitor & grafana (needs a running px-backup-ui IP/Port)
+pubIP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)
+backupPort=$(kubectl get svc px-backup-ui -n central -o=jsonpath='{.spec.ports[?(@.port==80)].nodePort}')
+kubectl delete job pxcentral-post-install-hook --namespace central
+helm upgrade px-central px-central-$VERSION.tgz --namespace central --version $VERSION --reuse-values --set pxmonitor.enabled=true --set pxmonitor.pxCentralEndpoint=$pubIP:$backupPort
+until (kubectl get po -n $NAMESPACE -ljob-name=pxcentral-post-install-hook  -o wide | awk '{print $1, $2, $3}' |grep "Completed"); do echo "Waiting for post install hook";sleep 3; done
 
 BACKUP_POD_NAME=$(kubectl get pods -n $NAMESPACE -l app=px-backup -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
 kubectl cp -n $NAMESPACE $BACKUP_POD_NAME:pxbackupctl/linux/pxbackupctl /usr/bin/pxbackupctl
