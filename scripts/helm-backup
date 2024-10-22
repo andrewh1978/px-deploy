@@ -1,10 +1,8 @@
 NAMESPACE=central
 VERSION=2.7.3
 
-kubectl label node $(kubectl get nodes | grep worker | cut -f 1 -d " " | sort | head -2) px/ls=true
-
 curl -O https://raw.githubusercontent.com/portworx/helm/master/stable/px-central-$VERSION.tgz
-helm install px-central px-central-$VERSION.tgz --namespace $NAMESPACE --create-namespace --version $VERSION --set persistentStorage.enabled=true,persistentStorage.storageClassName="px-csi-db",pxbackup.enabled=true,oidc.centralOIDC.updateAdminProfile=false,pxlicenseserver.enabled=true,pxmonitor.enabled=true,installCRDs=true
+helm install px-central px-central-$VERSION.tgz --namespace $NAMESPACE --create-namespace --version $VERSION --set persistentStorage.enabled=true,persistentStorage.storageClassName="px-csi-db",pxbackup.enabled=true,oidc.centralOIDC.updateAdminProfile=false,pxmonitor.enabled=true,installCRDs=true
 kubectl scale sts -n central pxc-backup-mongodb --replicas 1
 kubectl scale sts -n central pxcentral-cortex-cassandra --replicas 1
 
