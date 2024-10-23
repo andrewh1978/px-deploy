@@ -22,7 +22,7 @@ gcp_region: europe-north1
 gcp_zone: b
 gcp_type: n1-standard-4
 gcp_disks: "pd-standard:50"
-gke_version: "1.28.9"
+gke_version: "1.28.14"
 #gcp_disks: "pd-standard:20 pd-ssd:30"
 #gcp_project: "px-deploy"
 
