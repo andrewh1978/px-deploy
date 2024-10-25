@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/base64"
 	"errors"
@@ -1349,7 +1350,10 @@ func destroy_deployment(name string, destroyForce bool) {
 }
 func run_terraform_destroy(config *Config) string {
 	var cmd *exec.Cmd
+	var cmdinit *exec.Cmd
+	var buffer bytes.Buffer
 	var cloud_auth []string
+	var tf_plan_args []string
 
 	switch config.Cloud {
 	case "aws":
@@ -1361,31 +1365,59 @@ func run_terraform_destroy(config *Config) string {
 	// vsphere terraform must refresh, otherwise complains about missing disks
 	// other clouds do no refresh as this saves time @scale
 	if config.Cloud == "vsphere" {
-		cmd = exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-destroy", "-input=false", "-refresh=true", "-parallelism=50", "-out=tfplan", "-var-file", ".tfvars")
+		tf_plan_args = []string{"-chdir=/px-deploy/.px-deploy/tf-deployments/" + config.Name, "plan", "-destroy", "-input=false", "-refresh=true", "-parallelism=50", "-out=tfplan", "-var-file", ".tfvars"}
+		//cmd = exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-destroy", "-input=false", "-refresh=true", "-parallelism=50", "-out=tfplan", "-var-file", ".tfvars")
 	} else {
-		cmd = exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-destroy", "-input=false", "-refresh=false", "-parallelism=50", "-out=tfplan", "-var-file", ".tfvars")
+		tf_plan_args = []string{"-chdir=/px-deploy/.px-deploy/tf-deployments/" + config.Name, "plan", "-destroy", "-input=false", "-refresh=false", "-parallelism=50", "-out=tfplan", "-var-file", ".tfvars"}
+		//cmd = exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "plan", "-destroy", "-input=false", "-refresh=false", "-parallelism=50", "-out=tfplan", "-var-file", ".tfvars")
 	}
-	cmd.Stderr = os.Stderr
+	cmd = exec.Command("terraform", tf_plan_args...)
+	cmd.Stderr = &buffer
 	cmd.Env = append(cmd.Env, cloud_auth...)
 	err := cmd.Run()
-	if err != nil {
+
+	if (err != nil) && strings.Contains(buffer.String(), "Required plugins are not installed") {
+		// after updating with a px-deploy version containing newer modules the old modules for existing deployments might be missing
+		// if we catch the "Required plugins are not installed" error on delete, lets try to re-init the deployment and re-run terraform plan
+		fmt.Println(Yellow + "tf modules missing. re-running terraform init" + Reset)
+		cmdinit = exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "init")
+		cmdinit.Stderr = os.Stderr
+		cmdinit.Stdout = os.Stdout
+		err := cmdinit.Run()
+		if err != nil {
+			fmt.Println(Red + "ERROR: Terraform init failed. Check validity of terraform scripts" + Reset)
+			die(err.Error())
+		} else {
+			fmt.Println(Yellow + "Terraform modules updated. Re-run Terraform PLAN" + Reset)
+			cmd = exec.Command("terraform", tf_plan_args...)
+			cmd.Stderr = os.Stderr
+			cmd.Env = append(cmd.Env, cloud_auth...)
+			err = cmd.Run()
+			if err != nil {
+				fmt.Println(Red + "ERROR: second try Terraform PLAN failed. Check validity of terraform scripts" + Reset)
+				die(err.Error())
+			}
+		}
+	} else if err != nil {
+		fmt.Printf("%s", buffer.String())
 		fmt.Println(Red + "ERROR: Terraform plan failed. Check validity of terraform scripts" + Reset)
 		die(err.Error())
-	} else {
-		fmt.Println(White + "running Terraform DESTROY" + Reset)
-		cmd := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "apply", "-input=false", "-parallelism=50", "-auto-approve", "tfplan")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Env = append(cmd.Env, cloud_auth...)
-		errdestroy := cmd.Run()
-
-		if errdestroy != nil {
-			fmt.Println(Yellow + "ERROR: Terraform destroy failed. Check validity of terraform scripts" + Reset)
-			die(errdestroy.Error())
-		} else {
-			os.RemoveAll("tf-deployments/" + config.Name)
-		}
 	}
+
+	fmt.Println(White + "running Terraform DESTROY" + Reset)
+	cmd = exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "apply", "-input=false", "-parallelism=50", "-auto-approve", "tfplan")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Env = append(cmd.Env, cloud_auth...)
+	errdestroy := cmd.Run()
+
+	if errdestroy != nil {
+		fmt.Println(Yellow + "ERROR: Terraform destroy failed. Check validity of terraform scripts" + Reset)
+		die(errdestroy.Error())
+	} else {
+		os.RemoveAll("tf-deployments/" + config.Name)
+	}
+
 	return ""
 }
 
