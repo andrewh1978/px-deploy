@@ -1,3 +1,41 @@
+install_backup() {
+  NAMESPACE=central
+  VERSION=2.7.3
+  curl -O https://raw.githubusercontent.com/portworx/helm/master/stable/px-central-$VERSION.tgz
+  helm install px-central px-central-$VERSION.tgz --namespace $NAMESPACE --create-namespace --version $VERSION --set persistentStorage.enabled=true,persistentStorage.storageClassName="px-csi-db",pxbackup.enabled=true,oidc.centralOIDC.updateAdminProfile=false,installCRDs=true
+  kubectl scale sts -n central pxc-backup-mongodb --replicas 1
+  kubectl scale sts -n central pxcentral-cortex-cassandra --replicas 1
+  kubectl patch svc px-backup-ui -n central -p '{"spec": { "type": "NodePort", "ports": [ { "nodePort": 30303, "port": 80, "protocol": "TCP", "targetPort": 8080 } ] } }'
+  until (kubectl get po -n $NAMESPACE -ljob-name=pxcentral-post-install-hook  -o wide | awk '{print $1, $2, $3}' |grep "Completed"); do echo "Waiting for post install hook";sleep 3; done
+  until (kubectl get po -n $NAMESPACE -lapp=px-backup  -o wide | awk '{print $1, $2, $3}' | grep "Running" | grep "1/1"); do echo "Waiting for backup service";sleep 3; done
+  BACKUP_POD_NAME=$(kubectl get pods -n central -l app=px-backup -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+  kubectl cp -n central $BACKUP_POD_NAME:pxbackupctl/linux/pxbackupctl /usr/bin/pxbackupctl
+  chmod +x /usr/bin/pxbackupctl
+  BACKUP_POD_IP=$(kubectl get pods -n central -l app=px-backup -o jsonpath='{.items[*].status.podIP}' 2>/dev/null)
+  AWS_ACCESS_KEY=$(sed -n 's/aws_access_key_id[ =]*//p' /root/.aws/credentials 2>/dev/null)
+  AWS_SECRET_KEY=$(sed -n 's/aws_secret_access_key[ =]*//p' /root/.aws/credentials 2>/dev/null)
+  pubIP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)
+  backupPort=$(kubectl get svc px-backup-ui -n central -o=jsonpath='{.spec.ports[?(@.port==80)].nodePort}')
+  client_secret=$(kubectl get secret --namespace central pxc-backup-secret -o jsonpath={.data.OIDC_CLIENT_SECRET} | base64 --decode)
+  pxbackupctl login -s http://$pubIP:$backupPort -u admin -p admin
+  pxbackupctl create cloudcredential --aws-access-key $AWS_ACCESS_KEY --aws-secret-key $AWS_SECRET_KEY -e $BACKUP_POD_IP:10002 --orgID default -n s3 -p aws
+  sleep 5
+  cloud_credential_uid=$(pxbackupctl get cloudcredential -e $BACKUP_POD_IP:10002 --orgID default -o json | jq -cr '.[0].metadata.uid')
+  pxbackupctl create backuplocation --cloud-credential-name s3 --cloud-credential-Uid $cloud_credential_uid -n aws -p s3 --s3-endpoint https://s3.$aws_region.amazonaws.com --path $BACKUP_BUCKET --s3-region $aws_region -e $BACKUP_POD_IP:10002 --orgID default
+  pxbackupctl create schedulepolicy --interval-minutes 15 --interval-retain 12 --name example-schedule -e $BACKUP_POD_IP:10002 --orgID default
+  sleep 5
+  cat <<EOF >> /etc/motd
++================================================+
+SAVE THE FOLLOWING DETAILS FOR FUTURE REFERENCES
++================================================+
+PX-Central User Interface Access URL : http://$pubIP:$backupPort
+PX-Central admin user name: admin
+PX-Central admin user password: admin
++================================================+
+EOF
+}
+
+# Install editors and shellinabox on cluster 1
 if [ $cluster -eq 1 ]; then
   dnf install -y vim-enhanced nano
   dnf install -y https://dl.fedoraproject.org/pub/epel/7/x86_64/Packages/s/shellinabox-2.20-5.el7.x86_64.rpm
@@ -5,11 +43,13 @@ if [ $cluster -eq 1 ]; then
   sed -i s/4200/443/ /etc/sysconfig/shellinaboxd
   systemctl enable shellinaboxd
   systemctl restart shellinaboxd sshd
-  mkdir /etc/skel/.kube
+  mkdir /etc/skel/.kube /etc/skel/yaml
+  cp /assets/petclinic/petclinic.yml /etc/skel/yaml
   cat <<EOF >>/etc/skel/.bashrc
 alias k=kubectl
 complete -F __start_kubectl k
 PS1='\e[0;33m[\u@px-training \W]\$ \e[m'
+alias pxctl='kubectl pxc pxctl'
 EOF
   for i in $(seq 1 $clusters); do
     useradd training$i
@@ -17,9 +57,9 @@ EOF
   done
   echo -e 'kubectl exec $(kubectl get pod -n portworx -l name=portworx -o jsonpath="{.items[0].metadata.name}") -n portworx -c portworx -- curl -s https://ipinfo.io/ip\necho' >/usr/bin/getip
   chmod +x /usr/bin/getip
-  echo "alias pxctl='kubectl pxc pxctl'" >>/etc/bashrc
 fi
 
+# Wait for clusters to be up and copy kubeconfigs to cluster 1
 while :; do
   echo trying to copy kubeconfig
   cat /root/.kube/config | ssh master-1 "su -l training$cluster -c 'cat >.kube/config' && exit 22"
@@ -28,51 +68,50 @@ while :; do
 done
 
 
-mkdir /dude
-cp /assets/petclinic/petclinic.yml /dude
 export cluster
 if [ $[2*$[$cluster/2]] -eq $cluster ]; then
-# even cluster
-while : ; do
-  token=$(kubectl exec -n portworx -it $(kubectl get pods -n portworx -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- /opt/pwx/bin/pxctl cluster token show 2>/dev/null | cut -f 3 -d " ")
-  echo $token | grep -Eq '\w{128}'
-  [ $? -eq 0 ] && break
-  sleep 5
-  echo waiting for portworx
-done
-UUID=$(kubectl get stc -n portworx -o jsonpath='{.items[].status.clusterUid}')
-AWS_ACCESS_KEY=$(sed -n 's/aws_access_key_id[ =]*//p' /root/.aws/credentials 2>/dev/null | head -1)
-AWS_SECRET_KEY=$(sed -n 's/aws_secret_access_key[ =]*//p' /root/.aws/credentials 2>/dev/null | head -1)
-echo "Creating bucket '$DR_BUCKET' in region 'us-east-1', if it does not exist"
-aws s3 mb s3://$DR_BUCKET --region us-east-1
-BUCKET_REGION=$(aws s3api get-bucket-location --bucket $DR_BUCKET --output text)
-# Region us-east-1 returns "None" instead of the region name
-if [ "$BUCKET_REGION" = "None" ]; then
-  BUCKET_REGION="us-east-1"
-fi
-echo "Bucket region: $BUCKET_REGION"
-while : ; do
-  kubectl exec $(kubectl get pod -n portworx -lname=portworx | tail -1 | cut -f 1 -d " ") -n portworx -c portworx -- /opt/pwx/bin/pxctl credentials delete clusterPair_$UUID
-  kubectl exec $(kubectl get pod -n portworx -lname=portworx | tail -1 | cut -f 1 -d " ") -n portworx -c portworx -- /opt/pwx/bin/pxctl credentials create --provider s3 --s3-access-key $AWS_ACCESS_KEY --s3-secret-key $AWS_SECRET_KEY --s3-region $BUCKET_REGION --s3-endpoint s3.$BUCKET_REGION.amazonaws.com --s3-storage-class STANDARD --bucket $DR_BUCKET clusterPair_$UUID
-  [ $? -eq 0 ] && break
-  sleep 1
-done
-while : ; do
-  ssh master-$[$cluster-1] kubectl exec '$(kubectl get pod -n portworx -lname=portworx | tail -1 | cut -f 1 -d " ") -n portworx -c portworx -- /opt/pwx/bin/pxctl credentials create --provider s3 --s3-access-key '$AWS_ACCESS_KEY' --s3-secret-key '$AWS_SECRET_KEY' --s3-region '$BUCKET_REGION' --s3-endpoint s3.'$BUCKET_REGION'.amazonaws.com --s3-storage-class STANDARD --bucket '$DR_BUCKET' clusterPair_'$UUID
-  [ $? -eq 0 ] && break
-  sleep 1
-done
-host=node-$cluster-1
-storkctl generate clusterpair -n kube-system remotecluster-$cluster | sed "/insert_storage_options_here/c\    ip: $host\n    token: $token\n    mode: DisasterRecovery" >/dude/cp.yml
-while : ; do
-  scp /dude/cp.yml master-$[$cluster-1]:/dude/cp.yml
-  ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no master-$[$cluster-1] kubectl apply -f /dude/cp.yml
-  [ $? -eq 0 ] && break
-  sleep 5
-done
+  # even cluster
+  while : ; do
+    token=$(kubectl exec -n portworx -it $(kubectl get pods -n portworx -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- /opt/pwx/bin/pxctl cluster token show 2>/dev/null | cut -f 3 -d " ")
+    echo $token | grep -Eq '\w{128}'
+    [ $? -eq 0 ] && break
+    sleep 5
+    echo waiting for portworx
+  done
+  UUID=$(kubectl get stc -n portworx -o jsonpath='{.items[].status.clusterUid}')
+  AWS_ACCESS_KEY=$(sed -n 's/aws_access_key_id[ =]*//p' /root/.aws/credentials 2>/dev/null | head -1)
+  AWS_SECRET_KEY=$(sed -n 's/aws_secret_access_key[ =]*//p' /root/.aws/credentials 2>/dev/null | head -1)
+  echo "Creating bucket '$DR_BUCKET' in region 'us-east-1', if it does not exist"
+  aws s3 mb s3://$DR_BUCKET --region us-east-1
+  BUCKET_REGION=$(aws s3api get-bucket-location --bucket $DR_BUCKET --output text)
+  # Region us-east-1 returns "None" instead of the region name
+  if [ "$BUCKET_REGION" = "None" ]; then
+    BUCKET_REGION="us-east-1"
+  fi
+  echo "Bucket region: $BUCKET_REGION"
+  while : ; do
+    kubectl exec $(kubectl get pod -n portworx -lname=portworx | tail -1 | cut -f 1 -d " ") -n portworx -c portworx -- /opt/pwx/bin/pxctl credentials delete clusterPair_$UUID
+    kubectl exec $(kubectl get pod -n portworx -lname=portworx | tail -1 | cut -f 1 -d " ") -n portworx -c portworx -- /opt/pwx/bin/pxctl credentials create --provider s3 --s3-access-key $AWS_ACCESS_KEY --s3-secret-key $AWS_SECRET_KEY --s3-region $BUCKET_REGION --s3-endpoint s3.$BUCKET_REGION.amazonaws.com --s3-storage-class STANDARD --bucket $DR_BUCKET clusterPair_$UUID
+    [ $? -eq 0 ] && break
+    sleep 1
+  done
+  while : ; do
+    ssh master-$[$cluster-1] kubectl exec '$(kubectl get pod -n portworx -lname=portworx | tail -1 | cut -f 1 -d " ") -n portworx -c portworx -- /opt/pwx/bin/pxctl credentials create --provider s3 --s3-access-key '$AWS_ACCESS_KEY' --s3-secret-key '$AWS_SECRET_KEY' --s3-region '$BUCKET_REGION' --s3-endpoint s3.'$BUCKET_REGION'.amazonaws.com --s3-storage-class STANDARD --bucket '$DR_BUCKET' clusterPair_'$UUID
+    [ $? -eq 0 ] && break
+    sleep 1
+  done
+  host=node-$cluster-1
+  storkctl generate clusterpair -n kube-system remotecluster-$cluster | sed "/insert_storage_options_here/c\    ip: $host\n    token: $token\n    mode: DisasterRecovery" >/tmp/cp.yml
+  while : ; do
+    scp /tmp/cp.yml master-1:/home/training$[$cluster-1]/yaml/cp.yml
+    ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no master-1 "chown training$cluster.training$cluster /home/training$[$cluster-1]/yaml/cp.yml ; kubectl apply --kubeconfig /home/training$[$cluster-1]/.kube/config -f /home/training$[$cluster-1]/yaml/cp.yml"
+    [ $? -eq 0 ] && break
+    sleep 5
+  done
+  install_backup
 else
-# odd cluster
-cat <<EOF >/dude/async-dr.yml
+  # odd cluster
+  cat <<EOF >/tmp/async-dr.yml
 apiVersion: stork.libopenstorage.org/v1alpha1
 kind: SchedulePolicy
 metadata:
@@ -96,38 +135,10 @@ spec:
       - petclinic
   schedulePolicyName: drpolicy
 EOF
-kubectl apply -f /dude/async-dr.yml
-fi
-
-# last cluster
-if [ $cluster -eq $clusters ]; then
-helm repo add portworx http://charts.portworx.io/ && helm repo update
-helm install px-central portworx/px-central --namespace central --create-namespace --version 2.4.2 --set persistentStorage.enabled=true,persistentStorage.storageClassName="px-replicated",pxbackup.enabled=true,oidc.centralOIDC.updateAdminProfile=false
-until (kubectl get po --namespace central -ljob-name=pxcentral-post-install-hook  -o wide | awk '{print $1, $2, $3}' |grep "Completed"); do echo "Waiting for post install hook";sleep 3; done
-until (kubectl get po --namespace central -lapp=px-backup  -o wide | awk '{print $1, $2, $3}' | grep "Running" | grep "1/1"); do echo "Waiting for backup service";sleep 3; done
-BACKUP_POD_NAME=$(kubectl get pods -n central -l app=px-backup -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-kubectl cp -n central $BACKUP_POD_NAME:pxbackupctl/linux/pxbackupctl /usr/bin/pxbackupctl
-chmod +x /usr/bin/pxbackupctl
-BACKUP_POD_IP=$(kubectl get pods -n central -l app=px-backup -o jsonpath='{.items[*].status.podIP}' 2>/dev/null)
-AWS_ACCESS_KEY=$(sed -n 's/aws_access_key_id[ =]*//p' /root/.aws/credentials 2>/dev/null)
-AWS_SECRET_KEY=$(sed -n 's/aws_secret_access_key[ =]*//p' /root/.aws/credentials 2>/dev/null)
-pubIP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)
-backupPort=$(kubectl get svc px-backup-ui -n central -o=jsonpath='{.spec.ports[?(@.port==80)].nodePort}')
-client_secret=$(kubectl get secret --namespace central pxc-backup-secret -o jsonpath={.data.OIDC_CLIENT_SECRET} | base64 --decode)
-pxbackupctl login -s http://$pubIP:$backupPort -u admin -p admin
-pxbackupctl create cloudcredential --aws-access-key $AWS_ACCESS_KEY --aws-secret-key $AWS_SECRET_KEY -e $BACKUP_POD_IP:10002 --orgID default -n s3 -p aws
-sleep 5
-cloud_credential_uid=$(pxbackupctl get cloudcredential -e $BACKUP_POD_IP:10002 --orgID default -o json | jq -cr '.[0].metadata.uid')
-pxbackupctl create backuplocation --cloud-credential-name s3 --cloud-credential-Uid $cloud_credential_uid -n aws -p s3 --s3-endpoint https://s3.$aws_region.amazonaws.com --path $BACKUP_BUCKET --s3-region $aws_region -e $BACKUP_POD_IP:10002 --orgID default
-pxbackupctl create schedulepolicy --interval-minutes 15 --interval-retain 12 --name example-schedule -e $BACKUP_POD_IP:10002 --orgID default
-sleep 5
-cat <<EOF >> /etc/motd
-+================================================+
-SAVE THE FOLLOWING DETAILS FOR FUTURE REFERENCES
-+================================================+
-PX-Central User Interface Access URL : http://$pubIP:$backupPort
-PX-Central admin user name: admin
-PX-Central admin user password: admin
-+================================================+
-EOF
+  while : ; do
+    scp /tmp/async-dr.yml master-1:/home/training$cluster/yaml/async-dr.yml
+    ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no master-1 "chown training$cluster.training$cluster /home/training$cluster/yaml/async-dr.yml ; kubectl apply --kubeconfig /home/training$cluster/.kube/config -f /home/training$cluster/yaml/async-dr.yml"
+    [ $? -eq 0 ] && break
+    sleep 5
+  done
 fi
