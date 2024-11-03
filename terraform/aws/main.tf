@@ -13,6 +13,21 @@ terraform {
     tls = {
       source = "hashicorp/tls"
     }
+	helm = {
+      source  = "hashicorp/helm"
+      version = "2.16.1"
+    }
+    rancher2 = {
+      source  = "rancher/rancher2"
+      version = "5.1.0"
+    }
+	random = {
+		source ="hashicorp/random"
+	}
+    ssh = {
+      source  = "loafoe/ssh"
+      version = "2.7.0"
+    }
   }
 }
 
@@ -168,6 +183,13 @@ resource "aws_security_group" "sg_px-deploy" {
 		description = "tcp 8443"
 		from_port 	= 8443
 		to_port 	= 8443
+		protocol	= "tcp"
+		cidr_blocks = ["0.0.0.0/0"]
+		}
+	ingress {
+		description = "tcp 6443"
+		from_port 	= 6443
+		to_port 	= 6443
 		protocol	= "tcp"
 		cidr_blocks = ["0.0.0.0/0"]
 		}
