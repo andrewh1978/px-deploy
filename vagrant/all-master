@@ -4,6 +4,7 @@ mv /tmp/assets /assets
 echo 'source <(kubectl completion bash 2>/dev/null)' >>/etc/bash_completion.d/kubectl
 echo 'source <(oc completion bash 2>/dev/null)' >>/etc/bash_completion.d/oc
 echo 'alias k=kubectl' >>/root/.bashrc
+echo "alias watch='watch '" >>/root/.bashrc
 echo 'complete -F __start_kubectl k' >>/root/.bashrc
 cat <<EOF >/etc/exports
 / 10.0.0.0/8(rw,no_root_squash)
