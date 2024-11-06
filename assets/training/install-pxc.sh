@@ -5,4 +5,3 @@ kubectl cp -n portworx $(kubectl get pod -n portworx -l name=stork -o jsonpath='
 chmod +x $HOME/bin/pxc-pxctl $HOME/bin/kubectl-pxc $HOME/bin/storkctl
 kubectl pxc config cluster set --portworx-service-namespace portworx
 echo "alias pxctl='kubectl pxc pxctl'" >>$HOME/.bashrc
-echo "alias watch='watch --color '" >>$HOME/.bashrc
