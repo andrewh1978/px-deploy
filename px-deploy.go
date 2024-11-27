@@ -1142,12 +1142,12 @@ func destroy_deployment(name string, destroyForce bool) {
 			panic(fmt.Sprintf("error listing aws instances %v \n", err.Error()))
 		}
 
-		// split aws_instances into chunks of 197 elements
-		// because of the aws DescribeVolumes Filter limit of 200 (197 instances + pxtype: data/kvdb/journal)
+		// split aws_instances into chunks of 196 elements
+		// because of the aws DescribeVolumes Filter limit of 200 (196 instances + pxtype: data/kvdb/journal/metadata)
 		// build slice of slices
-		aws_instances_split := make([]([]string), len(aws_instances)/197+1)
+		aws_instances_split := make([]([]string), len(aws_instances)/196+1)
 		for i, val := range aws_instances {
-			aws_instances_split[i/197] = append(aws_instances_split[i/197], val)
+			aws_instances_split[i/196] = append(aws_instances_split[i/196], val)
 		}
 
 		aws_volumes, err := aws_get_clouddrives(aws_instances_split, client)
