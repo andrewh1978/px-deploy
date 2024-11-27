@@ -413,7 +413,7 @@ func main() {
 
 	defaults := parse_yaml("defaults.yml")
 	cmdCreate.Flags().StringVarP(&createName, "name", "n", "", "name of deployment to be created (if blank, generate UUID)")
-	cmdCreate.Flags().StringVarP(&flags.Platform, "platform", "p", "", "k8s | dockeree | none | k3s | ocp4 | rancher | eks | gke | aks | nomad (default "+defaults.Platform+")")
+	cmdCreate.Flags().StringVarP(&flags.Platform, "platform", "p", "", "k8s | none | ocp4 | rancher | eks | gke | aks (default "+defaults.Platform+")")
 	cmdCreate.Flags().StringVarP(&flags.Clusters, "clusters", "c", "", "number of clusters to be deployed (default "+defaults.Clusters+")")
 	cmdCreate.Flags().StringVarP(&flags.Nodes, "nodes", "N", "", "number of nodes to be deployed in each cluster (default "+defaults.Nodes+")")
 	cmdCreate.Flags().StringVarP(&flags.K8s_Version, "k8s_version", "k", "", "Kubernetes version to be deployed (default "+defaults.K8s_Version+")")
@@ -580,7 +580,7 @@ func validate_config(config *Config) []string {
 		config.Vsphere_Folder = strings.TrimRight(config.Vsphere_Folder, "/")
 	}
 
-	if config.Platform != "k8s" && config.Platform != "k3s" && config.Platform != "none" && config.Platform != "dockeree" && config.Platform != "ocp4" && config.Platform != "rancher" && config.Platform != "eks" && config.Platform != "gke" && config.Platform != "aks" && config.Platform != "nomad" {
+	if config.Platform != "k8s" && config.Platform != "none" && config.Platform != "ocp4" && config.Platform != "rancher" && config.Platform != "eks" && config.Platform != "gke" && config.Platform != "aks" {
 		errormsg = append(errormsg, "Invalid platform '"+config.Platform+"'")
 	}
 

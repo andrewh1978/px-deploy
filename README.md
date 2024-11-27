@@ -6,8 +6,6 @@ This will deploy one or more clusters in the cloud, with optional post-install t
 
 ## Container
  * Kubernetes
- * K3s
- * Docker EE
  * Openshift 4 (only on AWS at this time)
  * EKS (only makes sense on AWS)
  * AKS (only makes sense on Azure)
@@ -156,7 +154,7 @@ The `defaults.yml` file sets a number of deployment variables:
  * `post_script` - script to run on each master after deployment, output will go to stdout
  * `nodes` - the number of worker nodes on each cluster
  * `lock` - prevents deployment from being deleted by `px-deploy destroy ...`. use `px-deploy unlock -n ...` to unlock 
- * `platform` - can be set to either k8s, k3s, none, dockeree, ocp4, eks, gke or nomad
+ * `platform` - can be set to either k8s, none, ocp4, eks or gke
  * `azure_type` - the Azure machine type for each node
  * `azure_disks` - similar to aws_ebs, for example: `"Standard_LRS:49 Premium_LRS:50"` 
  * `azure_client_id` - Azure Client ID

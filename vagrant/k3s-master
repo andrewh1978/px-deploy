@@ -1,8 +1,0 @@
-curl -sfL https://get.k3s.io | sh -
-mkdir /root/.kube
-cp /etc/rancher/k3s/k3s.yaml /root/.kube/config
-ln -s /usr/local/bin/kubectl /usr/bin/
-while ! kubectl get nodes; do
-  echo waiting for k3s
-  sleep 1
-done

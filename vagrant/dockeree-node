@@ -1,6 +1,0 @@
-while : ; do
-  command=$(ssh -oConnectTimeout=1 -oStrictHostKeyChecking=no master-$cluster docker swarm join-token worker | grep token)
-  [ $? -eq 0 ] && break
-  sleep 5
-done
-$command
