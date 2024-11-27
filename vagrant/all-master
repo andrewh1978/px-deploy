@@ -3,10 +3,15 @@
 mv /tmp/assets /assets
 echo 'source <(kubectl completion bash 2>/dev/null)' >>/etc/bash_completion.d/kubectl
 echo 'source <(oc completion bash 2>/dev/null)' >>/etc/bash_completion.d/oc
+curl -sLO https://raw.githubusercontent.com/jonmosco/kube-ps1/refs/tags/v0.9.0/kube-ps1.sh
+mv kube-ps1.sh /usr/local/bin
+chmod +x /usr/local/bin/kube-ps1.sh
 {
   echo 'alias k=kubectl'
   echo "alias watch='watch --color '"
   echo 'complete -F __start_kubectl k'
+  echo "source /usr/local/bin/kube-ps1.sh"
+  echo "PS1='[\u@\h \W \$(kube_ps1)]\$ '"
 } >>/root/.bashrc
 cat <<EOF >/etc/exports
 / 10.0.0.0/8(rw,no_root_squash)
