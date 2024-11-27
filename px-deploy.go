@@ -72,6 +72,9 @@ type Config struct {
 	Azure_Subscription_Id    string
 	Azure_Tenant_Id          string
 	Aks_Version              string
+	Rancher_K3s_Version      string
+	Rancher_K8s_Version      string
+	Rancher_Version          string
 	Vsphere_Host             string
 	Vsphere_Compute_Resource string
 	Vsphere_Resource_Pool    string
@@ -410,7 +413,7 @@ func main() {
 
 	defaults := parse_yaml("defaults.yml")
 	cmdCreate.Flags().StringVarP(&createName, "name", "n", "", "name of deployment to be created (if blank, generate UUID)")
-	cmdCreate.Flags().StringVarP(&flags.Platform, "platform", "p", "", "k8s | dockeree | none | k3s | ocp4 | eks | gke | aks | nomad (default "+defaults.Platform+")")
+	cmdCreate.Flags().StringVarP(&flags.Platform, "platform", "p", "", "k8s | dockeree | none | k3s | ocp4 | rancher | eks | gke | aks | nomad (default "+defaults.Platform+")")
 	cmdCreate.Flags().StringVarP(&flags.Clusters, "clusters", "c", "", "number of clusters to be deployed (default "+defaults.Clusters+")")
 	cmdCreate.Flags().StringVarP(&flags.Nodes, "nodes", "N", "", "number of nodes to be deployed in each cluster (default "+defaults.Nodes+")")
 	cmdCreate.Flags().StringVarP(&flags.K8s_Version, "k8s_version", "k", "", "Kubernetes version to be deployed (default "+defaults.K8s_Version+")")
@@ -577,7 +580,7 @@ func validate_config(config *Config) []string {
 		config.Vsphere_Folder = strings.TrimRight(config.Vsphere_Folder, "/")
 	}
 
-	if config.Platform != "k8s" && config.Platform != "k3s" && config.Platform != "none" && config.Platform != "dockeree" && config.Platform != "ocp4" && config.Platform != "eks" && config.Platform != "gke" && config.Platform != "aks" && config.Platform != "nomad" {
+	if config.Platform != "k8s" && config.Platform != "k3s" && config.Platform != "none" && config.Platform != "dockeree" && config.Platform != "ocp4" && config.Platform != "rancher" && config.Platform != "eks" && config.Platform != "gke" && config.Platform != "aks" && config.Platform != "nomad" {
 		errormsg = append(errormsg, "Invalid platform '"+config.Platform+"'")
 	}
 
@@ -643,7 +646,17 @@ func validate_config(config *Config) []string {
 		emptyVars := isEmpty(config.Ocp4_Domain, config.Ocp4_Pull_Secret)
 		if len(emptyVars) > 0 {
 			for _, i := range emptyVars {
-				errormsg = append(errormsg, "please set \"%s\" in defaults.yml", checkvar[i])
+				errormsg = append(errormsg, fmt.Sprintf("please set \"%s\" in defaults.yml", checkvar[i]))
+			}
+		}
+	}
+
+	if config.Platform == "rancher" {
+		checkvar := []string{"rancher_k3s_version", "rancher_k8s_version", "rancher_version"}
+		emptyVars := isEmpty(config.Rancher_K3s_Version, config.Rancher_K8s_Version, config.Rancher_Version)
+		if len(emptyVars) > 0 {
+			for _, i := range emptyVars {
+				errormsg = append(errormsg, fmt.Sprintf("please set \"%s\" in defaults.yml", checkvar[i]))
 			}
 		}
 	}
@@ -653,6 +666,9 @@ func validate_config(config *Config) []string {
 	}
 	if config.Platform == "ocp4" && config.Cloud != "aws" {
 		errormsg = append(errormsg, "Openshift 4 only supported on AWS (not "+config.Cloud+")")
+	}
+	if config.Platform == "rancher" && config.Cloud != "aws" {
+		errormsg = append(errormsg, "Rancher only supported on AWS (not "+config.Cloud+")")
 	}
 	if config.Platform == "gke" && config.Cloud != "gcp" {
 		errormsg = append(errormsg, "GKE only makes sense with GCP (not "+config.Cloud+")")
@@ -749,7 +765,7 @@ func get_deployment_status(config *Config, cluster int, c chan Deployment_Status
 	var Nodes int
 	var returnvalue string
 
-	if (config.Platform == "ocp4") || (config.Platform == "eks") || (config.Platform == "aks") || (config.Platform == "gke") {
+	if (config.Platform == "ocp4") || (config.Platform == "rancher") || (config.Platform == "eks") || (config.Platform == "aks") || (config.Platform == "gke") {
 		Nodes = 0
 	} else {
 		Nodes, _ = strconv.Atoi(config.Nodes)
@@ -801,6 +817,19 @@ func get_deployment_status(config *Config, cluster int, c chan Deployment_Status
 				returnvalue = fmt.Sprintf("%v  OCP4 credentials not yet available\n", returnvalue)
 			}
 		}
+
+		if config.Platform == "rancher" {
+			if ready_nodes["url"] != "" {
+				returnvalue = fmt.Sprintf("%v  URL: %v \n", returnvalue, ready_nodes["url"])
+			} else {
+				returnvalue = fmt.Sprintf("%v  Rancher Server URL not yet available\n", returnvalue)
+			}
+			if ready_nodes["cred"] != "" {
+				returnvalue = fmt.Sprintf("%v  Credentials: admin / %v \n", returnvalue, ready_nodes["cred"])
+			} else {
+				returnvalue = fmt.Sprintf("%v  Rancher Server credentials not yet available\n", returnvalue)
+			}
+		}
 		for n := 1; n <= Nodes; n++ {
 			if ready_nodes[fmt.Sprintf("node-%v-%v", cluster, n)] != "" {
 				returnvalue = fmt.Sprintf("%vReady\t node-%v-%v\n", returnvalue, cluster, n)
@@ -846,6 +875,11 @@ func create_deployment(config Config) bool {
 				{
 					exec.Command("cp", "-a", `/px-deploy/terraform/aws/eks/eks.tf`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
 					exec.Command("cp", "-a", `/px-deploy/terraform/aws/eks/eks_run_everywhere.tpl`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
+				}
+			case "rancher":
+				{
+					exec.Command("cp", "-a", `/px-deploy/terraform/aws/rancher/rancher-server.tf`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
+					exec.Command("cp", "-a", `/px-deploy/terraform/aws/rancher/rancher-variables.tf`, `/px-deploy/.px-deploy/tf-deployments/`+config.Name).Run()
 				}
 			}
 			write_nodescripts(config)
@@ -984,6 +1018,9 @@ func run_terraform_apply(config *Config) string {
 	case "aws":
 		cloud_auth = append(cloud_auth, fmt.Sprintf("AWS_ACCESS_KEY_ID=%s", config.Aws_Access_Key_Id))
 		cloud_auth = append(cloud_auth, fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%s", config.Aws_Secret_Access_Key))
+		// make aws keys consumeable within the terraform scripts
+		cloud_auth = append(cloud_auth, fmt.Sprintf("TF_VAR_AWS_ACCESS_KEY_ID=%s", config.Aws_Access_Key_Id))
+		cloud_auth = append(cloud_auth, fmt.Sprintf("TF_VAR_AWS_SECRET_ACCESS_KEY=%s", config.Aws_Secret_Access_Key))
 	}
 	cmd.Env = append(cmd.Env, cloud_auth...)
 	err := cmd.Run()
@@ -1163,6 +1200,30 @@ func destroy_deployment(name string, destroyForce bool) {
 				prepare_predelete(&config, "script", destroyForce)
 				prepare_predelete(&config, "platform", destroyForce)
 			}
+		case "rancher":
+			{
+				var cloud_auth []string
+				cloud_auth = append(cloud_auth, fmt.Sprintf("AWS_ACCESS_KEY_ID=%s", config.Aws_Access_Key_Id))
+				cloud_auth = append(cloud_auth, fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%s", config.Aws_Secret_Access_Key))
+				fmt.Println(Red + "FIXME: removing helm deployments from rancher state." + Reset)
+				cmd1 := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "state", "rm", "helm_release.rancher_server")
+				cmd1.Stdout = os.Stdout
+				cmd1.Stderr = os.Stderr
+				cmd1.Env = append(cmd1.Env, cloud_auth...)
+				errstate1 := cmd1.Run()
+				if errstate1 != nil {
+					fmt.Println(Yellow + "ERROR: Terraform state rm helm_release.rancher_server failed. Check validity of terraform scripts" + Reset)
+				}
+				cmd2 := exec.Command("terraform", "-chdir=/px-deploy/.px-deploy/tf-deployments/"+config.Name, "state", "rm", "helm_release.cert_manager")
+				cmd2.Stdout = os.Stdout
+				cmd2.Stderr = os.Stderr
+				cmd2.Env = append(cmd2.Env, cloud_auth...)
+				errstate2 := cmd2.Run()
+				if errstate2 != nil {
+					fmt.Println(Yellow + "ERROR: Terraform state rm helm_release.cert_manager failed. Check validity of terraform scripts" + Reset)
+				}
+
+			}
 		case "eks":
 			{
 				prepare_predelete(&config, "script", destroyForce)
@@ -1199,8 +1260,15 @@ func destroy_deployment(name string, destroyForce bool) {
 			}
 		}
 
-		// delete elb instances & attached SGs (+referncing rules) from VPC
+		// delete elb instances & attached SGs (+referencing rules) from VPC
 		delete_elb_instances(config.Aws__Vpc, cfg)
+
+		// remove all terraform based infra
+		tf_error := run_terraform_destroy(&config)
+		if tf_error != "" {
+			fmt.Printf("%s\n", tf_error)
+			return
+		}
 
 		// at this point px clouddrive volumes must no longer be attached
 		// as instances are terminated
@@ -1220,11 +1288,6 @@ func destroy_deployment(name string, destroyForce bool) {
 			}
 		}
 
-		tf_error := run_terraform_destroy(&config)
-		if tf_error != "" {
-			fmt.Printf("%s\n", tf_error)
-			return
-		}
 		aws_show_iamkey_age(&config)
 
 	} else if config.Cloud == "gcp" {

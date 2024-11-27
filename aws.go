@@ -24,6 +24,7 @@ func aws_create_variables(config *Config) []string {
 	var pxduser string
 	var tf_variables []string
 	var tf_variables_ocp4 []string
+	var tf_variables_rancher []string
 	var tf_variables_eks []string
 	var tf_cluster_instance_type string
 	var tf_cluster_nodes string
@@ -66,6 +67,11 @@ func aws_create_variables(config *Config) []string {
 			tf_variables = append(tf_variables, "ocp4_nodes = \""+config.Nodes+"\"")
 			config.Nodes = "0"
 		}
+	case "rancher":
+		{
+			tf_variables = append(tf_variables, "rancher_nodes = \""+config.Nodes+"\"")
+			config.Nodes = "0"
+		}
 	case "eks":
 		{
 			tf_variables = append(tf_variables, "eks_nodes = \""+config.Nodes+"\"")
@@ -97,6 +103,14 @@ func aws_create_variables(config *Config) []string {
 	case "eks":
 		{
 			tf_variables_eks = append(tf_variables_eks, "eksclusters = {")
+		}
+	case "rancher":
+		{
+			tf_variables = append(tf_variables, "rancher_domain = \""+config.Ocp4_Domain+"\"")
+			tf_variables = append(tf_variables, "rancher_k3s_version = \""+config.Rancher_K3s_Version+"\"")
+			tf_variables = append(tf_variables, "rancher_k8s_version = \""+config.Rancher_K8s_Version+"\"")
+			tf_variables = append(tf_variables, "rancher_version = \""+config.Rancher_Version+"\"")
+			tf_variables_rancher = append(tf_variables_rancher, "rancherclusters = {")
 		}
 	}
 
@@ -146,6 +160,10 @@ func aws_create_variables(config *Config) []string {
 			{
 				tf_variables_ocp4 = append(tf_variables_ocp4, "  \""+masternum+"\" = \""+tf_cluster_instance_type+"\",")
 			}
+		case "rancher":
+			{
+				tf_variables_rancher = append(tf_variables_rancher, "  \""+masternum+"\" = \""+tf_cluster_instance_type+"\",")
+			}
 		case "eks":
 			{
 				tf_variables_eks = append(tf_variables_eks, "  \""+masternum+"\" = \""+tf_cluster_instance_type+"\",")
@@ -159,6 +177,11 @@ func aws_create_variables(config *Config) []string {
 		{
 			tf_variables_ocp4 = append(tf_variables_ocp4, "}")
 			tf_variables = append(tf_variables, tf_variables_ocp4...)
+		}
+	case "rancher":
+		{
+			tf_variables_rancher = append(tf_variables_rancher, "}")
+			tf_variables = append(tf_variables, tf_variables_rancher...)
 		}
 	case "eks":
 		{

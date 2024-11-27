@@ -1,0 +1,26 @@
+large scale test needed as clouddrive destroy function has been changed (now running after terrform destroy) (all platforms/clouds)
+
+OK use data source for rancher ami id 
+-> test on other regions
+
+? create option for rancher_domain or merge with ocp4_domain
+
+multiple clusters, handle exceptions for clusters (nodes,types...)
+
+? route53 for workload clusters
+? aws elb for l4
+? no external IP for cluster nodes
+
+TODO:
+implement run_everywhere
+secure rancher cluster PW handling
+test AWS key change during runtime (new key on deletion)
+
+KNOWN ISSUES:
+cloud-init check sometimes shows errors
+creation of downstream clusters sometimes fails because amazonec2 node driver not yet cloudInitReady (unknow schema error)
+
+terraform destroy failing on helm releases because they're throwing error. 
+current workaround: remove helm releases from terraform state
+terraform -chdir=/px-deploy/.px-deploy/tf-deployments/dpaul-rancher/ state rm helm_release.cert_manager 
+terraform -chdir=/px-deploy/.px-deploy/tf-deployments/dpaul-rancher/ state rm helm_release.rancher_server
