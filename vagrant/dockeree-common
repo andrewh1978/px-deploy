@@ -1,3 +1,0 @@
-yum -y install container-selinux
-rpm -i https://storebits.docker.com/ee/trial/sub-b9e7ba43-59d6-4821-813d-8a735b5d9e8b/centos/7/x86_64/stable-19.03/Packages/docker-ee-19.03.5-3.el7.x86_64.rpm https://storebits.docker.com/ee/trial/sub-b9e7ba43-59d6-4821-813d-8a735b5d9e8b/centos/7/x86_64/stable-19.03/Packages/docker-ee-cli-19.03.5-3.el7.x86_64.rpm https://storebits.docker.com/ee/trial/sub-b9e7ba43-59d6-4821-813d-8a735b5d9e8b/centos/7/x86_64/stable-19.03/Packages/containerd.io-1.2.10-3.2.el7.x86_64.rpm
-systemctl enable --now docker
