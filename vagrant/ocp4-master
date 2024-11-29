@@ -10,9 +10,9 @@ ln -s /usr/local/bin/aws /usr/bin/aws
 eval $(ssh-agent)
 cd /tmp
 wget -q https://mirror.openshift.com/pub/openshift-v4/clients/ocp/$ocp4_version/openshift-install-linux-$ocp4_version.tar.gz
-wget -q https://mirror.openshift.com/pub/openshift-v4/clients/ocp/$ocp4_version/openshift-client-linux-$ocp4_version.tar.gz
+wget -q https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.15.38/openshift-client-linux-4.15.38.tar.gz
 tar xzf openshift-install-linux-$ocp4_version.tar.gz
-tar xzf openshift-client-linux-$ocp4_version.tar.gz
+tar xzf openshift-client-linux-4.15.38.tar.gz
 mv openshift-install oc kubectl /usr/bin
 rm -f openshift-install-linux-$ocp4_version.tar.gz openshift-client-linux-$ocp4_version.tar.gz
 
