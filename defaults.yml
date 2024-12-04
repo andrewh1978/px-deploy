@@ -57,7 +57,7 @@ vsphere_repo: "https://px-deploy.s3.eu-west-1.amazonaws.com/templates/"
 #vsphere_folder: ""
 
 ocp4_domain: ""
-ocp4_version: 4.14.16
+ocp4_version: 4.16.17
 ocp4_pull_secret: ""
 
 #env:
