@@ -7,18 +7,11 @@
 
 # Default secrets store is k8s; can also set environment variable secrets=vault
 
-# If you do not want to deploy using the operator, set the environment variable operator=false, and then the DaemonSet will be used
-
 # You can also set csi=true and security=true
 
 # If you select cloud=vsphere, clouddrives will be provisioned from vsphere_disks
 
-if [ "$operator" != false ]; then
-  namespace=portworx
-  kubectl create namespace portworx
-else
-  namespace=kube-system
-fi
+kubectl create namespace portworx
 if [ $cloud = vsphere ]; then
   VSPHERE_USER=$(printf $vsphere_user | base64)
   VSPHERE_PASSWORD=$(printf $vsphere_password | base64)
@@ -27,7 +20,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: px-vsphere-secret
-  namespace: $namespace
+  namespace: portworx
 type: Opaque
 data:
   VSPHERE_USER: $VSPHERE_USER
@@ -40,7 +33,7 @@ EOF
 fi
 
 k8s_version=$((kubectl version --short 2>&1 || kubectl version) | awk -Fv '/Server Version: / {print $3}')
-url="https://install.portworx.com/$px_version?kbver=$k8s_version&b=true&c=px-deploy-$cluster&stork=true&st=k8s&lh=true&mon=true&promop=true"
+url="https://install.portworx.com/$px_version?kbver=$k8s_version&b=true&c=px-deploy-$cluster&stork=true&st=k8s&lh=true&mon=true&promop=true&operator=true"
 [ -e /usr/bin/oc ] && url="$url&osft=true"
 if [ "$cloud_drive" ]; then
   if [ "$cloud" = "azure" ]; then
@@ -61,7 +54,6 @@ fi
 [ "$vsphere_suffix" ] && url="$url&$vsphere_suffix"
 [ "$platform" = eks ] && url="$url&eks=true"
 [ "$platform" = ocp4 ] && url="$url&r=17001"
-[ "$operator" = false ] || url="$url&operator=true"
 [ "$security" = true ] && url="$url&security=true"
 [ -n "$csi" ] && url="$url&csi=$csi"
 #[ "$etcd" = EXTERNAL ] && url="$url&k=etcd:http://$(ssh master-1 curl https://ipinfo.io/ip):2382"
@@ -98,7 +90,7 @@ EOF
   done
 fi
 
-if [ "$operator" != false -a "$platform" != ocp4 ]; then
+if [ "$platform" != ocp4 ]; then
   kubectl apply -f "https://install.portworx.com/$px_version?comp=pxoperator&kbver=$k8s_version"
   while ! kubectl wait --for=condition=ready pod -lname=portworx-operator -n kube-system; do
     sleep 2
@@ -120,11 +112,9 @@ if [ "$platform" = aks ]; then
 fi
 
 curl -sko /tmp/px.yml $url
-if [ "$operator" != false ]; then
-  sed -i 's/namespace: kube-system/namespace: portworx/' /tmp/px.yml
-  sed -i 's/imagePullPolicy: Always/imagePullPolicy: IfNotPresent/' /tmp/px.yml
-  [ -f "/tmp/metro" ] && clusterdomain=$(cat /tmp/metro) && sed -i '/  annotations:/a\ \ \ \ '"$clusterdomain"'' /tmp/px.yml
-fi
+sed -i 's/namespace: kube-system/namespace: portworx/' /tmp/px.yml
+sed -i 's/imagePullPolicy: Always/imagePullPolicy: IfNotPresent/' /tmp/px.yml
+[ -f "/tmp/metro" ] && clusterdomain=$(cat /tmp/metro) && sed -i '/  annotations:/a\ \ \ \ '"$clusterdomain"'' /tmp/px.yml
 kubectl apply -f /tmp/px.yml
 
 wait
@@ -138,34 +128,45 @@ curl -so /usr/local/bin/pxc-pxctl https://raw.githubusercontent.com/portworx/pxc
 mv /tmp/pxc/kubectl-pxc /usr/bin
 chmod +x /usr/local/bin/pxc-pxctl
 echo "alias pxctl='kubectl pxc pxctl'" >>/root/.bashrc
-[ "$operator" != false ] && kubectl-pxc config cluster set --portworx-service-namespace=portworx
+kubectl-pxc config cluster set --portworx-service-namespace=portworx
 
-# Install Grafana / wait for storagecluster readiness
-if [ "$operator" != false ]; then
-  kubectl -n portworx create configmap grafana-dashboard-config --from-file=grafana-dashboard-config.yaml=<(curl -s https://docs.portworx.com/samples/k8s/pxc/grafana-dashboard-config.yaml)
+# Install Grafana
+if [ $platform = ocp4 ]; then
+  kubectl apply -f <(curl -s https://docs.portworx.com/samples/portworx-enterprise/k8s/pxc/grafana-service-account.yaml | sed s/kube-system/portworx/)
+  oc -n portworx adm policy add-cluster-role-to-user cluster-monitoring-view -z grafana
+  TOKEN=$(oc -n portworx create token grafana --duration=8760h)
+  THANOS=$(oc get route thanos-querier -n openshift-monitoring -o json | jq -r '.spec.host')
+  kubectl -n portworx create configmap grafana-source-config --from-file=grafana-datasource-ocp.yaml=<(curl -s https://docs.portworx.com/samples/portworx-enterprise/k8s/pxc/grafana-datasource-ocp.yaml | sed "s/<THANOS_QUERIER_HOST>/$THANOS/;s/<BEARER_TOKEN>/$TOKEN/g")
+  kubectl apply -f <(curl -s https://docs.portworx.com/samples/portworx-enterprise/k8s/pxc/grafana-ocp.yaml | sed s/kube-system/portworx/)
+else
   kubectl -n portworx create configmap grafana-source-config --from-file=grafana-datasource.yaml=<(curl -s https://docs.portworx.com/samples/k8s/pxc/grafana-datasource.yaml)
-  kubectl -n portworx create configmap grafana-dashboards --from-file=portworx-cluster-dashboard.json=<(curl -s https://docs.portworx.com/samples/k8s/pxc/portworx-cluster-dashboard.json) --from-file=portworx-node-dashboard.json=<(curl -s https://docs.portworx.com/samples/k8s/pxc/portworx-node-dashboard.json) --from-file=portworx-volume-dashboard.json=<(curl -s https://docs.portworx.com/samples/k8s/pxc/portworx-volume-dashboard.json) --from-file=portworx-etcd-dashboard.json=<(curl -s https://docs.portworx.com/samples/k8s/pxc/portworx-etcd-dashboard.json) --from-file=portworx-performance-dashboard.json=<(curl -s https://docs.portworx.com/samples/k8s/pxc/portworx-performance-dashboard.json)
-  kubectl apply -f <(curl -s https://docs.portworx.com/samples/k8s/pxc/grafana.yaml | sed s/kube-system/portworx/)
-  if [ $platform != eks ] && [ $platform != gke ] && [ $platform != ocp4 ] && [ $platform != rancher ] && [ $platform != aks ]; then
-    kubectl patch svc grafana -n portworx -p '{"spec": { "type": "NodePort", "ports": [ { "nodePort": 30112, "port": 3000, "protocol": "TCP", "targetPort": 3000 } ] } }'
-    while ! curl -m 1 -s -X POST -H "Content-Type: application/json" -d '{"Name":"portworx","type":"prometheus","access":"server","url":"http://px-prometheus:9090"}' http://admin:admin@localhost:30112/api/datasources; do
-      echo waiting for grafana
-      sleep 2
-    done
-    curl -s -X PUT -H "Content-Type: application/json" -d '{"oldPassword":"admin","newPassword":"admin","confirmNew":"admin"}' http://admin:admin@localhost:30112/api/user/password
-  fi
-  while ! kubectl get stc -A -n $namespace | grep -q 'Running\|Online'; do
-    echo "Waiting for StorageCluster status online"
-    sleep 3
+  kubectl apply -f <(curl -s https://docs.portworx.com/samples/portworx-enterprise/k8s/pxc/grafana.yaml | sed s/kube-system/portworx/)
+fi
+kubectl -n portworx create configmap grafana-dashboard-config --from-file=grafana-dashboard-config.yaml=<(curl -s https://docs.portworx.com/samples/k8s/pxc/grafana-dashboard-config.yaml)
+kubectl -n portworx create configmap grafana-dashboards --from-file=portworx-cluster-dashboard.json=<(curl -s https://docs.portworx.com/samples/k8s/pxc/portworx-cluster-dashboard.json) --from-file=portworx-node-dashboard.json=<(curl -s https://docs.portworx.com/samples/k8s/pxc/portworx-node-dashboard.json) --from-file=portworx-volume-dashboard.json=<(curl -s https://docs.portworx.com/samples/k8s/pxc/portworx-volume-dashboard.json) --from-file=portworx-etcd-dashboard.json=<(curl -s https://docs.portworx.com/samples/k8s/pxc/portworx-etcd-dashboard.json) --from-file=portworx-performance-dashboard.json=<(curl -s https://docs.portworx.com/samples/portworx-enterprise/k8s/pxc/portworx-performance-dashboard.json)
+
+# Patch Grafana
+if [ $platform != eks ] && [ $platform != gke ] && [ $platform != ocp4 ] && [ $platform != rancher ] && [ $platform != aks ]; then
+  kubectl patch svc grafana -n portworx -p '{"spec": { "type": "NodePort", "ports": [ { "nodePort": 30112, "port": 3000, "protocol": "TCP", "targetPort": 3000 } ] } }'
+  while ! curl -m 1 -s -X POST -H "Content-Type: application/json" -d '{"Name":"portworx","type":"prometheus","access":"server","url":"http://px-prometheus:9090"}' http://admin:admin@localhost:30112/api/datasources; do
+    echo waiting for grafana
+    sleep 2
   done
+  curl -s -X PUT -H "Content-Type: application/json" -d '{"oldPassword":"admin","newPassword":"admin","confirmNew":"admin"}' http://admin:admin@localhost:30112/api/user/password
 fi
 
+# Wait for cluster readiness
+while ! kubectl get stc -A -n portworx | grep -q 'Running\|Online'; do
+  echo "Waiting for StorageCluster status online"
+  sleep 3
+done
+
 # install storkctl
-STORK_POD=$(kubectl get pods -n $namespace -l name=stork -o jsonpath='{.items[0].metadata.name}')
-while ! kubectl cp -n $namespace $STORK_POD:/storkctl/linux/storkctl /usr/local/bin/storkctl ; do
+STORK_POD=$(kubectl get pods -n portworx -l name=stork -o jsonpath='{.items[0].metadata.name}')
+while ! kubectl cp -n portworx $STORK_POD:/storkctl/linux/storkctl /usr/local/bin/storkctl ; do
     echo "trying to kubectl cp storkctl out of $STORK_POD"
     sleep 2
-    STORK_POD=$(kubectl get pods -n $namespace -l name=stork -o jsonpath='{.items[0].metadata.name}')
+    STORK_POD=$(kubectl get pods -n portworx -l name=stork -o jsonpath='{.items[0].metadata.name}')
 done
 chmod +x /usr/local/bin/storkctl
 

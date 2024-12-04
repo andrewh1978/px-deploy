@@ -12,15 +12,10 @@ for i in $licenses; do
 done
 
 for i in $licenses; do
-  if [ "$operator" = false ]; then
-    NAMESPACE=kube-system
-  else
-    NAMESPACE=portworx
-  fi
   if [ "$security" = true ]; then
-    ADMIN_TOKEN=$(kubectl -n $NAMESPACE get secret px-admin-token -o json | jq -r '.data."auth-token"' | base64 -d)
+    ADMIN_TOKEN=$(kubectl -n portworx get secret px-admin-token -o json | jq -r '.data."auth-token"' | base64 -d)
   fi 
-  while ! kubectl exec -n $NAMESPACE -c portworx -it $(kubectl get pods -n $NAMESPACE -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- bash <<EOF
+  while ! kubectl exec -n portworx -c portworx -it $(kubectl get pods -n portworx -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ") -- bash <<EOF
 /opt/pwx/bin/pxctl context create admin --token=$ADMIN_TOKEN
 /opt/pwx/bin/pxctl license activate $i
 EOF

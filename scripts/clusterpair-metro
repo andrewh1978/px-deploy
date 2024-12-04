@@ -1,16 +1,11 @@
 # Configures a clusterpair from cluster 1 to this cluster
-if [ "$operator" = false ]; then
-  NAMESPACE=kube-system
-else
-  NAMESPACE=portworx
-fi
 while : ; do
-  POD=$(kubectl get pods -n $NAMESPACE -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ")
+  POD=$(kubectl get pods -n portworx -lname=portworx --field-selector=status.phase=Running | tail -1 | cut -f 1 -d " ")
   if [ "$security" = true ]; then
-    ADMIN_TOKEN=$(kubectl -n $NAMESPACE get secret px-admin-token -o json | jq -r '.data."auth-token"' | base64 -d)
-    kubectl -n $NAMESPACE exec -ti $POD -c portworx -- /opt/pwx/bin/pxctl context create admin --token=$ADMIN_TOKEN
+    ADMIN_TOKEN=$(kubectl -n portworx get secret px-admin-token -o json | jq -r '.data."auth-token"' | base64 -d)
+    kubectl -n portworx exec -ti $POD -c portworx -- /opt/pwx/bin/pxctl context create admin --token=$ADMIN_TOKEN
   fi
-  token=$(kubectl exec -n $NAMESPACE -it $POD -- /opt/pwx/bin/pxctl cluster token show 2>/dev/null | cut -f 3 -d " ")
+  token=$(kubectl exec -n portworx -it $POD -- /opt/pwx/bin/pxctl cluster token show 2>/dev/null | cut -f 3 -d " ")
   echo $token | grep -Eq '\w{128}'
   [ $? -eq 0 ] && break
   sleep 5
