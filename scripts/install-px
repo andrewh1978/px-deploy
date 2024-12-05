@@ -138,6 +138,8 @@ if [ $platform = ocp4 ]; then
   THANOS=$(oc get route thanos-querier -n openshift-monitoring -o json | jq -r '.spec.host')
   kubectl -n portworx create configmap grafana-source-config --from-file=grafana-datasource-ocp.yaml=<(curl -s https://docs.portworx.com/samples/portworx-enterprise/k8s/pxc/grafana-datasource-ocp.yaml | sed "s/<THANOS_QUERIER_HOST>/$THANOS/;s/<BEARER_TOKEN>/$TOKEN/g")
   kubectl apply -f <(curl -s https://docs.portworx.com/samples/portworx-enterprise/k8s/pxc/grafana-ocp.yaml | sed s/kube-system/portworx/)
+  # enable OCP4 console plugin
+  kubectl patch console.operator cluster --type json -p '[{"op": "add", "path": "/spec/plugins/-", "value": "portworx"}]'
 else
   kubectl -n portworx create configmap grafana-source-config --from-file=grafana-datasource.yaml=<(curl -s https://docs.portworx.com/samples/k8s/pxc/grafana-datasource.yaml)
   kubectl apply -f <(curl -s https://docs.portworx.com/samples/portworx-enterprise/k8s/pxc/grafana.yaml | sed s/kube-system/portworx/)
