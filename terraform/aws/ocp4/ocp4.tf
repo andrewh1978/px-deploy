@@ -76,6 +76,50 @@ resource "aws_route_table_association" "rta_private" {
     route_table_id      = aws_route_table.rt_sn_private[count.index].id
 }
 
+resource "aws_security_group" "sg_ocp-nodes" {
+	name 		= 	format("pxd-ocp-nodes-%s",var.config_name)
+	description = 	"sg for ocp px east-west (tf-created)"
+	vpc_id = aws_vpc.vpc.id
+	ingress {
+		description = "portworx mgmt (REST)"
+		from_port 	= 17001
+		to_port 	= 17001
+		protocol	= "tcp"
+		cidr_blocks = ["0.0.0.0/0"]
+		}
+  ingress {
+    description = "portworx gRPC SDK gateway (REST)"
+		from_port 	= 17018
+		to_port 	= 17018
+		protocol	= "tcp"
+		cidr_blocks = ["0.0.0.0/0"]
+		}
+  ingress {
+		description = "portworx ports"
+		from_port 	= 17002
+		to_port 	= 17021
+		protocol	= "tcp"
+		self = true
+		}
+  ingress {
+		description = "portworx gossip"
+		from_port 	= 17002
+		to_port 	= 17002
+		protocol	= "udp"
+		self = true
+		}
+  ingress {
+		description = "portworx rwx nfs"
+		from_port 	= 2049
+		to_port 	= 2049
+		protocol	= "tcp"
+		self = true
+		}
+	tags = {
+		Name=format("px-deploy-%s",var.config_name)
+		}
+}
+
 resource "local_file" "ocp4-install-config" {
         for_each = var.ocp4clusters
         content = templatefile("${path.module}/ocp4-install-config.tpl", {
@@ -92,6 +136,7 @@ resource "local_file" "ocp4-install-config" {
                         tpl_cidr        = var.aws_cidr_vpc
                         tpl_privsubnet  = aws_subnet.ocp4_private[each.key - 1].id
                         tpl_pubsubnet   = aws_subnet.subnet[each.key - 1].id
+                        tpl_ocp_sg      = aws_security_group.sg_ocp-nodes.id
                 }
         )
         filename = "${path.module}/ocp4-install-config-master-${each.key}-1.yaml"
