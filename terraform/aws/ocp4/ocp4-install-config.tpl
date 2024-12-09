@@ -5,6 +5,8 @@ compute:
   name: worker
   platform:
     aws:
+      additionalSecurityGroupIDs:
+      - ${tpl_ocp_sg}
       type: ${tpl_awstype}
       iamRole: ${tpl_aws_iamrole}
   replicas: ${tpl_nodes}

@@ -32,16 +32,7 @@ fi
 mkdir /root/.kube
 cp /root/ocp4/auth/kubeconfig /root/.kube/config
 chmod 600 /root/.kube/config
-sg=$(cat terraform.cluster.tfstate | jq -r '.resources[] | select(.name==("worker") and .type==("aws_security_group")).instances[0].attributes.id')
-
 aws configure set default.region $aws_region
-aws ec2 authorize-security-group-ingress --group-id $sg --protocol tcp --port 17001-17022 --cidr 0.0.0.0/0
-aws ec2 authorize-security-group-ingress --group-id $sg --protocol udp --port 17001-17022 --cidr 0.0.0.0/0
-
-# open NFS Port for RWX
-cidr=$(cat terraform.cluster.tfstate | jq -r '.resources[] | select(.name==("private") and .type==("aws_subnet")).instances[0].attributes.cidr_block')
-aws ec2 authorize-security-group-ingress --group-id $sg --protocol tcp --port 2049 --cidr $cidr
-
 URL=$(grep 'Access the OpenShift web-console' /root/ocp4/.openshift_install.log |cut -d\" -f4 | cut -d: -f2-)
 echo "url $URL" >> /var/log/px-deploy/completed/tracking
 
