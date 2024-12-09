@@ -30,7 +30,7 @@ func gcp_container_connect(Auth_Json string) (*container.Service, error) {
 	return containerService, nil
 }
 
-func gcp_get_instances(deployment string, config *Config) ([]string, error) {
+func gcp_get_instances(config *Config) ([]string, error) {
 	var instances []string
 
 	computeService, err := gcp_compute_connect(config.Gcp_Auth_Json)
