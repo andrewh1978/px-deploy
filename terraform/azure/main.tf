@@ -2,7 +2,7 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "=3.104.2"
+      version = "=4.13.0"
     }
     local = {
       source = "hashicorp/local"
@@ -182,10 +182,10 @@ locals {
       for i in range(1, vm.nodecount+1) : {
         instance_name 	= "${vm.role}-${vm.cluster}-${i}"
         instance_type 	= vm.instance_type
-		nodenum			= i
-		cluster 		= vm.cluster
-        blockdisks 		= vm.block_devices
-		ip_start 		= vm.ip_start
+		    nodenum			    = i
+		    cluster 		    = vm.cluster
+        blockdisks 		  = vm.block_devices
+		    ip_start        = vm.ip_start
       }
     ]
   ]
@@ -227,67 +227,82 @@ resource "azurerm_network_interface" "nic" {
   }
 }
 
-resource "azurerm_virtual_machine" "node" {
-  for_each  		  =	{for server in local.instances: server.instance_name =>  server}
+locals {
+  diskconfig = [
+    for server in local.instances : [
+      for index,i in server.blockdisks : {
+        name = format("%s-%s",server.instance_name,index)
+        attach_node = server.instance_name
+        lun         = index+10
+        type        = i.type
+        size        = i.size
+      }
+    ]
+  ]
+}
+
+locals {
+  datadisks = flatten(local.diskconfig)
+}
+
+resource "azurerm_managed_disk" "data" {
+  for_each              = {for disk in local.datadisks: disk.name => disk}
+  name                  = format("%s-%s",var.config_name,each.key)
+  resource_group_name   = azurerm_resource_group.rg.name
+  location              = azurerm_resource_group.rg.location
+  storage_account_type  = each.value.type
+  create_option         = "Empty"
+  disk_size_gb          = each.value.size
+}
+
+resource "azurerm_virtual_machine_data_disk_attachment" "data" {
+  for_each           = {for disk in local.datadisks: disk.name => disk}
+  managed_disk_id    = azurerm_managed_disk.data[each.key].id
+  virtual_machine_id = azurerm_linux_virtual_machine.node[each.value.attach_node].id
+  lun                = each.value.lun
+  caching            = "ReadWrite"
+}
+
+resource "azurerm_linux_virtual_machine" "node" {
+  for_each  		      =	{for server in local.instances: server.instance_name =>  server}
   name                = each.key
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
-  vm_size             = each.value.instance_type
+  size                = each.value.instance_type
+  admin_username      = "rocky"
   tags                = var.azure_tags
-  delete_os_disk_on_termination = true
-  delete_data_disks_on_termination = true
+  
   network_interface_ids = [
     azurerm_network_interface.nic[each.key].id,
   ]
-  
-  os_profile {
-    computer_name  = each.key
-    admin_username = "rocky"
-    custom_data = base64gzip(local_file.cloud-init[each.key].content)
-  }
+  user_data = base64gzip(local_file.cloud-init[each.key].content)
 
-  os_profile_linux_config {
-    disable_password_authentication = true
-    ssh_keys {
-      key_data = azurerm_ssh_public_key.deploy_key.public_key
-      path = "/home/rocky/.ssh/authorized_keys"
-    }
+  admin_ssh_key {
+    public_key = azurerm_ssh_public_key.deploy_key.public_key
+    username = "rocky"
   }
   
-  storage_os_disk {
+  os_disk {
     name = each.key
-    create_option = "FromImage"
     caching = "ReadWrite"
-    managed_disk_type = "Standard_LRS"
+    storage_account_type = "Standard_LRS"
     disk_size_gb = 50
-    os_type = "Linux"
-  }
-  
-  dynamic "storage_data_disk"{
-    	for_each 				= each.value.blockdisks
-    	content {
-      		managed_disk_type	= storage_data_disk.value.type
-      		disk_size_gb 		= storage_data_disk.value.size
-            create_option       = "Empty"
-            name                = format("%s.%s.%s.%s",var.name_prefix,var.config_name,each.key,storage_data_disk.key)
-            lun                 = storage_data_disk.key + 1
-    	}
   }
 
 // when changing dont forget to update information how to accept eula
-// e.g. 'az vm image terms accept --urn "erockyenterprisesoftwarefoundationinc1653071250513:rockylinux:free:8.6.0"'
+// e.g. 'az vm image terms accept --urn "resf:rockylinux-x86_64:8-base:8.9.20231119"'
 
   plan {
-    name = "free"
-    publisher = "erockyenterprisesoftwarefoundationinc1653071250513"
-    product = "rockylinux"
+    name = "8-base"
+    publisher = "resf"
+    product = "rockylinux-x86_64"
   }
 
-  storage_image_reference {
-    publisher = "erockyenterprisesoftwarefoundationinc1653071250513"
-    offer     = "rockylinux"
-    sku       = "free"
-    version   = "8.6.0"
+  source_image_reference {
+    publisher = "resf"
+    offer     = "rockylinux-x86_64"
+    sku       = "8-base"
+    version   = "8.9.20231119"
   }
 
   connection {
