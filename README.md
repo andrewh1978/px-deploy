@@ -298,7 +298,7 @@ value of `password` is your `azure_client_secret`
 4. accept RockyLinux EULA
 
 ```
-$ az vm image terms accept --urn "erockyenterprisesoftwarefoundationinc1653071250513:rockylinux:free:8.6.0" 
+$ az vm image terms accept --urn "resf:rockylinux-x86_64:8-base:8.9.20231119" 
 ```
 
 # Notes for GCP
