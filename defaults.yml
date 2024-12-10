@@ -4,7 +4,7 @@ clusters: 1
 nodes: 3
 #ssh_pub_key: "ssh-rsa XXXXXXXXXXXXXXXXXXXXXX user@example"
 k8s_version: 1.28.9
-px_version: 3.1.2
+px_version: 3.2.1
 stop_after: 6
 post_script: show-ip
 quiet: false
@@ -35,7 +35,7 @@ azure_client_secret: ""
 azure_client_id: ""
 azure_tenant_id: ""
 azure_subscription_id: ""
-aks_version: "1.28"
+aks_version: "1.30"
 
 rancher_version: "2.9.3"
 rancher_k3s_version: "1.30.6+k3s1"
