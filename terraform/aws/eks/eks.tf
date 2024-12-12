@@ -253,6 +253,11 @@ resource "aws_launch_template" "cluster" {
   for_each = var.eksclusters
   name = format("%s-%s-%s",var.name_prefix,var.config_name, each.key)
   instance_type = each.value
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_put_response_hop_limit = 3
+  }
+
   block_device_mappings {
     device_name = "/dev/xvda"
     ebs {
