@@ -80,6 +80,7 @@ elif [ $cloud = "vsphere" ]; then
       name=$(govc vm.info -json "$i" | jq -r '.virtualMachines[0].config.extraConfig[] | select(.key==("pxd.hostname")).value')
       echo $ip $name >>/tmp/hosts
     done
+    IFS=$' \t\n'
     [ $(cat /tmp/hosts | wc -w) -eq $[($nodes+1)*$clusters*2] ] && break
   done
   echo 127.0.0.1 localhost >/etc/hosts
