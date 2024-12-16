@@ -1,23 +1,9 @@
-kind: StorageClass
-apiVersion: storage.k8s.io/v1
-metadata:
-    name: px-repl3-sc
-provisioner: kubernetes.io/portworx-volume
-parameters:
-  #openstorage.io/auth-secret-name: px-user-token
-  #openstorage.io/auth-secret-namespace: portworx
-  repl: "3"
-  io_profile: "db_remote"
-  priority_io: "high"
-allowVolumeExpansion: true
----
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
    name: px-redis-data
-   annotations:
-     volume.beta.kubernetes.io/storage-class: px-repl3-sc
 spec:
+   storageClassName: px-csi-db
    accessModes:
      - ReadWriteOnce
    resources:
@@ -28,9 +14,8 @@ kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
    name: px-redis-conf
-   annotations:
-     volume.beta.kubernetes.io/storage-class: px-repl3-sc
 spec:
+   storageClassName: px-csi-db
    accessModes:
      - ReadWriteOnce
    resources:

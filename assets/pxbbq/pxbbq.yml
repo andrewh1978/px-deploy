@@ -4,7 +4,7 @@ kind: Namespace
 metadata:
   name: pxbbq
   labels:
-    pds.portworx.com/available: "true"
+    platform.portworx.com/pds: "true"
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -108,7 +108,7 @@ spec:
     spec:                        
       containers:
       - name: pxbbq-web
-        image: eshanks16/pxbbq:v4.2
+        image: eshanks16/pxbbq:v4.5.4
         env:
         - name: MONGO_INIT_USER
           value: "porxie" #Mongo User with permissions to create additional databases and users. Typically "porxie" or "pds"
@@ -122,15 +122,21 @@ spec:
           value: porxie #Mongo DB User that will be created by using the Init_User
         - name: MONGO_PASS
           value: "porxie" #Mongo DB Password for User that will be created by using the Init User
+        - name: API_SECRET_KEY
+          value: "TheBlackDogBarksAtNoon"
           ########## CHATBOT SECTION #############
         - name: CHATBOT_ENABLED #If CHATBOT is set to False, the other variables in this section are not needed.
           value: "false" #Set to True to enable a LLAMA3 chatbot - Requires the AIDemo to be deployed first
         - name: PXBBQ_URI
-          value: "EXTERNAL_IP_ADDRESS_OF_PXBBQ_HERE" #MUST Be the external svc name for the PXBBQ application (PXBBQ NodePort/LoadBalaner)
+          value: "http://EXTERNAL_IP_ADDRESS_OF_PXBBQ_HERE" #MUST Be the external svc name for the PXBBQ application (PXBBQ NodePort/LoadBalaner)
         - name: MODEL_SERVER_URI
           value: "http://ollama.genai.svc.cluster.local:11434" #MUST be the internal svc name for the ollama service (CLUSERIP)
         - name: NEO4J_URI
           value: "bolt://database.genai.svc.cluster.local:7687" #MUST be the internal svc name for the new4j service (CLUSTERIP)
+        - name: NEO4J_USERNAME
+          value: "neo4j"
+        - name: NEO4J_PASSWORD
+          value: "password"
         imagePullPolicy: Always
         ports:
           - containerPort: 8080
@@ -171,6 +177,7 @@ spec:
   ports:
   - port: 80
     targetPort: 8080
+    nodePort: 30010
   type: LoadBalancer
   selector:
     app: pxbbq-web

@@ -1,1 +1,0 @@
-watch kubectl get events --field-selector involvedObject.kind=AutopilotRule --all-namespaces

@@ -7,7 +7,7 @@ kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
     name: portworx-db-ha
-provisioner: kubernetes.io/portworx-volume
+provisioner: pxd.portworx.com
 parameters:
   #openstorage.io/auth-secret-name: px-user-token
   #openstorage.io/auth-secret-namespace: portworx
@@ -19,7 +19,7 @@ kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
     name: portworx-tmp-fs
-provisioner: kubernetes.io/portworx-volume
+provisioner: pxd.portworx.com
 parameters:
   #openstorage.io/auth-secret-name: px-user-token
   #openstorage.io/auth-secret-namespace: portworx
@@ -31,7 +31,7 @@ kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
     name: portworx-queue-ha
-provisioner: kubernetes.io/portworx-volume
+provisioner: pxd.portworx.com
 parameters:
   #openstorage.io/auth-secret-name: px-user-token
   #openstorage.io/auth-secret-namespace: portworx
@@ -43,9 +43,8 @@ apiVersion: v1
 metadata:
    name: carts-db-pvc
    namespace: sock-shop
-   annotations:
-     volume.beta.kubernetes.io/storage-class: portworx-db-ha
 spec:
+   storageClassName: portworx-db-ha
    accessModes:
      - ReadWriteOnce
    resources:
@@ -57,9 +56,8 @@ apiVersion: v1
 metadata:
    name: catalogue-db-pvc
    namespace: sock-shop
-   annotations:
-     volume.beta.kubernetes.io/storage-class: portworx-db-ha
 spec:
+   storageClassName: portworx-db-ha
    accessModes:
      - ReadWriteOnce
    resources:
@@ -71,9 +69,8 @@ apiVersion: v1
 metadata:
    name: orders-db-pvc
    namespace: sock-shop
-   annotations:
-     volume.beta.kubernetes.io/storage-class: portworx-db-ha
 spec:
+   storageClassName: portworx-db-ha
    accessModes:
      - ReadWriteOnce
    resources:
@@ -85,9 +82,8 @@ apiVersion: v1
 metadata:
    name: orders-tmp-pvc
    namespace: sock-shop
-   annotations:
-     volume.beta.kubernetes.io/storage-class: portworx-tmp-fs
 spec:
+   storageClassName: portworx-tmp-fs
    accessModes:
      - ReadWriteOnce
    resources:
@@ -99,9 +95,8 @@ apiVersion: v1
 metadata:
    name: carts-pvc
    namespace: sock-shop
-   annotations:
-     volume.beta.kubernetes.io/storage-class: portworx-tmp-fs
 spec:
+   storageClassName: portworx-tmp-fs
    accessModes:
      - ReadWriteOnce
    resources:
@@ -113,9 +108,8 @@ apiVersion: v1
 metadata:
    name: rabbitmq-pvc
    namespace: sock-shop
-   annotations:
-     volume.beta.kubernetes.io/storage-class: portworx-queue-ha
 spec:
+   storageClassName: portworx-queue-ha
    accessModes:
      - ReadWriteOnce
    resources:
@@ -127,9 +121,8 @@ apiVersion: v1
 metadata:
    name: shipping-tmp-pvc
    namespace: sock-shop
-   annotations:
-     volume.beta.kubernetes.io/storage-class: portworx-tmp-fs
 spec:
+   storageClassName: portworx-tmp-fs
    accessModes:
      - ReadWriteOnce
    resources:
@@ -141,9 +134,8 @@ apiVersion: v1
 metadata:
    name: users-db-pvc
    namespace: sock-shop
-   annotations:
-     volume.beta.kubernetes.io/storage-class: portworx-db-ha
 spec:
+   storageClassName: portworx-db-ha
    accessModes:
      - ReadWriteOnce
    resources:
