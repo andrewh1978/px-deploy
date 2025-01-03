@@ -1,3 +1,21 @@
+# 6.2.2
+
+## Improvements
+ * Bump EKS to 1.31
+ * Bump Portworx to 3.2.1
+ * Bump GKE to 1.30
+ * Bump AKS to 1.30
+ * Enable OCP console plugin
+ * Add support for OCP 4.16
+ * Add Rancher support (Beta)
+ * Reduce deployment time for PX-Backup
+ * Automatically capture logs for troubleshooting
+ * Bump PX-Central to 2.7.3
+
+## Fixes
+ * Fix Grafana on Kubernetes and OCP
+ * Fix issue destroying deployments with large numbers of disks
+
 # 6.2.1
 
 ## Improvements
