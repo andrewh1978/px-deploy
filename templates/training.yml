@@ -1,3 +1,2 @@
 description: Deploys training clusters
 scripts: ["training"]
-stop_after: 24
