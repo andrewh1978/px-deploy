@@ -1,3 +1,8 @@
+# 6.2.2.1
+
+## Fixes
+ * Fix petclinic yaml typo
+
 # 6.2.2
 
 ## Improvements
