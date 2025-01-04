@@ -18,9 +18,9 @@ kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   namespace: petclinic
-  storageClassName: px-repl2-sc
   name: petclinic-db-mysql
 spec:
+  storageClassName: px-repl2-sc
   accessModes:
   - ReadWriteOnce
   resources:
