@@ -2,7 +2,7 @@ apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: portworx-sc-repl3-shared
-provisioner: kubernetes.io/portworx-volume
+provisioner: pxd.portworx.com
 parameters:
   #openstorage.io/auth-secret-name: px-user-token
   #openstorage.io/auth-secret-namespace: portworx
@@ -16,9 +16,8 @@ metadata:
   name: wp-pv-claim
   labels:
     app: wordpress
-  annotations:
-    volume.beta.kubernetes.io/storage-class: portworx-sc-repl3-shared
 spec:
+  storageClassName: portworx-sc-repl3-shared
   accessModes:
     - ReadWriteMany
   resources:

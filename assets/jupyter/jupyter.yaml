@@ -2,7 +2,7 @@ kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
     name: px-jhub-sc
-provisioner: kubernetes.io/portworx-volume
+provisioner: pxd.portworx.com
 parameters:
   #openstorage.io/auth-secret-name: px-user-token
   #openstorage.io/auth-secret-namespace: portworx
@@ -12,13 +12,12 @@ kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
   name: px-jhub-shared-sc
-provisioner: kubernetes.io/portworx-volume
+provisioner: pxd.portworx.com
 parameters:
   #openstorage.io/auth-secret-name: px-user-token
   #openstorage.io/auth-secret-namespace: portworx
   repl: "2"
   sharedv4: "true"
-  io_profile: "cms"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -26,9 +25,8 @@ metadata:
   name: px-jhub-shared-vol
   labels:
     app: jupyterhub
-  annotations:
-    volume.beta.kubernetes.io/storage-class: px-jhub-shared-sc
 spec:
+  storageClassName: px-jhub-shared-sc
   accessModes:
     - ReadWriteMany
   resources:
@@ -277,7 +275,7 @@ spec:
           - 169.254.169.254/32
 ---
 # Source: jupyterhub/templates/scheduling/user-placeholder/pdb.yaml
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: user-placeholder
@@ -296,7 +294,7 @@ spec:
       release: jhub
 ---
 # Source: jupyterhub/templates/scheduling/user-scheduler/pdb.yaml
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: user-scheduler
@@ -921,7 +919,7 @@ metadata:
     chart: jupyterhub-0.11.1
     heritage: Helm
 spec:
-  storageClassName: "px-jhub-sc"
+  storageClassName: px-jhub-sc
   accessModes:
     - ReadWriteOnce
   resources:

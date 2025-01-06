@@ -1,2 +1,0 @@
-description: A single Kubernetes cluster with StorageOS installed
-scripts: ["etcd", "install-storageos"]

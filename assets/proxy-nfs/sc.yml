@@ -2,7 +2,7 @@ kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
   name: portworx-proxy-volume-volume
-provisioner: kubernetes.io/portworx-volume
+provisioner: pxd.portworx.comw
 parameters:
   #openstorage.io/auth-secret-name: px-user-token
   #openstorage.io/auth-secret-namespace: portworx

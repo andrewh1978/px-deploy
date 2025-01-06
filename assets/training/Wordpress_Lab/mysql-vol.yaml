@@ -2,7 +2,7 @@ apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: portworx-sc-repl3
-provisioner: kubernetes.io/portworx-volume
+provisioner: pxd.portworx.com
 parameters:
   #openstorage.io/auth-secret-name: px-user-token
   #openstorage.io/auth-secret-namespace: portworx
@@ -13,9 +13,8 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: mysql-pvc-1
-  annotations:
-    volume.beta.kubernetes.io/storage-class: portworx-sc-repl3
 spec:
+  storageClassName: portworx-sc-repl3
   accessModes:
     - ReadWriteOnce
   resources:

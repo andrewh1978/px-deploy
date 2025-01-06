@@ -7,7 +7,7 @@ kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
   name: px-redis-sc
-provisioner: kubernetes.io/portworx-volume
+provisioner: pxd.portworx.com
 parameters:
   #openstorage.io/auth-secret-name: px-user-token
   #openstorage.io/auth-secret-namespace: portworx
@@ -22,9 +22,8 @@ metadata:
       app: redis
    name: redis-data
    namespace: redis
-   annotations:
-     volume.beta.kubernetes.io/storage-class: px-redis-sc
 spec:
+   storageClassName: px-redis-sc
    accessModes:
      - ReadWriteOnce
    resources:
