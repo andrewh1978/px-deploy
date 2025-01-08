@@ -157,7 +157,7 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 
 			fmt.Printf("%v%v", check_version(), Reset)
-
+			sync_repository()
 			if len(args) > 0 {
 				die("Invalid arguments")
 			}
@@ -2079,5 +2079,16 @@ func check_for_recommended_settings(config *Config) {
 				}
 			}
 		}
+	}
+}
+
+func sync_repository() {
+	fmt.Printf("Sync container repo to local dir\n")
+	cmd := exec.Command("rsync", "-a", "/px-deploy/assets", "/px-deploy/scripts", "/px-deploy/templates", "/px-deploy/.px-deploy/")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	errapply := cmd.Run()
+	if errapply != nil {
+		fmt.Println(Red + "ERROR: failed to sync container repo to .px-deploy repo" + Reset)
 	}
 }

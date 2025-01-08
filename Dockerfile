@@ -28,6 +28,9 @@ ARG TARGETPLATFORM
 COPY --from=build /$TARGETPLATFORM/terraform /usr/bin/terraform
 COPY --from=build /$TARGETPLATFORM/govc /usr/bin/govc
 COPY --from=build /$TARGETPLATFORM/px-deploy /root/go/bin/px-deploy
+COPY assets /px-deploy/assets
+COPY scripts /px-deploy/scripts
+COPY templates /px-deploy/templates
 COPY vagrant /px-deploy/vagrant
 COPY VERSION /
 COPY --from=build /px-deploy/terraform/aws /px-deploy/terraform/aws 
