@@ -2083,7 +2083,7 @@ func check_for_recommended_settings(config *Config) {
 }
 
 func sync_repository() {
-	fmt.Printf("Sync container repo to local dir\n")
+	fmt.Printf("syncing container repo to local dir\n")
 	cmd := exec.Command("rsync", "-a", "/px-deploy/assets", "/px-deploy/scripts", "/px-deploy/templates", "/px-deploy/.px-deploy/")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
