@@ -1,0 +1,24 @@
+{
+    "FlashArrays": [
+        {
+            "MgmtEndPoint": "<management-endpoint-of-first-fa>",
+            "APIToken": "<first-fa-api-token>"
+        },
+        {
+            "MgmtEndPoint": "<management-endpoint-of-second-fa>",
+            "APIToken": "<second-fa-api-token>"
+        }
+    ],
+    "FlashBlades": [
+        {
+            "MgmtEndPoint": "<management-endpoint-of-first-fb>",
+            "APIToken": "<api-token-of-first-fb>",
+            "NFSEndPoint": "<nfs-endpoints-of-first-fb>"
+        },
+        {
+            "MgmtEndPoint": "<management-endpoint-of-second-fb>",
+            "APIToken": "<api-token-of-second-fb>",
+            "NFSEndPoint": "<nfs-endpoints-of-second-fb>"
+        }
+    ]
+}
