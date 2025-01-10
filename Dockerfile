@@ -31,7 +31,7 @@ COPY --from=build /$TARGETPLATFORM/px-deploy /root/go/bin/px-deploy
 COPY assets /px-deploy/assets
 COPY scripts /px-deploy/scripts
 COPY templates /px-deploy/templates
-COPY vagrant /px-deploy/vagrant
+COPY infra /px-deploy/infra
 COPY VERSION /
 COPY --from=build /px-deploy/terraform/aws /px-deploy/terraform/aws 
 COPY --from=build /px-deploy/terraform/azure /px-deploy/terraform/azure

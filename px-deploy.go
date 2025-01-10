@@ -51,6 +51,7 @@ type Config struct {
 	Stop_After               string
 	Post_Script              string
 	DryRun                   bool
+	NoSync                   bool
 	Lock                     bool
 	Aws_Type                 string
 	Aws_Ebs                  string
@@ -157,12 +158,16 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 
 			fmt.Printf("%v%v", check_version(), Reset)
-			sync_repository()
 			if len(args) > 0 {
 				die("Invalid arguments")
 			}
 			config := parse_yaml("defaults.yml")
 
+			if flags.NoSync {
+				fmt.Printf("skipping file sync from container to local dir\n")
+			} else {
+				sync_repository()
+			}
 			// should be there by default
 			// we dont put in into defaults.yml as it defines a path within container
 			config.Gcp_Auth_Json = "/px-deploy/.px-deploy/gcp.json"
@@ -180,7 +185,7 @@ func main() {
 					fmt.Printf("%s creation of deployment failed %s \n", Red, Reset)
 					os.Exit(1)
 				}
-				os.Chdir("/px-deploy/vagrant")
+				os.Chdir("/px-deploy/.px-deploy/infra")
 				os.Setenv("deployment", config.Name)
 
 			}
@@ -443,6 +448,7 @@ func main() {
 	cmdCreate.Flags().BoolVarP(&flags.Run_Predelete, "predelete", "", false, "run predelete scripts on destruction (true/false)")
 	cmdCreate.Flags().StringVarP(&createEnv, "env", "e", "", "Comma-separated list of environment variables to be passed, for example foo=bar,abc=123")
 	cmdCreate.Flags().BoolVarP(&flags.DryRun, "dry_run", "d", false, "dry-run, create local files only. Works only on aws / azure")
+	cmdCreate.Flags().BoolVarP(&flags.NoSync, "no_sync", "", false, "do not sync assets/infra/scripts/templates from container to local dir, allows to change local scripts")
 	cmdCreate.Flags().BoolVarP(&flags.Lock, "lock", "", false, "protect deployment from deletion. run px-deploy unlock -n ... before deletion")
 	cmdDestroy.Flags().BoolVarP(&destroyAll, "all", "a", false, "destroy all deployments")
 	cmdDestroy.Flags().BoolVarP(&destroyClear, "clear", "c", false, "destroy local deployment files (use with caution!)")
@@ -788,7 +794,7 @@ func get_deployment_status(config *Config, cluster int, c chan Deployment_Status
 	case "vsphere":
 		ip = vsphere_get_node_ip(config, fmt.Sprintf("%v-master-%v", config.Name, cluster))
 	}
-	// get content of node tracking file (-> each node will add its entry when finished cloud-init/vagrant scripts)
+	// get content of node tracking file (-> each node will add its entry when finished cloud-init/infra scripts)
 	cmd := exec.Command("ssh", "-q", "-oStrictHostKeyChecking=no", "-i", "keys/id_rsa."+config.Cloud+"."+config.Name, "root@"+ip, "cat /var/log/px-deploy/completed/tracking")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -1734,7 +1740,7 @@ func write_nodescripts(config Config) {
 	tf_node_script = append(tf_node_script, "mkdir /var/log/px-deploy\n"...)
 
 	for _, filename := range tf_node_scripts {
-		content, err := os.ReadFile("/px-deploy/vagrant/" + filename)
+		content, err := os.ReadFile("/px-deploy/.px-deploy/infra/" + filename)
 		if err == nil {
 			tf_node_script = append(tf_node_script, "(\n"...)
 			tf_node_script = append(tf_node_script, "echo \"Started $(date)\"\n"...)
@@ -1761,7 +1767,7 @@ func write_nodescripts(config Config) {
 	tf_common_master_script = append(tf_common_master_script, "touch /var/log/px-deploy/completed/tracking\n"...)
 
 	for _, filename := range tf_master_scripts {
-		content, err := os.ReadFile("/px-deploy/vagrant/" + filename)
+		content, err := os.ReadFile("/px-deploy/.px-deploy/infra/" + filename)
 		if err == nil {
 			tf_common_master_script = append(tf_common_master_script, "(\n"...)
 			tf_common_master_script = append(tf_common_master_script, "echo \"Started $(date)\"\n"...)
@@ -2084,7 +2090,7 @@ func check_for_recommended_settings(config *Config) {
 
 func sync_repository() {
 	fmt.Printf("syncing container repo to local dir\n")
-	cmd := exec.Command("rsync", "-a", "/px-deploy/assets", "/px-deploy/scripts", "/px-deploy/templates", "/px-deploy/.px-deploy/")
+	cmd := exec.Command("rsync", "-a", "/px-deploy/assets", "/px-deploy/scripts", "/px-deploy/templates", "/px-deploy/infra", "/px-deploy/.px-deploy/")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	errapply := cmd.Run()

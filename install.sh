@@ -38,7 +38,7 @@ mkdir -p $HOME/.px-deploy/{keys,deployments,kubeconfig,tf-deployments,docs,logs}
 
 # backup existing directories and force copy from current branch
 time=$(date +%s)
-for i in scripts templates assets docs; do
+for i in infra scripts templates assets docs; do
   [ -e $HOME/.px-deploy/$i ] && echo Backing up $HOME/.px-deploy/$i to $HOME/.px-deploy/$i.$time && cp -r $HOME/.px-deploy/$i $HOME/.px-deploy/$i.$time
   cp -rf $i $HOME/.px-deploy
 done
