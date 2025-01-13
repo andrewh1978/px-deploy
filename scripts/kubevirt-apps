@@ -1,6 +1,6 @@
 kubectl apply -f /assets/kubevirt/pxbbq-ns.yml
 kubectl apply -f /assets/kubevirt/dv-ubuntu.yml
-kubectl apply -f /assets/kubevirt/pxbbq.yml
+kubectl apply -f /assets/kubevirt/pxbbq-ubuntu.yml
 
 if [ "$platform" = ocp4 ]; then
     kubectl apply -f /assets/kubevirt/ocp/pxbbq-route.yml

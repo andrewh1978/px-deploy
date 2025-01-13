@@ -6,7 +6,7 @@ metadata:
 spec:
   source:
     http:
-      url: "https://cloud-images.ubuntu.com/minimal/releases/mantic/release/ubuntu-23.10-minimal-cloudimg-amd64.img"
+      url: "https://cloud-images.ubuntu.com/minimal/releases/noble/release/ubuntu-24.04-minimal-cloudimg-amd64.img"
   pvc:
     storageClassName: px-csi-db
     accessModes:
