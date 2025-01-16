@@ -3,14 +3,17 @@ kind: DataVolume
 metadata:
   name: ubuntu-image
   namespace: pxbbq
+  annotations:
+    cdi.kubevirt.io/storage.bind.immediate.requested: "true"
+    cdi.kubevirt.io/storage.usePopulator: "false"
 spec:
   source:
     http:
       url: "https://cloud-images.ubuntu.com/minimal/releases/noble/release/ubuntu-24.04-minimal-cloudimg-amd64.img"
   pvc:
-    storageClassName: px-csi-db
+    storageClassName: px-rwx-kubevirt
     accessModes:
-      - ReadWriteOnce
+      - ReadWriteMany
     resources:
       requests:
-        storage: 5Gi
+        storage: 5Gi~                         

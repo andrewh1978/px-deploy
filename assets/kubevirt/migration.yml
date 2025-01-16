@@ -1,0 +1,7 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachineInstanceMigration
+metadata:
+  name: migrate-ubuntu-mongodb
+  namespace: pxbbq
+spec:
+  vmiName: ubuntu-mongodb
