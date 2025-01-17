@@ -115,6 +115,41 @@ resource "aws_security_group" "sg_ocp-nodes" {
 		protocol	= "tcp"
 		self = true
 		}
+  ingress {
+		description = "portworx nfs portmapper"
+		from_port 	= 111
+		to_port 	= 111
+		protocol	= "tcp"
+		self = true
+		}
+  ingress {
+		description = "portworx nfs mountd"
+		from_port 	= 20048
+		to_port 	= 20048
+		protocol	= "tcp"
+		self = true
+		}
+  ingress {
+		description = "portworx rwx nfs"
+		from_port 	= 2049
+		to_port 	= 2049
+		protocol	= "udp"
+		self = true
+		}
+  ingress {
+		description = "portworx nfs portmapper"
+		from_port 	= 111
+		to_port 	= 111
+		protocol	= "udp"
+		self = true
+		}
+  ingress {
+		description = "portworx nfs mountd"
+		from_port 	= 20048
+		to_port 	= 20048
+		protocol	= "udp"
+		self = true
+		}
 	tags = {
 		Name=format("px-deploy-%s",var.config_name)
 		}
