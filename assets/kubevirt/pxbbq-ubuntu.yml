@@ -159,6 +159,8 @@ spec:
   dataVolumeTemplates:
     - metadata:
         name: 'ubuntu-mongodb-rootdisk'
+        annotations:
+          cdi.kubevirt.io/storage.usePopulator: "false"
       spec:
         storage:
           resources:
