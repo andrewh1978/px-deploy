@@ -52,6 +52,7 @@ type Config struct {
 	Post_Script              string
 	DryRun                   bool
 	NoSync                   bool
+	IgnoreVersion            bool
 	Lock                     bool
 	Aws_Type                 string
 	Aws_Ebs                  string
@@ -158,7 +159,11 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 
 			if !latest_version() {
-				die("Please update to latest release")
+				if flags.IgnoreVersion {
+					fmt.Println("ignore_version set. Please update to latest release.")
+				} else {
+					die("Please update to latest release")
+				}
 			}
 			if len(args) > 0 {
 				die("Invalid arguments")
@@ -451,6 +456,7 @@ func main() {
 	cmdCreate.Flags().StringVarP(&createEnv, "env", "e", "", "Comma-separated list of environment variables to be passed, for example foo=bar,abc=123")
 	cmdCreate.Flags().BoolVarP(&flags.DryRun, "dry_run", "d", false, "dry-run, create local files only. Works only on aws / azure")
 	cmdCreate.Flags().BoolVarP(&flags.NoSync, "no_sync", "", false, "do not sync assets/infra/scripts/templates from container to local dir, allows to change local scripts")
+	cmdCreate.Flags().BoolVarP(&flags.IgnoreVersion, "ignore_version", "", false, "ignore if not running the latest px-deploy release")
 	cmdCreate.Flags().BoolVarP(&flags.Lock, "lock", "", false, "protect deployment from deletion. run px-deploy unlock -n ... before deletion")
 	cmdDestroy.Flags().BoolVarP(&destroyAll, "all", "a", false, "destroy all deployments")
 	cmdDestroy.Flags().BoolVarP(&destroyClear, "clear", "c", false, "destroy local deployment files (use with caution!)")
