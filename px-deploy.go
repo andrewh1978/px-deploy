@@ -157,7 +157,9 @@ func main() {
 		Long:  "Creates a deployment",
 		Run: func(cmd *cobra.Command, args []string) {
 
-			fmt.Printf("%v%v", check_version(), Reset)
+			if !latest_version() {
+				die("Please update to latest release")
+			}
 			if len(args) > 0 {
 				die("Invalid arguments")
 			}
@@ -2010,16 +2012,19 @@ func write_tf_file(deployment string, filename string, data []string) {
 		}
 	}
 }
-func check_version() string {
+func latest_version() bool {
 	version_current := get_version_current()
 	version_latest := get_version_latest()
 	if version_latest == "" {
-		return fmt.Sprintln(Yellow + "Current version is " + version_current + ", cannot determine latest version")
+		fmt.Println(Yellow + "Current version is " + version_current + ", cannot determine latest version" + Reset)
+		return true
 	} else {
 		if version_current != version_latest {
-			return fmt.Sprintln(Yellow + "Current version is " + version_current + ", latest version is " + version_latest)
+			fmt.Println(Yellow + "Current version is " + version_current + ", latest version is " + version_latest + Reset)
+			return false
 		} else {
-			return fmt.Sprintln(Green + "Current version is " + version_current + " (latest)")
+			fmt.Println(Green + "Current version is " + version_current + " (latest)" + Reset)
+			return true
 		}
 	}
 }
