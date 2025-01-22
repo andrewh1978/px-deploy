@@ -45,11 +45,11 @@ done
 
 # existing defaults.yml found. Dont replace, but ask for updating versions
 if [ -e $HOME/.px-deploy/defaults.yml ]; then
-  echo -e "${YELLOW}Existing defaults.yml found. Please consider updating k8s_version and px_version to release settings (check $HOME/px-deploy/defaults.yml.$ver)."
+  echo -e "${YELLOW}Existing defaults.yml found. Please consider updating k8s_version and px_version to release settings (check $HOME/px-deploy/versions.yml)."
 else
   cp defaults.yml $HOME/.px-deploy/defaults.yml
 fi
-cp defaults.yml $HOME/.px-deploy/defaults.yml.$ver
+cp defaults.yml $HOME/.px-deploy/versions.yml
 
 echo
 echo -e ${YELLOW}If you are using zsh, append this to your .zshrc:

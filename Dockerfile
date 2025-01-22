@@ -32,6 +32,7 @@ COPY assets /px-deploy/assets
 COPY scripts /px-deploy/scripts
 COPY templates /px-deploy/templates
 COPY infra /px-deploy/infra
+COPY defaults.yml /px-deploy/versions.yml
 COPY VERSION /
 COPY --from=build /px-deploy/terraform/aws /px-deploy/terraform/aws 
 COPY --from=build /px-deploy/terraform/azure /px-deploy/terraform/azure
