@@ -162,7 +162,7 @@ func main() {
 				if flags.IgnoreVersion {
 					fmt.Println("ignore_version set. Please update to latest release.")
 				} else {
-					die("Please update to latest release")
+					die("Please update to latest release. (use --ignore_version to continue)")
 				}
 			}
 			if len(args) > 0 {
