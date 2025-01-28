@@ -25,6 +25,11 @@ echo "/root/.kube/config found"
 # remove k3s implementation of kubectl
 rm /usr/local/bin/kubectl
 
+echo "waiting for rancher guest cluster readiness"
+while ! kubectl wait pod -n cattle-system --timeout=300s --for=condition=ready -l app=cattle-cluster-agent; do
+  sleep 2
+done
+
 echo "url https://rancher.$name.$ocp4_domain" >> /var/log/px-deploy/completed/tracking
 echo "cred portworx1!portworx1!" >> /var/log/px-deploy/completed/tracking
 
