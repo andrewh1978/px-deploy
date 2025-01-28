@@ -4,6 +4,7 @@ metadata:
   name: pool-rebalance
 spec:
   conditions:
+    for: 5
     requiredMatches: 1
     expressions:
     - keyAlias: PoolProvDeviationPerc

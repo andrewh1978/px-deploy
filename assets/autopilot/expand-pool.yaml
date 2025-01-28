@@ -6,6 +6,7 @@ spec:
   enforcement: required
   ##### conditions are the symptoms to evaluate. All conditions are AND'ed
   conditions:
+    for: 5
     expressions:
     # pool available capacity less than 50%
     - key: "100 * ( px_pool_stats_available_bytes/ px_pool_stats_total_bytes)"
