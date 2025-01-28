@@ -10,6 +10,7 @@ spec:
   pollInterval: 2
   ##### conditions are the symptoms to evaluate. All conditions are AND'ed
   conditions:
+    for: 5
     # volume usage should be less than 30%
     expressions:
     - key: "100 * (px_volume_usage_bytes / px_volume_capacity_bytes)"
