@@ -257,14 +257,20 @@ resource "rancher2_cloud_credential" "aws" {
   }
 }
 
+resource "time_sleep" "wait_30_seconds" {
+  depends_on = [rancher2_cloud_credential.aws]
+  create_duration = "30s"
+}
+
 resource "rancher2_machine_config_v2" "node" {
   for_each = var.rancherclusters
   depends_on = [
     helm_release.rancher_server,
-    rancher2_cloud_credential.aws
+    rancher2_cloud_credential.aws,
+    time_sleep.wait_30_seconds
   ]
   provider = rancher2.admin
-  generate_name = format("node-templ-%s",each.key)
+  generate_name = format("templ-%s",each.key)
   amazonec2_config {
     ami =  data.aws_ami.ubuntu.id
     root_size = "50"

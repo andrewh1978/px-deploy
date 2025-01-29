@@ -37,9 +37,9 @@ azure_tenant_id: ""
 azure_subscription_id: ""
 aks_version: "1.30"
 
-rancher_version: "2.9.3"
-rancher_k3s_version: "1.30.6+k3s1"
-rancher_k8s_version: "1.30.6+rke2r1"
+rancher_version: "2.10.1"
+rancher_k3s_version: "1.30.8+k3s1"
+rancher_k8s_version: "1.30.8+rke2r1"
 
 vsphere_host: ""
 vsphere_compute_resource: ""
