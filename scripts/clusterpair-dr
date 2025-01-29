@@ -39,6 +39,8 @@ if [ "$platform" = eks ] || [ "$platform" = ocp4 ]; then
     [ "$host" ] && break
     sleep 1
   done
+elif [ "$platform" = rancher ]; then
+  host=$(kubectl get nodes -l node-role.kubernetes.io/worker=true -o json |jq -r '.items[0].status.addresses[] | select(.type=="InternalIP") | .address')
 else
   host=node-$cluster-1
 fi
