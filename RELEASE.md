@@ -1,3 +1,17 @@
+# 6.3
+
+## Improvements
+ * Before each create, assets, scripts and templates are synced from running container
+ * ocp-kubevirt now deploys Ubuntu VM instead of FreeBSD
+ * Always check latest version before deploying
+
+## Fixes
+ * Optimisations in ocp-kubevirt
+ * Add NFS ports for OCP
+
+## Removal
+ * Outdated assets
+
 # 6.2.2.1
 
 ## Fixes
