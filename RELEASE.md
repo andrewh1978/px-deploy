@@ -1,3 +1,8 @@
+# 6.3.1
+
+## Fixes
+ * Fix Grafana namespace
+
 # 6.3
 
 ## Improvements
