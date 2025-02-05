@@ -142,7 +142,7 @@ if [ $platform = ocp4 ]; then
   kubectl patch console.operator cluster --type json -p '[{"op": "add", "path": "/spec/plugins/-", "value": "portworx"}]'
 else
   kubectl -n portworx create configmap grafana-source-config --from-file=grafana-datasource.yaml=<(curl -s https://docs.portworx.com/samples/portworx-enterprise/k8s/pxc/grafana-datasource.yaml)
-  kubectl apply -f <(curl -s https://docs.portworx.com/samples/portworx-enterprise/k8s/pxc/grafana.yaml | sed s/kube-system/portworx/)
+  kubectl apply -n portworx -f <(curl -s https://docs.portworx.com/samples/portworx-enterprise/k8s/pxc/grafana.yaml)
 fi
 kubectl -n portworx create configmap grafana-dashboard-config --from-file=grafana-dashboard-config.yaml=<(curl -s https://docs.portworx.com/samples/portworx-enterprise/k8s/pxc/grafana-dashboard-config.yaml)
 kubectl -n portworx create configmap grafana-dashboards --from-file=portworx-cluster-dashboard.json=<(curl -s https://docs.portworx.com/samples/portworx-enterprise/k8s/pxc/portworx-cluster-dashboard.json) --from-file=portworx-node-dashboard.json=<(curl -s https://docs.portworx.com/samples/portworx-enterprise/k8s/pxc/portworx-node-dashboard.json) --from-file=portworx-volume-dashboard.json=<(curl -s https://docs.portworx.com/samples/portworx-enterprise/k8s/pxc/portworx-volume-dashboard.json) --from-file=portworx-etcd-dashboard.json=<(curl -s https://docs.portworx.com/samples/portworx-enterprise/k8s/pxc/portworx-etcd-dashboard.json) --from-file=portworx-performance-dashboard.json=<(curl -s https://docs.portworx.com/samples/portworx-enterprise/k8s/pxc/portworx-performance-dashboard.json)
